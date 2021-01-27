@@ -12,7 +12,11 @@ using StatsBase
     max_step::Int = 100
 end
 MetaMDP(;kws...) = MetaMDP{2}(;kws...)
+getfields(x) = (getfield(x, f) for f in fieldnames(typeof(x)))
+id(m::MetaMDP) = join(getfields(m), "-")
 
+State{N} = NTuple{N, Float64}
+sample_state(m::MetaMDP) = Tuple(rand(n_item(m)))
 
 struct Belief{N}
     n_step::Int
@@ -20,8 +24,9 @@ struct Belief{N}
     counts::NTuple{N, Tuple{Int, Int}}
 end
 
+
 initial_belief(m::MetaMDP) = Belief(0, 0, Tuple((1,1) for i in 1:n_item(m)))
-terminal_belief(m::MetaMDP, c::Int=-1) = Belief(-1, c, Tuple((-1, -1) for i in 1:n_item(m)))
+# terminal_belief(m::MetaMDP, c::Int=-1) = Belief(-1, c, Tuple((-1, -1) for i in 1:n_item(m)))
 is_terminal(b) = b.n_step == -1
 # max_cost(m::MetaMDP) = m.miss_cost
 
@@ -29,28 +34,40 @@ n_item(m::MetaMDP{N}) where N = N
 n_item(b::Belief{N}) where N = N
 
 function results(m::MetaMDP{N}, b::Belief{N}, c::Int) where N
-    @unpack threshold, step_size, max_step, sample_cost, switch_cost, miss_cost = m
-    @unpack n_step, focused, counts = b
-    @assert !is_terminal(b)
-    @assert n_step < max_step
-    # @assert sum(sum.(b.counts)) - n_step * step_size - 2N == 0
-    # if sum(sum.(b.counts)) - n_step * step_size - 2N != 0
-    #     @error "Bad belief" b c
-    #     error()
-    # end
-    # n_step == max_step && return [(1., terminal_belief(m), miss_cost)]
+    _results(m, b, c) do heads
+        α, β = b.counts[c]
+        pdf(BetaBinomial(m.step_size, α, β), heads)
+    end
+end
 
-    cost = c != focused ? sample_cost + switch_cost : sample_cost
-    map(0:step_size) do heads
-        α, β = counts[c]
-        p = pdf(BetaBinomial(step_size, α, β), heads)
-        if α + heads >= threshold
-            return (p, terminal_belief(m, c), cost)
-        elseif n_step == max_step - 1
-            return (p, terminal_belief(m), cost + miss_cost)
+function results(m::MetaMDP{N}, b::Belief{N}, s::State{N}, c::Int) where N
+    _results(m, b, c) do heads
+        pdf(Binomial(m.step_size, s[c]), heads)
+    end
+end
+
+results(m::MetaMDP{N}, b::Belief{N}, s::Nothing, c::Int) where N = results(m, b, c)
+
+
+function _results(get_p::Function, m::MetaMDP{N}, b::Belief{N}, c::Int) where N
+    @assert !is_terminal(b)
+    @assert b.n_step < m.max_step
+
+    cost = c != b.focused ? m.sample_cost + m.switch_cost : m.sample_cost
+    map(0:m.step_size) do heads
+        α, β = b.counts[c]
+        p = get_p(heads)
+        update = (α + heads, β + m.step_size - heads)
+        new_counts = Base.setindex(b.counts, update, c)
+
+        if α + heads >= m.threshold
+            return (p, Belief(-1, c, new_counts), -cost)
+        elseif b.n_step == m.max_step - 1
+            return (p, Belief(-1, -1, new_counts), -(cost + m.miss_cost))
         else
-            new_counts = Base.setindex(counts, (α + heads, β + (step_size - heads)), c)
-            return (p, Belief(n_step + 1, c, new_counts), cost)
+            update = (α + heads, β + m.step_size - heads)
+            new_counts = Base.setindex(b.counts, update, c)
+            return (p, Belief(b.n_step + 1, c, new_counts), -cost)
         end
     end
 end
@@ -97,7 +114,7 @@ function (V::ValueFunction)(b::Belief)::Float64
 end
 
 function step_V(V::ValueFunction, b::Belief)
-    minimum(Q(V, b, c) for c in 1:n_item(b))
+    maximum(Q(V, b, c) for c in 1:n_item(b))
 end
 
 # function step_V(V::ValueFunction, b)::Float64
@@ -168,7 +185,7 @@ function actions(pol::OptimalPolicy, b::Belief)
     argmaxes(c->Q(pol.V, b, c), 1:n_item(b))
 end
 
-function simulate(policy; b=initial_belief(policy.m))
+function simulate(policy; b=initial_belief(policy.m), s=nothing)
     m = policy.m
     total_cost = 0.
     bs = Belief[]
@@ -176,7 +193,8 @@ function simulate(policy; b=initial_belief(policy.m))
     while !is_terminal(b)
         c = policy(b)
         push!(bs, b); push!(cs, c)
-        p, b1, cost = invert(results(m, b, c))
+
+        p, b1, cost = invert(results(m, b, s, c))
         i = sample(Weights(p))
         b = b1[i]
         total_cost += cost[i]
