@@ -1,0 +1,174 @@
+---
+title: Experiment 1 Results (v1.0)
+date: Jan 28, 2021
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.path='figs/', # fig.width=12, fig.height=8, f
+                      echo=FALSE, warning=FALSE, message=FALSE)
+library("tidyverse")
+library("lme4")
+library("jtools")
+options(
+    "summ-model.info"=FALSE, 
+    "summ-model.fit"=FALSE, 
+    "summ-re.table"=FALSE, 
+    "summ-groups.table"=FALSE,
+    "jtools-digits"=3
+)
+
+RED =  "#E41A1C" 
+BLUE =  "#377EB8" 
+GREEN =  "#4DAF4A" 
+PURPLE =  "#984EA3" 
+ORANGE =  "#FF7F00" 
+YELLOW =  "#FFDD47" 
+theme_set(theme_classic(base_size = 18))
+kable = knitr::kable
+
+response_type_colors = scale_colour_manual(values=c(
+    GREEN,
+    ORANGE,
+    RED
+), aesthetics=c("fill", "colour"), name="Response Type")
+
+word_type_colors = scale_colour_manual(values=c(
+    BLUE,
+    YELLOW
+), aesthetics=c("fill", "colour"), name="Word Memorability")
+
+
+all_trials = bind_rows(
+    read_csv("../data/v1.1/trials.csv"),
+    read_csv("../data/v1.0/trials.csv")
+)
+
+all_trials = all_trials %>% mutate(
+    response_type = factor(response_type, 
+        levels=c("correct", "intrusion", "other"), 
+        labels=c("Correct", "Intrusion", "Other")),
+    word_type = factor(word_type, 
+        levels=c("low", "high"), labels=c("Low", "High")),
+    total_time = rt + type_time,
+    correct = response_type == "Correct"
+)
+
+trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.5)
+n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
+N = length(unique(trials$wid))
+
+nt = nrow(trials)
+max_rt = with(trials, mean(rt) + 3 * sd(rt))
+trials = filter(trials, rt < max_rt)
+n_trial = nrow(trials)
+n_drop_rt = nt - n_trial
+
+grouped = trials %>% 
+    group_by(wid, word_type, response_type) %>% 
+    summarise(across(where(is.numeric), mean)) %>% 
+    ungroup()
+```
+
+- Excluding `r n_exclude` participants who gave an incorrect resonse on more than half of trials, leaving `r N` participants in the analysis.
+- Dropping `r n_drop_rt` trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis.
+
+
+# Accuracy
+
+```{r}
+
+ggplot(trials, aes(fill=response_type, x=word_type)) +
+     geom_histogram(stat="count") + response_type_colors
+```
+```{r, echo=TRUE}
+glmer(response_type == "Correct" ~ word_type + (word_type | wid), data=trials, family=binomial) %>% summ
+```
+
+# Reaction time
+
+### Aggregate
+
+```{r}
+ggplot(trials, aes(x=response_type, y=rt, color=word_type)) + 
+    stat_summary(fun.data=mean_se, geom="pointrange", position = position_dodge(width = 0.1)) + 
+    theme(legend.position=c(0.2, 0.9)) + word_type_colors
+trials %>% group_by(response_type, word_type) %>% summarise(rt = mean(rt)) %>% kable
+```
+
+### By participant
+
+```{r}
+ggplot(grouped, aes(x=word_type, y=rt, color=response_type, group=response_type)) + 
+    geom_line(alpha=0.3, size=1, aes(group=interaction(response_type, wid))) +
+    stat_summary(fun.data=mean_se, geom="pointrange") + 
+    stat_summary(fun.data=mean_se, geom="line", size=1) + 
+    facet_wrap(~response_type) +
+    ylim(0, 20000) +
+    response_type_colors + theme(legend.position="none")
+```
+```{r}
+prop = grouped %>%
+    filter(response_type=="Correct") %>%
+    group_by(wid, word_type) %>%
+    summarise(rt=mean(rt)) %>% 
+    pivot_wider(names_from=word_type, values_from=rt) %>% 
+    with(round(mean(Low > High) * 100))
+# prop
+```
+
+`r prop`% of grouped respond faster on high memorability trials.
+
+<!-- 
+
+### By participant correct only
+
+```{r}
+ggplot(filter(grouped, response_type=="Correct"), 
+    aes(x=word_type, y=rt, color=response_type, group=response_type)) + 
+    geom_line(alpha=0.3, size=1, aes(group=interaction(response_type, wid))) +
+    stat_summary(fun.data=mean_se, geom="pointrange") + 
+    stat_summary(fun.data=mean_se, geom="line", size=2) + 
+    # ylim(0, 30000) +
+    response_type_colors + theme(legend.position="none")
+
+``` 
+
+-->
+
+### Stats
+
+Significant effect in simplest regression
+```{r, echo=TRUE}
+lm(rt ~ word_type, data=trials) %>% summ
+```
+
+```{r, echo=TRUE}
+lm(rt ~ word_type * response_type, data=trials) %>% summ
+```
+
+```{r, echo=TRUE}
+lm(rt ~ word_type, data=subset(trials, response_type=="Correct")) %>% summ
+```
+
+```{r, echo=TRUE}
+lm(log(rt) ~ word_type, data=subset(trials, response_type=="Correct")) %>% summ
+```
+
+# Typing time
+We didn't enforce a time limit on word entry. It looks like most people aren't abusing it horribly.
+
+```{r}
+ggplot(trials, aes(type_time)) + geom_histogram(binwidth=500) + 
+    xlim(0, 10000)
+```
+
+But they are more likely to take a long time typing on error trials.
+
+```{r, echo=TRUE}
+lm(type_time ~ word_type + response_type, data=trials) %>% summ
+```
+
+```{r, echo=TRUE}
+lm(rt + type_time ~ word_type, data=subset(trials, response_type=="Correct")) %>% summ
+```
+
