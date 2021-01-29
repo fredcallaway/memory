@@ -168,9 +168,11 @@ end
 
 abstract type Policy end
 
-function act(pol::Policy, b::Belief)
-    rand(actions(pol, b))
+struct RandomPolicy <: Policy
+    m::MetaMDP
 end
+
+act(pol::RandomPolicy, b::Belief) = rand(1:n_item(b))
 
 struct OptimalPolicy <: Policy
     m::MetaMDP
@@ -179,10 +181,9 @@ end
 
 OptimalPolicy(m::MetaMDP) = OptimalPolicy(m, ValueFunction(m))
 OptimalPolicy(V::ValueFunction) = OptimalPolicy(V.m, V)
-(pol::OptimalPolicy)(b::Belief) = act(pol, b)
 
-function actions(pol::OptimalPolicy, b::Belief)
-    argmaxes(c->Q(pol.V, b, c), 1:n_item(b))
+function act(pol::OptimalPolicy, b::Belief)
+    rand(argmaxes(c->Q(pol.V, b, c), 1:n_item(b)))
 end
 
 function simulate(policy; b=initial_belief(policy.m), s=nothing)
@@ -191,7 +192,7 @@ function simulate(policy; b=initial_belief(policy.m), s=nothing)
     bs = Belief[]
     cs = Int[]
     while !is_terminal(b)
-        c = policy(b)
+        c = act(policy, b)
         push!(bs, b); push!(cs, c)
 
         p, b1, cost = invert(results(m, b, s, c))
