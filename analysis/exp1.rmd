@@ -76,7 +76,6 @@ grouped = trials %>%
 # Accuracy
 
 ```{r}
-
 ggplot(trials, aes(fill=response_type, x=word_type)) +
      geom_histogram(stat="count") + response_type_colors
 ```
