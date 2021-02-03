@@ -1,3 +1,7 @@
 analysis/.lintr
 analysis/*.html
 analysis/exp1.R
+model/scratch.jl
+analysis/.Rhistory
+model/bak/
+model/fighist/
