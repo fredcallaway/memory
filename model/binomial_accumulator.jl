@@ -174,6 +174,20 @@ end
 
 act(pol::RandomPolicy, b::Belief) = rand(1:n_item(b))
 
+
+struct RandomSwitchPolicy <: Policy
+    m::MetaMDP
+    p_switch::Float64
+end
+
+function act(pol::RandomSwitchPolicy, b::Belief)
+    if b.focused == 0 || rand() < pol.p_switch
+        rand(setdiff(1:n_item(b), b.focused))
+    else
+        b.focused
+    end
+end
+
 struct OptimalPolicy <: Policy
     m::MetaMDP
     V::ValueFunction
