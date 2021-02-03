@@ -9,3 +9,5 @@ newpath=reports/$filename-`date +"%y-%m-%d"`.html
 mv $filename.html $newpath
 git add .
 git commit -m "$newpath"
+
+scp $newpath fredc@simcoe:~/www.fredcallaway.com/docs/reports/memory
