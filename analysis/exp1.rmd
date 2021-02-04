@@ -1,6 +1,6 @@
 ---
-title: Experiment 1 Results (v1.0)
-date: Jan 28, 2021
+title: Experiment 1 Results (v1.0 + v1.1)
+date: Feb 3, 2021
 ---
 
 ```{r setup, include=FALSE}
@@ -9,6 +9,7 @@ knitr::opts_chunk$set(fig.path='figs/', # fig.width=12, fig.height=8, f
 library("tidyverse")
 library("lme4")
 library("jtools")
+library(magrittr)
 options(
     "summ-model.info"=FALSE, 
     "summ-model.fit"=FALSE, 
@@ -51,14 +52,18 @@ all_trials = all_trials %>% mutate(
         levels=c("low", "high"), labels=c("Low", "High")),
     total_time = rt + type_time,
     correct = response_type == "Correct"
-)
+) 
+# %>% mutate(
+#     base_rt = rt,
+#     rt = typing_rt
+# )
 
 trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.5)
 n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
 N = length(unique(trials$wid))
 
 nt = nrow(trials)
-max_rt = with(trials, mean(rt) + 3 * sd(rt))
+max_rt = with(trials, mean(rt, na.rm=TRUE) + 3 * sd(rt, na.rm=TRUE))
 trials = filter(trials, rt < max_rt)
 n_trial = nrow(trials)
 n_drop_rt = nt - n_trial
@@ -69,8 +74,14 @@ grouped = trials %>%
     ungroup()
 ```
 
+### Feb 3 Update
+- Spell checking and lemmatization when classifying response types
+- RT computed by time to first type
+
+### Exclusions
 - Excluding `r n_exclude` participants who gave an incorrect resonse on more than half of trials, leaving `r N` participants in the analysis.
 - Dropping `r n_drop_rt` trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis.
+
 
 
 # Accuracy
@@ -79,16 +90,20 @@ grouped = trials %>%
 ggplot(trials, aes(fill=response_type, x=word_type)) +
      geom_histogram(stat="count") + response_type_colors
 ```
+ 
+
 ```{r, echo=TRUE}
-glmer(response_type == "Correct" ~ word_type + (word_type | wid), data=trials, family=binomial) %>% summ
+glmer(response_type == "Correct" ~ word_type + (1|wid), data=trials, family=binomial) %>% summ
+# glmer(response_type == "Correct" ~ word_type + (word_type|wid), data=trials, family=binomial) %>% summ
 ```
+
 
 # Reaction time
 
 ### Aggregate
 
 ```{r}
-ggplot(trials, aes(x=response_type, y=rt, color=word_type)) + 
+ggplot(trials, aes(x=response_type, y=typing_rt, color=word_type)) + 
     stat_summary(fun.data=mean_se, geom="pointrange", position = position_dodge(width = 0.1)) + 
     theme(legend.position=c(0.2, 0.9)) + word_type_colors
 trials %>% group_by(response_type, word_type) %>% summarise(rt = mean(rt)) %>% kable
@@ -136,7 +151,6 @@ ggplot(filter(grouped, response_type=="Correct"),
 
 ### Stats
 
-Significant effect in simplest regression
 ```{r, echo=TRUE}
 lm(rt ~ word_type, data=trials) %>% summ
 ```
@@ -163,11 +177,24 @@ ggplot(trials, aes(type_time)) + geom_histogram(binwidth=500) +
 
 But they are more likely to take a long time typing on error trials.
 
+
 ```{r, echo=TRUE}
 lm(type_time ~ word_type + response_type, data=trials) %>% summ
 ```
 
 ```{r, echo=TRUE}
 lm(rt + type_time ~ word_type, data=subset(trials, response_type=="Correct")) %>% summ
+``` 
+
+# Error classification
+
+```{r}
+trials %>% filter(word == response)  %>% with(all(response_type == "Correct")) %>% stopifnot
+trials %>% filter(response_type == "Other") %>% select(word, response) %>% print(n=100)
+```
+
+## Non-exact matches classified as correct
+```{r}
+trials %>% filter(response_type == "Correct" & word != response) %>% select(word, response) %>% print(n=100)
 ```
 
