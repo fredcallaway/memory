@@ -52,11 +52,10 @@ all_trials = all_trials %>% mutate(
         levels=c("low", "high"), labels=c("Low", "High")),
     total_time = rt + type_time,
     correct = response_type == "Correct"
-) 
-# %>% mutate(
-#     base_rt = rt,
-#     rt = typing_rt
-# )
+) %>% mutate(
+    base_rt = rt,
+    rt = typing_rt
+)
 
 trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.5)
 n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))

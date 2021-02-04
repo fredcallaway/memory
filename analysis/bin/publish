@@ -11,3 +11,5 @@ git add .
 git commit -m "$newpath"
 
 scp $newpath fredc@simcoe:~/www.fredcallaway.com/docs/reports/memory
+
+echo www.fredcallaway.com/reports/memory/$newpath
