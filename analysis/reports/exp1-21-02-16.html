@@ -522,9 +522,16 @@ word_typeHigh
 </div>
 <div id="stats" class="section level3">
 <h3>Stats</h3>
-<pre class="r"><code>lm(rt ~ word_type, data=trials) %&gt;% summ</code></pre>
+<pre class="r"><code>lmer(rt ~ word_type + (1|wid), data=trials) %&gt;% summ</code></pre>
 <table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
 <tr>
 <th style="text-align:left;">
 </th>
@@ -538,6 +545,9 @@ S.E.
 t val.
 </th>
 <th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
 p
 </th>
 </tr>
@@ -548,13 +558,16 @@ p
 (Intercept)
 </td>
 <td style="text-align:right;">
-2428.743
+2537.490
 </td>
 <td style="text-align:right;">
-102.633
+203.456
 </td>
 <td style="text-align:right;">
-23.664
+12.472
+</td>
+<td style="text-align:right;">
+29.008
 </td>
 <td style="text-align:right;">
 0.000
@@ -565,30 +578,40 @@ p
 word_typeHigh
 </td>
 <td style="text-align:right;">
--195.027
+-205.449
 </td>
 <td style="text-align:right;">
-144.976
+118.152
 </td>
 <td style="text-align:right;">
--1.345
+-1.739
 </td>
 <td style="text-align:right;">
-0.179
+402.523
+</td>
+<td style="text-align:right;">
+0.083
 </td>
 </tr>
 </tbody>
 <tfoot>
 <tr>
 <td style="padding: 0; " colspan="100%">
-<sup></sup> Standard errors: OLS
+<sup></sup> p values calculated using Satterthwaite d.f.
 </td>
 </tr>
 </tfoot>
 </table>
-<pre class="r"><code>lm(rt ~ word_type * response_type, data=trials) %&gt;% summ</code></pre>
+<pre class="r"><code>lmer(rt ~ word_type * response_type + (1|wid), data=trials) %&gt;% summ</code></pre>
 <table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
 <tr>
 <th style="text-align:left;">
 </th>
@@ -602,6 +625,9 @@ S.E.
 t val.
 </th>
 <th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
 p
 </th>
 </tr>
@@ -612,13 +638,16 @@ p
 (Intercept)
 </td>
 <td style="text-align:right;">
-2215.887
+2359.423
 </td>
 <td style="text-align:right;">
-100.179
+190.474
 </td>
 <td style="text-align:right;">
-22.119
+12.387
+</td>
+<td style="text-align:right;">
+30.336
 </td>
 <td style="text-align:right;">
 0.000
@@ -629,16 +658,19 @@ p
 word_typeHigh
 </td>
 <td style="text-align:right;">
--184.021
+-223.559
 </td>
 <td style="text-align:right;">
-140.207
+115.085
 </td>
 <td style="text-align:right;">
--1.312
+-1.943
 </td>
 <td style="text-align:right;">
-0.190
+398.083
+</td>
+<td style="text-align:right;">
+0.053
 </td>
 </tr>
 <tr>
@@ -646,16 +678,19 @@ word_typeHigh
 response_typeintrusion
 </td>
 <td style="text-align:right;">
-2375.113
+2425.539
 </td>
 <td style="text-align:right;">
-690.438
+607.365
 </td>
 <td style="text-align:right;">
-3.440
+3.994
 </td>
 <td style="text-align:right;">
-0.001
+409.681
+</td>
+<td style="text-align:right;">
+0.000
 </td>
 </tr>
 <tr>
@@ -663,13 +698,16 @@ response_typeintrusion
 response_typeother
 </td>
 <td style="text-align:right;">
-1459.522
+1110.705
 </td>
 <td style="text-align:right;">
-308.034
+265.982
 </td>
 <td style="text-align:right;">
-4.738
+4.176
+</td>
+<td style="text-align:right;">
+407.382
 </td>
 <td style="text-align:right;">
 0.000
@@ -680,16 +718,19 @@ response_typeother
 response_typetimeout
 </td>
 <td style="text-align:right;">
-1970.613
+836.763
 </td>
 <td style="text-align:right;">
-971.274
+840.023
 </td>
 <td style="text-align:right;">
-2.029
+0.996
 </td>
 <td style="text-align:right;">
-0.043
+406.384
+</td>
+<td style="text-align:right;">
+0.320
 </td>
 </tr>
 <tr>
@@ -697,16 +738,19 @@ response_typetimeout
 word_typeHigh:response_typeintrusion
 </td>
 <td style="text-align:right;">
--363.979
+-522.275
 </td>
 <td style="text-align:right;">
-976.215
+797.192
 </td>
 <td style="text-align:right;">
--0.373
+-0.655
 </td>
 <td style="text-align:right;">
-0.709
+396.905
+</td>
+<td style="text-align:right;">
+0.513
 </td>
 </tr>
 <tr>
@@ -714,16 +758,19 @@ word_typeHigh:response_typeintrusion
 word_typeHigh:response_typeother
 </td>
 <td style="text-align:right;">
-149.612
+484.975
 </td>
 <td style="text-align:right;">
-478.489
+431.157
 </td>
 <td style="text-align:right;">
-0.313
+1.125
 </td>
 <td style="text-align:right;">
-0.755
+412.337
+</td>
+<td style="text-align:right;">
+0.261
 </td>
 </tr>
 <tr>
@@ -731,30 +778,40 @@ word_typeHigh:response_typeother
 word_typeHigh:response_typetimeout
 </td>
 <td style="text-align:right;">
-3637.521
+3822.789
 </td>
 <td style="text-align:right;">
-1373.439
+1168.265
 </td>
 <td style="text-align:right;">
-2.648
+3.272
 </td>
 <td style="text-align:right;">
-0.008
+403.651
+</td>
+<td style="text-align:right;">
+0.001
 </td>
 </tr>
 </tbody>
 <tfoot>
 <tr>
 <td style="padding: 0; " colspan="100%">
-<sup></sup> Standard errors: OLS
+<sup></sup> p values calculated using Satterthwaite d.f.
 </td>
 </tr>
 </tfoot>
 </table>
-<pre class="r"><code>lm(rt ~ word_type, data=subset(trials, correct)) %&gt;% summ</code></pre>
+<pre class="r"><code>lmer(rt ~ word_type + (1|wid), data=subset(trials, correct)) %&gt;% summ</code></pre>
 <table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
 <tr>
 <th style="text-align:left;">
 </th>
@@ -768,6 +825,9 @@ S.E.
 t val.
 </th>
 <th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
 p
 </th>
 </tr>
@@ -778,13 +838,16 @@ p
 (Intercept)
 </td>
 <td style="text-align:right;">
-2215.887
+2371.384
 </td>
 <td style="text-align:right;">
-93.494
+194.086
 </td>
 <td style="text-align:right;">
-23.701
+12.218
+</td>
+<td style="text-align:right;">
+28.058
 </td>
 <td style="text-align:right;">
 0.000
@@ -795,30 +858,40 @@ p
 word_typeHigh
 </td>
 <td style="text-align:right;">
--184.021
+-220.435
 </td>
 <td style="text-align:right;">
-130.851
+100.066
 </td>
 <td style="text-align:right;">
--1.406
+-2.203
 </td>
 <td style="text-align:right;">
-0.160
+354.821
+</td>
+<td style="text-align:right;">
+0.028
 </td>
 </tr>
 </tbody>
 <tfoot>
 <tr>
 <td style="padding: 0; " colspan="100%">
-<sup></sup> Standard errors: OLS
+<sup></sup> p values calculated using Satterthwaite d.f.
 </td>
 </tr>
 </tfoot>
 </table>
-<pre class="r"><code>lm(log(rt) ~ word_type, data=subset(trials, correct)) %&gt;% summ</code></pre>
+<pre class="r"><code>lmer(log(rt) ~ word_type + (1|wid), data=subset(trials, correct)) %&gt;% summ</code></pre>
 <table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
 <tr>
 <th style="text-align:left;">
 </th>
@@ -832,6 +905,9 @@ S.E.
 t val.
 </th>
 <th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
 p
 </th>
 </tr>
@@ -842,40 +918,46 @@ p
 (Intercept)
 </td>
 <td style="text-align:right;">
-7.577
-</td>
-<td style="text-align:right;">
-0.034
-</td>
-<td style="text-align:right;">
-220.425
-</td>
-<td style="text-align:right;">
-0.000
-</td>
-</tr>
-<tr>
-<td style="text-align:left;font-weight: bold;">
-word_typeHigh
-</td>
-<td style="text-align:right;">
--0.087
-</td>
-<td style="text-align:right;">
-0.048
-</td>
-<td style="text-align:right;">
--1.805
+7.638
 </td>
 <td style="text-align:right;">
 0.072
 </td>
+<td style="text-align:right;">
+106.009
+</td>
+<td style="text-align:right;">
+28.113
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh
+</td>
+<td style="text-align:right;">
+-0.098
+</td>
+<td style="text-align:right;">
+0.036
+</td>
+<td style="text-align:right;">
+-2.746
+</td>
+<td style="text-align:right;">
+354.942
+</td>
+<td style="text-align:right;">
+0.006
+</td>
 </tr>
 </tbody>
 <tfoot>
 <tr>
 <td style="padding: 0; " colspan="100%">
-<sup></sup> Standard errors: OLS
+<sup></sup> p values calculated using Satterthwaite d.f.
 </td>
 </tr>
 </tfoot>

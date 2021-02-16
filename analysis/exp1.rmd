@@ -160,19 +160,19 @@ prop = grouped %>%
 ### Stats
 
 ```{r, echo=TRUE}
-lm(rt ~ word_type, data=trials) %>% summ
+lmer(rt ~ word_type + (1|wid), data=trials) %>% summ
 ```
 
 ```{r, echo=TRUE}
-lm(rt ~ word_type * response_type, data=trials) %>% summ
+lmer(rt ~ word_type * response_type + (1|wid), data=trials) %>% summ
 ```
 
 ```{r, echo=TRUE}
-lm(rt ~ word_type, data=subset(trials, correct)) %>% summ
+lmer(rt ~ word_type + (1|wid), data=subset(trials, correct)) %>% summ
 ```
 
 ```{r, echo=TRUE}
-lm(log(rt) ~ word_type, data=subset(trials, correct)) %>% summ
+lmer(log(rt) ~ word_type + (1|wid), data=subset(trials, correct)) %>% summ
 ```
 
 # Typing time
