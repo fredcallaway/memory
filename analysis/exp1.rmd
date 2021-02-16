@@ -39,10 +39,11 @@ word_type_colors = scale_colour_manual(values=c(
 ), aesthetics=c("fill", "colour"), name="Word Memorability")
 
 
-all_trials = bind_rows(
-    read_csv("../data/v1.1/trials.csv"),
-    read_csv("../data/v1.0/trials.csv")
-)
+all_trials = read_csv('../data/v1.2/trials.csv')
+# all_trials = bind_rows(
+#     read_csv("../data/v1.1/trials.csv"),
+#     read_csv("../data/v1.0/trials.csv")
+# )
 
 all_trials = all_trials %>% mutate(
     response_type = factor(response_type, 
