@@ -86,7 +86,7 @@ n_drop_rt = nt - n_trial
 
 # Accuracy
 
-## All participants (before exclusion)
+### All participants (before exclusion)
 ```{r}
 all_trials %>% group_by(wid) %>% summarise(accuracy=mean(correct)) %>%
     ggplot(aes(accuracy)) + 
@@ -99,7 +99,7 @@ ggplot(all_trials, aes(fill=response_type, x=word_type)) +
 ```
 
 
-## Good participants (after exclusion)
+### Good participants (after exclusion)
 
 ```{r}
 ggplot(trials, aes(fill=response_type, x=word_type)) +
