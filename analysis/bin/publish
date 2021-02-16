@@ -5,11 +5,13 @@ if [ $? -ne 0 ]; then
    echo "Error compiling $filename.rmd"
    exit
 fi
-newpath=reports/$filename-`date +"%y-%m-%d"`.html
+
+newname=$filename-`date +"%y-%m-%d"`.html
+newpath=reports/$newname
 mv $filename.html $newpath
 git add .
 git commit -m "$newpath"
 
 scp $newpath fredc@simcoe:~/www.fredcallaway.com/docs/reports/memory
 
-echo www.fredcallaway.com/reports/memory/$newpath
+echo www.fredcallaway.com/reports/memory/$newname

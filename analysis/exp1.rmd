@@ -1,6 +1,6 @@
 ---
-title: Experiment 1 Results (v1.0 + v1.1)
-date: Feb 3, 2021
+title: Experiment 1 Results (v1.3)
+date: Feb 16, 2021
 ---
 
 ```{r setup, include=FALSE}
@@ -24,41 +24,45 @@ GREEN =  "#4DAF4A"
 PURPLE =  "#984EA3" 
 ORANGE =  "#FF7F00" 
 YELLOW =  "#FFDD47" 
+GRAY = "#8E8E8E"
+BLACK = "#1B1B1B"
 theme_set(theme_classic(base_size = 18))
 kable = knitr::kable
 
 response_type_colors = scale_colour_manual(values=c(
     GREEN,
     ORANGE,
-    RED
+    RED,
+    GRAY,
+    BLACK
 ), aesthetics=c("fill", "colour"), name="Response Type")
 
 word_type_colors = scale_colour_manual(values=c(
     BLUE,
     YELLOW
 ), aesthetics=c("fill", "colour"), name="Word Memorability")
+```
+
+```{r}
+
+all_trials = read_csv('../data/v1.2/trials.csv') %>% 
+    filter(!pratice) %>% 
+    mutate(
+        response_type = factor(response_type, 
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
+        word_type = factor(word_type, 
+            levels=c("low", "high"), labels=c("Low", "High")),
+        total_time = rt + type_time,
+        correct = response_type == "correct"
+    ) %>% mutate(
+        base_rt = rt,
+        rt = typing_rt
+    )
 
 
-all_trials = read_csv('../data/v1.2/trials.csv')
-# all_trials = bind_rows(
-#     read_csv("../data/v1.1/trials.csv"),
-#     read_csv("../data/v1.0/trials.csv")
-# )
-
-all_trials = all_trials %>% mutate(
-    response_type = factor(response_type, 
-        levels=c("correct", "intrusion", "other"), 
-        labels=c("Correct", "Intrusion", "Other")),
-    word_type = factor(word_type, 
-        levels=c("low", "high"), labels=c("Low", "High")),
-    total_time = rt + type_time,
-    correct = response_type == "Correct"
-) %>% mutate(
-    base_rt = rt,
-    rt = typing_rt
-)
-
-trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.5)
+trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.25)
 n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
 N = length(unique(trials$wid))
 
@@ -67,34 +71,43 @@ max_rt = with(trials, mean(rt, na.rm=TRUE) + 3 * sd(rt, na.rm=TRUE))
 trials = filter(trials, rt < max_rt)
 n_trial = nrow(trials)
 n_drop_rt = nt - n_trial
-
-grouped = trials %>% 
-    group_by(wid, word_type, response_type) %>% 
-    summarise(across(where(is.numeric), mean)) %>% 
-    ungroup()
 ```
 
-### Feb 3 Update
-- Spell checking and lemmatization when classifying response types
-- RT computed by time to first type
+### Feb 16 Update
+- Text box appears immediately, RT computed by time to begin typing
+- High/low memory words selected by concreteness in addition to recall probability
+- Exclusion threshold set to 25% accuracy
 
 ### Exclusions
-- Excluding `r n_exclude` participants who gave an incorrect resonse on more than half of trials, leaving `r N` participants in the analysis.
+- Excluding `r n_exclude` participants who gave incorrect resonses on fewer than 25% of trials, leaving `r N` participants in the analysis.
 - Dropping `r n_drop_rt` trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis.
 
 
 
 # Accuracy
 
+## All participants (before exclusion)
+```{r}
+all_trials %>% group_by(wid) %>% summarise(accuracy=mean(correct)) %>%
+    ggplot(aes(accuracy)) + 
+        geom_histogram(binwidth=.1)
+```
+
+```{r}
+ggplot(all_trials, aes(fill=response_type, x=word_type)) +
+     geom_histogram(stat="count") + response_type_colors
+```
+
+
+## Good participants (after exclusion)
+
 ```{r}
 ggplot(trials, aes(fill=response_type, x=word_type)) +
      geom_histogram(stat="count") + response_type_colors
 ```
- 
 
 ```{r, echo=TRUE}
-glmer(response_type == "Correct" ~ word_type + (1|wid), data=trials, family=binomial) %>% summ
-# glmer(response_type == "Correct" ~ word_type + (word_type|wid), data=trials, family=binomial) %>% summ
+glmer(correct ~ word_type + (1|wid), data=trials, family=binomial) %>% summ
 ```
 
 
@@ -103,7 +116,7 @@ glmer(response_type == "Correct" ~ word_type + (1|wid), data=trials, family=bino
 ### Aggregate
 
 ```{r}
-ggplot(trials, aes(x=response_type, y=typing_rt, color=word_type)) + 
+ggplot(trials, aes(x=response_type, y=rt, color=word_type)) + 
     stat_summary(fun.data=mean_se, geom="pointrange", position = position_dodge(width = 0.1)) + 
     theme(legend.position=c(0.2, 0.9)) + word_type_colors
 trials %>% group_by(response_type, word_type) %>% summarise(rt = mean(rt)) %>% kable
@@ -112,17 +125,28 @@ trials %>% group_by(response_type, word_type) %>% summarise(rt = mean(rt)) %>% k
 ### By participant
 
 ```{r}
+grouped = trials %>% 
+    group_by(wid, word_type, response_type) %>% 
+    summarise(across(where(is.numeric), mean)) %>% 
+    ungroup()
+
 ggplot(grouped, aes(x=word_type, y=rt, color=response_type, group=response_type)) + 
     geom_line(alpha=0.3, size=1, aes(group=interaction(response_type, wid))) +
     stat_summary(fun.data=mean_se, geom="pointrange") + 
     stat_summary(fun.data=mean_se, geom="line", size=1) + 
     facet_wrap(~response_type) +
-    ylim(0, 20000) +
+    response_type_colors + theme(legend.position="none")
+
+ggplot(filter(grouped, response_type == "correct"), aes(x=word_type, y=rt, color=response_type, group=response_type)) + 
+    geom_line(alpha=0.3, size=1, aes(group=interaction(response_type, wid))) +
+    stat_summary(fun.data=mean_se, geom="pointrange") + 
+    stat_summary(fun.data=mean_se, geom="line", size=1) + 
     response_type_colors + theme(legend.position="none")
 ```
+
 ```{r}
 prop = grouped %>%
-    filter(response_type=="Correct") %>%
+    filter(response_type == "correct") %>%
     group_by(wid, word_type) %>%
     summarise(rt=mean(rt)) %>% 
     pivot_wider(names_from=word_type, values_from=rt) %>% 
@@ -130,24 +154,8 @@ prop = grouped %>%
 # prop
 ```
 
-`r prop`% of grouped respond faster on high memorability trials.
+`r prop`% of participants respond faster on high memorability trials (including only correct response trials).
 
-<!-- 
-
-### By participant correct only
-
-```{r}
-ggplot(filter(grouped, response_type=="Correct"), 
-    aes(x=word_type, y=rt, color=response_type, group=response_type)) + 
-    geom_line(alpha=0.3, size=1, aes(group=interaction(response_type, wid))) +
-    stat_summary(fun.data=mean_se, geom="pointrange") + 
-    stat_summary(fun.data=mean_se, geom="line", size=2) + 
-    # ylim(0, 30000) +
-    response_type_colors + theme(legend.position="none")
-
-``` 
-
--->
 
 ### Stats
 
@@ -160,41 +168,50 @@ lm(rt ~ word_type * response_type, data=trials) %>% summ
 ```
 
 ```{r, echo=TRUE}
-lm(rt ~ word_type, data=subset(trials, response_type=="Correct")) %>% summ
+lm(rt ~ word_type, data=subset(trials, correct)) %>% summ
 ```
 
 ```{r, echo=TRUE}
-lm(log(rt) ~ word_type, data=subset(trials, response_type=="Correct")) %>% summ
+lm(log(rt) ~ word_type, data=subset(trials, correct)) %>% summ
 ```
 
 # Typing time
-We didn't enforce a time limit on word entry. It looks like most people aren't abusing it horribly.
+
+We also see the effect on typing time, but it is higher variance, so including it doesn't help with significance.
 
 ```{r}
-ggplot(trials, aes(type_time)) + geom_histogram(binwidth=500) + 
-    xlim(0, 10000)
-```
-
-But they are more likely to take a long time typing on error trials.
-
-
-```{r, echo=TRUE}
-lm(type_time ~ word_type + response_type, data=trials) %>% summ
+ggplot(trials, aes(x=response_type, y=type_time, color=word_type)) + 
+    stat_summary(fun.data=mean_se, geom="pointrange", position = position_dodge(width = 0.1)) + 
+    theme(legend.position=c(0.2, 0.9)) + word_type_colors
+trials %>% group_by(response_type, word_type) %>% summarise(type_time = mean(type_time)) %>% kable
 ```
 
 ```{r, echo=TRUE}
-lm(rt + type_time ~ word_type, data=subset(trials, response_type=="Correct")) %>% summ
+lm(type_time ~ word_type, data=subset(trials, correct)) %>% summ
+```
+
+## Total response time
+
+```{r}
+ggplot(trials, aes(x=response_type, y=rt+type_time, color=word_type)) + 
+    stat_summary(fun.data=mean_se, geom="pointrange", position = position_dodge(width = 0.1)) + 
+    theme(legend.position=c(0.2, 0.9)) + word_type_colors
+trials %>% group_by(response_type, word_type) %>% summarise(total_time = mean(rt+type_time)) %>% kable
+```
+
+```{r, echo=TRUE}
+lm(rt + type_time ~ word_type, data=subset(trials, correct)) %>% summ
 ``` 
 
-# Error classification
+# Check response coding
 
 ```{r}
-trials %>% filter(word == response)  %>% with(all(response_type == "Correct")) %>% stopifnot
+trials %>% filter(word == response)  %>% with(all(correct)) %>% stopifnot
 trials %>% filter(response_type == "Other") %>% select(word, response) %>% print(n=100)
 ```
 
-## Non-exact matches classified as correct
+# Non-exact matches classified as correct
 ```{r}
-trials %>% filter(response_type == "Correct" & word != response) %>% select(word, response) %>% print(n=100)
+trials %>% filter(correct & word != response) %>% select(word, response) %>% print(n=100)
 ```
 
