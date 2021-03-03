@@ -6,3 +6,4 @@ analysis/.Rhistory
 model/bak/
 model/fighist/
 analysis/test.rmd
+model/Makefile
