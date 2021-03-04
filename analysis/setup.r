@@ -4,6 +4,7 @@ library("tidyverse")
 library("lme4")
 library("jtools")
 library(magrittr)
+library(purrr)
 options(
     "summ-model.info"=FALSE, 
     "summ-model.fit"=FALSE, 

@@ -1,15 +1,20 @@
 ---
-title: Predicting recall RT with 2AFC RT (v2.0)
-date: Mar 3, 2021
+title: Predicting recall RT with 2AFC RT (v2.0B)
+date: March 4, 2021
 ---
 
 ```{r setup, include=FALSE}
 source("setup.r")
-```
 
-```{r}
-version = 'v2.0'
-all_trials = read_csv(glue('../data/{version}/simple-recall.csv')) %>% 
+VERSIONS = c('v2.0', 'v2.0B')
+
+load_data = function(type) {
+    VERSIONS %>% 
+    map(~ read_csv(glue('../data/{.x}/{type}.csv'))) %>% 
+    bind_rows
+}
+
+all_trials = load_data('simple-recall') %>% 
     filter(!practice) %>% 
     mutate(
         response_type = factor(response_type, 
@@ -25,8 +30,8 @@ all_trials = read_csv(glue('../data/{version}/simple-recall.csv')) %>%
         rt = typing_rt
     )
 
-afc = read_csv(glue('../data/{version}/afc.csv')) 
-afc %<>% 
+
+afc = load_data('afc') %>% 
     mutate(
         round = rep(1:3, each=20, times=length(unique(all_trials$wid))),
         log_afc_rt = log(rt)
@@ -46,7 +51,9 @@ x2 = afc %>%
 all_trials = inner_join(all_trials, inner_join(x1, x2))
 ```
 
-
+### March 4 update
+- Adding 30 more participants
+- Add simulated pairings analysis
 
 ### Exclusions
 
@@ -71,6 +78,37 @@ trials %<>% mutate(
 - Excluding `r n_exclude` participants who gave incorrect resonses on fewer than 25% of recall trials, leaving `r N` participants in the analysis.
 - Dropping `r n_drop_rt` recall trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis.
 
+
+## Simulating pairings
+For example, x axis are index for 10 pairs ordered by (easy-hard), there is a red line representing easy and blue line representing hard. each data point on red or blue is mean of 30 subjects, then add error bar - then we can see if the blue and red line get more apart as the (easy-hard) is increasing
+
+```{r}
+X = afc %>%
+    filter(round > 1) %>% 
+    mutate(score=rt) %>% 
+    group_by(wid, word) %>% 
+    summarise(score=mean(score)) %>% 
+    group_by(wid) %>% 
+    mutate(score  = score - median(score)) %>% 
+    arrange(score, .by_group=T) %>% 
+    mutate(kind=rep(c('easy', 'hard'), each=10), pair=c(10:1, 1:10)) %>% 
+    left_join(select(trials, wid, word, rt))
+
+ggplot(X, aes(pair, rt, color=kind)) +
+    stat_summary() +
+    geom_smooth(method='lm', se=F)
+
+d = X %>% 
+    pivot_wider(c(wid, pair), values_from=rt, names_from=kind) %>%
+    mutate(diff = hard - easy)
+
+ggplot(d, aes(pair, diff)) + 
+    stat_summary() + 
+    geom_smooth(method='lm', se=F) + 
+    geom_hline(yintercept=0)
+
+d %>% with(lm(diff ~ pair)) %>% summ(scale=TRUE)
+```
 
 ## AFC RT -> Recall RT
 
@@ -175,6 +213,9 @@ trials %>% with(lmer(log_recall_rt ~ afc_accuracy + log_afc_rt + (1|wid))) %>% s
 
 ```{r}
 ggplot(afc, aes(round, log_afc_rt)) + 
+    stat_summary()
+
+ggplot(afc, aes(round, as.numeric(correct))) + 
     stat_summary()
 ```
 
