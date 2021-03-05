@@ -1,7 +1,17 @@
 ---
-title: Predicting recall RT with 2AFC RT (v2.0B)
-date: March 4, 2021
+title: Predicting recall RT with 2-AFC RT (v2.0B)
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: false
+    thumbnails: false
+    lightbox: true
+pkgdown:
+  as_is: true   
 ---
+
 
 ```{r setup, include=FALSE}
 source("setup.r")
@@ -39,6 +49,10 @@ afc = load_data('afc') %>%
     filter(rt > 100) %>%   # mispresses or recording errors
     filter(!practice)
 
+max_afc_rt = with(afc, mean(rt) + 5 * sd(rt))
+afc_drop_rt = afc$rt > max_afc_rt
+# afc$rt[afc_drop_rt] = NaN
+
 x1 = afc %>% 
     group_by(wid, word) %>% 
     summarise(afc_accuracy = mean(correct))
@@ -52,7 +66,7 @@ all_trials = inner_join(all_trials, inner_join(x1, x2))
 ```
 
 ### March 4 update
-- Adding 30 more participants
+- Add 29 more participants
 - Add simulated pairings analysis
 
 ### Exclusions
@@ -64,76 +78,48 @@ n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
 N = length(unique(trials$wid))
 
 nt = nrow(trials)
-max_rt = with(trials, mean(rt, na.rm=TRUE) + 3 * sd(rt, na.rm=TRUE))
-trials = filter(trials, rt < max_rt)
+max_rt = with(trials, mean(rt, na.rm=TRUE) + 5 * sd(rt, na.rm=TRUE))
+# trials = filter(trials, rt < max_rt)
 n_trial = nrow(trials)
 n_drop_rt = nt - n_trial
 
 trials %<>% mutate(
     log_afc_rt = log(afc_rt),
+    recall_rt = rt,
     log_recall_rt = log(rt)
 )
 ```
 
 - Excluding `r n_exclude` participants who gave incorrect resonses on fewer than 25% of recall trials, leaving `r N` participants in the analysis.
-- Dropping `r n_drop_rt` recall trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis.
+<!-- - Excluding `r sum(afc_drop_rt)` AFC reaction times more than 5 sds from the mean. -->
+<!-- - Dropping `r n_drop_rt` recall trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis. -->
 
 
-## Simulating pairings
-For example, x axis are index for 10 pairs ordered by (easy-hard), there is a red line representing easy and blue line representing hard. each data point on red or blue is mean of 30 subjects, then add error bar - then we can see if the blue and red line get more apart as the (easy-hard) is increasing
+## Goal
 
-```{r}
-X = afc %>%
-    filter(round > 1) %>% 
-    mutate(score=rt) %>% 
-    group_by(wid, word) %>% 
-    summarise(score=mean(score)) %>% 
-    group_by(wid) %>% 
-    mutate(score  = score - median(score)) %>% 
-    arrange(score, .by_group=T) %>% 
-    mutate(kind=rep(c('easy', 'hard'), each=10), pair=c(10:1, 1:10)) %>% 
-    left_join(select(trials, wid, word, rt))
-
-ggplot(X, aes(pair, rt, color=kind)) +
-    stat_summary() +
-    geom_smooth(method='lm', se=F)
-
-d = X %>% 
-    pivot_wider(c(wid, pair), values_from=rt, names_from=kind) %>%
-    mutate(diff = hard - easy)
-
-ggplot(d, aes(pair, diff)) + 
-    stat_summary() + 
-    geom_smooth(method='lm', se=F) + 
-    geom_hline(yintercept=0)
-
-d %>% with(lm(diff ~ pair)) %>% summ(scale=TRUE)
-```
-
-## AFC RT -> Recall RT
-
-We want to see if the reaction time on 2AFC trials for a given word are predictive of reaction time for the same word in the recall task.
+In the critical phase of our study, we will show participants two images and ask them to enter the word associated with one of them (a "multi-cue recall" task). The primary model prediction is that people will spend more time looking at (trying to remember) the image for which partial recall progresses more quickly.
 
 ```{r}
-ggplot(trials, aes(log_afc_rt, log_recall_rt)) + 
-    geom_point() + 
-    geom_smooth(method=lm, se=F)
-
-ggplot(trials, aes(log_afc_rt, log_recall_rt)) + 
-    stat_summary_bin() + 
-    geom_smooth()
-
-trials %>% with(lm(log_recall_rt ~ log_afc_rt)) %>% summ
+knitr::include_graphics("../model/figs/fixation_by_strength.png")
 ```
-This looks promising, but it could be driven by individual differences. We need to see the effect within individuals.
+
+To see this prediction in data, we need to be able to manipulate the memorability of different pairs. Initial attempts to do this using pre-existing word memorability scores were not very successful (see [Word type effects]). Instead, we can _measure_ how well a participant has learned each pair in a preliminary 2-AFC task and use this measure to predict fixations in the multi-cue recall task.
+
+In this experiment, we wanted to verify that this approach might work by asking whether reaction time in the 2-AFC task reliably predicts reaction time in a single cue recall task.
+
+## Does 2-AFC RT predict cue-recall RT?
+
+Is the reaction time on 2AFC trials for a given word predictive of reaction time for the same word in the recall task? Critically, we need to see the effect within individuals, so we plot linear fits for each participant and run a mixed effects model with random intercepts.
 
 ```{r}
 ggplot(trials, aes(log_afc_rt, log_recall_rt, group=wid)) + 
+    geom_point(alpha=0.2) +
     geom_smooth(method=lm, se=F)
 trials %>% with(lmer(log_recall_rt ~ log_afc_rt + (1|wid))) %>% summ
 ```
 
-Looks like we still see a positive relationship. We can visualize it more
+Looks like we have a consistent effect and reasonably sized effect!
+We can visualize the individual effects more clearly by 
 clearly by applying participant-wise mean centering:
 
 ```{r}
@@ -146,8 +132,10 @@ ggplot(trials, aes(centered_log_afc_rt, centered_log_recall_rt, group=wid)) +
     geom_smooth(method=lm, se=F)
 ```
 
-And here is the distribution of slopes (with 95% confidence intervals).
-```{r}
+And here is the distribution of slopes (with 95% confidence intervals) and correlations
+for each participant.
+
+```{r out.width="100%"}
 effects = trials %>% 
     nest(-wid) %>% 
     mutate(
@@ -160,30 +148,103 @@ effects = trials %>%
     filter(term == 'log_afc_rt') %>% 
     arrange(estimate)
 
-ggplot(effects, aes(reorder(wid, estimate), estimate)) + 
+notick = theme(
+  axis.text.x = element_blank(),
+  axis.text.y = element_blank(),
+  axis.ticks = element_blank())
+
+slopes = ggplot(effects, aes(reorder(wid, estimate), estimate)) + 
     geom_point() +
     geom_errorbar(aes(ymin=conf.low , ymax=conf.high)) +
     geom_hline(yintercept=0, color="red") +
-    labs(x="slope(log_recall_rt ~ log_afc_rt)", y="participant") +
-    coord_flip()
+    labs(y="slope", x="participant") +
+    coord_flip() + notick
 
 prop_slope_positive = with(effects, mean(estimate > 0))
-```
 
-`r round(100 * prop_slope_positive)`% of participants have a positive slope. This is a good sign, but it's still
-not great. The estimates are super noisy so it's hard to know how much of this is real. Here's a similar plot with the correlation.
-
-```{r}
-trials %>%
+corrs = trials %>%
     group_by(wid) %>% 
     summarise(estimate=cor(log_recall_rt, log_afc_rt)) %>% 
     ggplot(aes(reorder(wid, estimate), estimate)) + 
         geom_point() +
         geom_hline(yintercept=0, color="red") + 
-        labs(y="correlation(log_recall_rt, log_afc_rt)", x="participant") +
-        coord_flip()
+        labs(y="correlation", x="participant") +
+        coord_flip() + notick
+
+slopes | corrs
 ```
 
+`r round(100 * prop_slope_positive)`% of participants have a positive slope.
+
+
+## Simulated pairings
+
+Another way to analyze this data is to look at what the RT differences would have been if we had paired the items as we plan to do in the critical experiment: slowest with fastest, second slowest with second fastest, and so on. After much exploration, we found that we get the best results when we ignore the AFC accuracy and throw out the first round (leaving just two RT measurements per word).
+
+```{r, out.width="100%"}
+make_pairs = function(filt, score) {
+    afc %>%
+        filter({{ filt }}) %>% 
+        mutate(score={{ score }}) %>% 
+        group_by(wid, word) %>% 
+        summarise(score=mean(score)) %>% 
+        group_by(wid) %>% 
+        mutate(score  = score - median(score)) %>% 
+        arrange(score, .by_group=T) %>% 
+        mutate(kind=rep(c('easy', 'hard'), each=10), pair=c(10:1, 1:10)) %>% 
+        left_join(select(trials, wid, word, recall_rt=rt))
+}
+
+make_diff = function(pairs) {
+    pairs %>% 
+        pivot_wider(c(wid, pair), values_from=recall_rt, names_from=kind) %>%
+        mutate(diff = log(hard) - log(easy))
+}
+
+pairs = make_pairs(round > 1, log(rt))
+p1 = ggplot(pairs, aes(pair, log(recall_rt), color=kind)) +
+    stat_summary(position=position_dodge2(.2)) +
+    geom_smooth(method='lm', se=F)
+
+dif = make_diff(pairs)
+p2 = ggplot(dif, aes(pair, diff)) + 
+    stat_summary() + 
+    labs(y="log(hard RT) - log(easy RT)") +
+    geom_smooth(method='lm') + 
+    geom_hline(yintercept=0)
+
+p1 | p2
+dif %>% with(lm(diff ~ pair)) %>% summ(scale=TRUE)
+```
+
+There's a clear difference between the easy (fast 2AFC RT) and hard (slow 2AFC RT) trials. And the
+effect grows with the extremity of the difference (pair 10 has the slowest and fastest words).
+
+### Other scoring approaches
+
+```{r}
+try_strategy = function(filt, score) {
+    make_pairs({{filt}}, {{score}}) %>% make_diff %>% lm(diff ~ pair, data=.) %>% summ(scale=TRUE)
+}
+```
+
+```{r class.source = "fold-show"}
+# Exclude first round, sort by log(rt) only
+try_strategy(round > 1, log(rt))
+```
+```{r class.source = "fold-show"}
+# No exclusion
+try_strategy(TRUE, log(rt))
+```
+```{r class.source = "fold-show"}
+# Sort by accuracy, then log(rt)
+try_strategy(round > 1, 1000*(1-correct) + log(rt))
+```
+
+
+# Other junk
+
+Below is a bunch of other stuff we tried that isn't really worth looking at.
 
 ## AFC accuracy
 
@@ -361,14 +422,13 @@ lm(rt + type_time ~ word_type, data=subset(trials, correct)) %>% summ
 
 ## Check response coding
 
-#### Responses classified as "other" (incorrect but not intrusion)
+### Responses classified as "other" (incorrect but not intrusion)
 ```{r}
 trials %>% filter(word == response)  %>% with(all(correct)) %>% stopifnot
 trials %>% filter(response_type == "other") %>% select(word, response) %>% kable
 ```
 
-#### Non-exact matches classified as correct
+### Non-exact matches classified as correct
 ```{r}
 trials %>% filter(correct & word != response) %>% select(word, response) %>% kable
 ```
-

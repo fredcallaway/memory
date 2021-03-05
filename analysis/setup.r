@@ -1,10 +1,12 @@
 knitr::opts_chunk$set(fig.path='figs/', # fig.width=12, fig.height=8, f
-                      echo=FALSE, warning=FALSE, message=FALSE)
+                      warning=FALSE, message=FALSE)
 library("tidyverse")
 library("lme4")
 library("jtools")
 library(magrittr)
 library(purrr)
+library(rmdformats) 
+library(patchwork)
 options(
     "summ-model.info"=FALSE, 
     "summ-model.fit"=FALSE, 
@@ -38,5 +40,5 @@ word_type_colors = scale_colour_manual(values=c(
     YELLOW
 ), aesthetics=c("fill", "colour"), name="Word Memorability")
 
-knitr::opts_chunk$set(out.width="50%", fig.align="center")
+knitr::opts_chunk$set(out.width="60%", fig.align="center")
 

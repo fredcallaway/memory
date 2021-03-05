@@ -1,0 +1,2459 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="generator" content="pandoc" />
+
+        <meta name="author" content="fredcallaway" />
+    
+        <meta name="date" content="2021-03-05" />
+    
+    <title>Predicting recall RT with 2-AFC RT (v2.0B)</title>
+
+        <script src="simple_recall_files/jquery-1.11.3/jquery.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="simple_recall_files/bootstrap-3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="simple_recall_files/bootstrap-3.3.7/js/bootstrap.min.js"></script>
+    <script src="simple_recall_files/jqueryui-1.11.4/jquery-ui.min.js"></script>
+    <script src="simple_recall_files/navigation-1.1/tabsets.js"></script>
+    <script src="simple_recall_files/navigation-1.1/codefolding.js"></script>
+    <link href="simple_recall_files/magnific-popup-1.1.0/magnific-popup.css" rel="stylesheet" />
+    <script src="simple_recall_files/magnific-popup-1.1.0/jquery.magnific-popup.min.js"></script>
+    <link href="simple_recall_files/robobook-0.1/robobook.css" rel="stylesheet" />
+    <link href="simple_recall_files/robobook-0.1/robobook_fonts_embed.css" rel="stylesheet" />
+    <script src="simple_recall_files/robobook-0.1/robobook.js"></script>
+    <script src="simple_recall_files/accessible-code-block-0.0.1/empty-anchor.js"></script>
+    
+    
+        <style type="text/css">code{white-space: pre;}</style>
+    <style type="text/css">
+      code.sourceCode > span { display: inline-block; line-height: 1.25; }
+      code.sourceCode > span { color: inherit; text-decoration: inherit; }
+      code.sourceCode > span:empty { height: 1.2em; }
+      .sourceCode { overflow: visible; }
+      code.sourceCode { white-space: pre; position: relative; }
+      div.sourceCode { margin: 1em 0; }
+      pre.sourceCode { margin: 0; }
+      @media screen {
+      div.sourceCode { overflow: auto; }
+      }
+      @media print {
+      code.sourceCode { white-space: pre-wrap; }
+      code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+      }
+      pre.numberSource code
+        { counter-reset: source-line 0; }
+      pre.numberSource code > span
+        { position: relative; left: -4em; counter-increment: source-line; }
+      pre.numberSource code > span > a:first-child::before
+        { content: counter(source-line);
+          position: relative; left: -1em; text-align: right; vertical-align: baseline;
+          border: none; display: inline-block;
+          -webkit-touch-callout: none; -webkit-user-select: none;
+          -khtml-user-select: none; -moz-user-select: none;
+          -ms-user-select: none; user-select: none;
+          padding: 0 4px; width: 4em;
+          background-color: #ffffff;
+          color: #a0a0a0;
+        }
+      pre.numberSource { margin-left: 3em; border-left: 1px solid #a0a0a0;  padding-left: 4px; }
+      div.sourceCode
+        { color: #1f1c1b; background-color: #ffffff; }
+      @media screen {
+      code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+      }
+      code span. { color: #1f1c1b; } /* Normal */
+      code span.al { color: #bf0303; background-color: #f7e6e6; font-weight: bold; } /* Alert */
+      code span.an { color: #ca60ca; } /* Annotation */
+      code span.at { color: #0057ae; } /* Attribute */
+      code span.bn { color: #b08000; } /* BaseN */
+      code span.bu { color: #644a9b; font-weight: bold; } /* BuiltIn */
+      code span.cf { color: #1f1c1b; font-weight: bold; } /* ControlFlow */
+      code span.ch { color: #924c9d; } /* Char */
+      code span.cn { color: #aa5500; } /* Constant */
+      code span.co { color: #898887; } /* Comment */
+      code span.cv { color: #0095ff; } /* CommentVar */
+      code span.do { color: #607880; } /* Documentation */
+      code span.dt { color: #0057ae; } /* DataType */
+      code span.dv { color: #b08000; } /* DecVal */
+      code span.er { color: #bf0303; text-decoration: underline; } /* Error */
+      code span.ex { color: #0095ff; font-weight: bold; } /* Extension */
+      code span.fl { color: #b08000; } /* Float */
+      code span.fu { color: #644a9b; } /* Function */
+      code span.im { color: #ff5500; } /* Import */
+      code span.in { color: #b08000; } /* Information */
+      code span.kw { color: #1f1c1b; font-weight: bold; } /* Keyword */
+      code span.op { color: #1f1c1b; } /* Operator */
+      code span.ot { color: #006e28; } /* Other */
+      code span.pp { color: #006e28; } /* Preprocessor */
+      code span.re { color: #0057ae; background-color: #e0e9f8; } /* RegionMarker */
+      code span.sc { color: #3daee9; } /* SpecialChar */
+      code span.ss { color: #ff5500; } /* SpecialString */
+      code span.st { color: #bf0303; } /* String */
+      code span.va { color: #0057ae; } /* Variable */
+      code span.vs { color: #bf0303; } /* VerbatimString */
+      code span.wa { color: #bf0303; } /* Warning */
+    </style>
+    
+    
+    <!-- tabsets -->
+    <script>
+      $(document).ready(function () {
+	  window.buildTabsets("toc");
+      });
+      $(document).ready(function () {
+	  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+	      $(this).parent().toggleClass('nav-tabs-open')
+	  });
+      });
+    </script>
+
+    <!-- code folding -->
+        <script>
+      $(document).ready(function () {
+	  	  	  window.initializeCodeFolding("hide" === "show");
+	        });
+    </script>
+    
+    <!-- code download -->
+    
+    <!-- tabsets dropdown -->
+
+    <style type="text/css">
+      .tabset-dropdown > .nav-tabs {
+	  display: inline-table;
+	  max-height: 500px;
+	  min-height: 44px;
+	  overflow-y: auto;
+	  background: white;
+	  border: 1px solid #ddd;
+	  border-radius: 4px;
+      }
+      
+      .tabset-dropdown > .nav-tabs > li.active:before {
+	  content: "";
+	  font-family: 'Glyphicons Halflings';
+	  display: inline-block;
+	  padding: 10px;
+	  border-right: 1px solid #ddd;
+      }
+      
+      .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+	  content: "&#xe258;";
+	  border: none;
+      }
+      
+      .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+	  content: "";
+	  font-family: 'Glyphicons Halflings';
+	  display: inline-block;
+	  padding: 10px;
+	  border-right: 1px solid #ddd;
+      }
+      
+      .tabset-dropdown > .nav-tabs > li.active {
+	  display: block;
+      }
+
+      .tabset-dropdown > .nav-tabs > li.active a {
+  	  padding: 0 15px !important;
+      }
+
+      .tabset-dropdown > .nav-tabs > li > a,
+      .tabset-dropdown > .nav-tabs > li > a:focus,
+      .tabset-dropdown > .nav-tabs > li > a:hover {
+	  border: none;
+	  display: inline-block;
+	  border-radius: 4px;
+	  background-color: transparent;
+      }
+      
+      .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+	  display: block;
+	  float: none;
+      }
+      
+      .tabset-dropdown > .nav-tabs > li {
+	  display: none;
+	  margin-left: 0 !important;
+      }
+    </style>
+    
+</head>
+
+<body class="preload">
+
+               <!-- robobook start -->   
+   <div class="book with-summary">
+      <div class="book-summary">
+        <ul>
+          <li class="title">Predicting recall RT with 2-AFC RT (v2.0B)</li>
+          <li class="divider"></li>
+        </ul>
+        <nav role="navigation" id="toc">
+          <ul>
+          <li><a href="#goal">Goal</a></li>
+          <li><a href="#does-2-afc-rt-predict-cue-recall-rt">Does 2-AFC RT predict cue-recall RT?</a></li>
+          <li><a href="#simulated-pairings">Simulated pairings</a></li>
+          <li><a href="#other-junk">Other junk</a><ul>
+          <li><a href="#afc-accuracy">AFC accuracy</a></li>
+          <li><a href="#time-course">Time course</a></li>
+          </ul></li>
+          <li><a href="#word-type-effects">Word type effects</a><ul>
+          <li><a href="#accuracy">Accuracy</a></li>
+          <li><a href="#reaction-time">Reaction time</a></li>
+          <li><a href="#typing-time">Typing time</a></li>
+          <li><a href="#total-response-time">Total response time</a></li>
+          <li><a href="#check-response-coding">Check response coding</a></li>
+          </ul></li>
+          </ul>
+        </nav>
+        <ul class="authors">
+          <li class="divider"></li>
+                                <li><span><i class="glyphicon glyphicon-user"></i> fredcallaway</span></li>
+                                         <li><span><i class="glyphicon glyphicon-calendar"></i> 2021-03-05</span></li>
+                  </ul>     
+      </div>
+      <div class="book-body fixed">
+        <div class="body-inner">
+            <a class="btn pull-left js-toolbar-action toggle-sidebar" aria-label="Toggle Sidebar" title="Toggle Sidebar" href="#">
+              <span class="glyphicon glyphicon-menu-hamburger"></span>
+            </a>
+            <div class="page-inner">
+              <section id="content" class="normal">
+      
+      <div class="btn-group pull-right">
+     <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+     <ul class="dropdown-menu" style="min-width: 50px;">
+	    	    <li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+	    <li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+	    	    	         </ul>
+   </div>
+   
+        
+      <h1 class="title">Predicting recall RT with 2-AFC RT (v2.0B)</h1>
+      
+      
+   
+      
+   
+<!-- Don't indent these lines or it will mess pre blocks indentation --> 
+<div id="march-4-update" class="section level3">
+<h3>March 4 update</h3>
+<ul>
+<li>Add 29 more participants</li>
+<li>Add simulated pairings analysis</li>
+</ul>
+</div>
+<div id="exclusions" class="section level3">
+<h3>Exclusions</h3>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>trials =<span class="st"> </span>all_trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(wid) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(<span class="kw">mean</span>(correct) <span class="op">&gt;</span><span class="st"> </span><span class="fl">0.25</span>)</span>
+<span id="cb1-2"><a href="#cb1-2"></a>n_exclude =<span class="st"> </span><span class="kw">length</span>(<span class="kw">unique</span>(all_trials<span class="op">$</span>wid)) <span class="op">-</span><span class="st"> </span><span class="kw">length</span>(<span class="kw">unique</span>(trials<span class="op">$</span>wid))</span>
+<span id="cb1-3"><a href="#cb1-3"></a>N =<span class="st"> </span><span class="kw">length</span>(<span class="kw">unique</span>(trials<span class="op">$</span>wid))</span>
+<span id="cb1-4"><a href="#cb1-4"></a></span>
+<span id="cb1-5"><a href="#cb1-5"></a>nt =<span class="st"> </span><span class="kw">nrow</span>(trials)</span>
+<span id="cb1-6"><a href="#cb1-6"></a>max_rt =<span class="st"> </span><span class="kw">with</span>(trials, <span class="kw">mean</span>(rt, <span class="dt">na.rm=</span><span class="ot">TRUE</span>) <span class="op">+</span><span class="st"> </span><span class="dv">5</span> <span class="op">*</span><span class="st"> </span><span class="kw">sd</span>(rt, <span class="dt">na.rm=</span><span class="ot">TRUE</span>))</span>
+<span id="cb1-7"><a href="#cb1-7"></a><span class="co"># trials = filter(trials, rt &lt; max_rt)</span></span>
+<span id="cb1-8"><a href="#cb1-8"></a>n_trial =<span class="st"> </span><span class="kw">nrow</span>(trials)</span>
+<span id="cb1-9"><a href="#cb1-9"></a>n_drop_rt =<span class="st"> </span>nt <span class="op">-</span><span class="st"> </span>n_trial</span>
+<span id="cb1-10"><a href="#cb1-10"></a></span>
+<span id="cb1-11"><a href="#cb1-11"></a>trials <span class="op">%&lt;&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(</span>
+<span id="cb1-12"><a href="#cb1-12"></a>    <span class="dt">log_afc_rt =</span> <span class="kw">log</span>(afc_rt),</span>
+<span id="cb1-13"><a href="#cb1-13"></a>    <span class="dt">recall_rt =</span> rt,</span>
+<span id="cb1-14"><a href="#cb1-14"></a>    <span class="dt">log_recall_rt =</span> <span class="kw">log</span>(rt)</span>
+<span id="cb1-15"><a href="#cb1-15"></a>)</span></code></pre></div>
+<ul>
+<li>Excluding 0 participants who gave incorrect resonses on fewer than 25% of recall trials, leaving 56 participants in the analysis. <!-- - Excluding 24 AFC reaction times more than 5 sds from the mean. --> <!-- - Dropping 0 recall trials with reaction times over more than 3 sds above the mean (more than 8.1 seconds), leaving 1064 trials in the analysis. --></li>
+</ul>
+</div>
+<div id="goal" class="section level2">
+<h2>Goal</h2>
+<p>In the critical phase of our study, we will show participants two images and ask them to enter the word associated with one of them (a “multi-cue recall” task). The primary model prediction is that people will spend more time looking at (trying to remember) the image for which partial recall progresses more quickly.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>knitr<span class="op">::</span><span class="kw">include_graphics</span>(<span class="st">&quot;../model/figs/fixation_by_strength.png&quot;</span>)</span></code></pre></div>
+<p><img src="../model/figs/fixation_by_strength.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>To see this prediction in data, we need to be able to manipulate the memorability of different pairs. Initial attempts to do this using pre-existing word memorability scores were not very successful (see <a href="#word-type-effects">Word type effects</a>). Instead, we can <em>measure</em> how well a participant has learned each pair in a preliminary 2-AFC task and use this measure to predict fixations in the multi-cue recall task.</p>
+<p>In this experiment, we wanted to verify that this approach might work by asking whether reaction time in the 2-AFC task reliably predicts reaction time in a single cue recall task.</p>
+</div>
+<div id="does-2-afc-rt-predict-cue-recall-rt" class="section level2">
+<h2>Does 2-AFC RT predict cue-recall RT?</h2>
+<p>Is the reaction time on 2AFC trials for a given word predictive of reaction time for the same word in the recall task? Critically, we need to see the effect within individuals, so we plot linear fits for each participant and run a mixed effects model with random intercepts.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a><span class="kw">ggplot</span>(trials, <span class="kw">aes</span>(log_afc_rt, log_recall_rt, <span class="dt">group=</span>wid)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb3-2"><a href="#cb3-2"></a><span class="st">    </span><span class="kw">geom_point</span>(<span class="dt">alpha=</span><span class="fl">0.2</span>) <span class="op">+</span></span>
+<span id="cb3-3"><a href="#cb3-3"></a><span class="st">    </span><span class="kw">geom_smooth</span>(<span class="dt">method=</span>lm, <span class="dt">se=</span>F)</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-3-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">with</span>(<span class="kw">lmer</span>(log_recall_rt <span class="op">~</span><span class="st"> </span>log_afc_rt <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>wid))) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+5.491
+</td>
+<td style="text-align:right;">
+0.282
+</td>
+<td style="text-align:right;">
+19.471
+</td>
+<td style="text-align:right;">
+664.419
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+log_afc_rt
+</td>
+<td style="text-align:right;">
+0.272
+</td>
+<td style="text-align:right;">
+0.039
+</td>
+<td style="text-align:right;">
+6.921
+</td>
+<td style="text-align:right;">
+697.947
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> p values calculated using Satterthwaite d.f.
+</td>
+</tr>
+</tfoot>
+</table>
+<p>Looks like we have a consistent effect and reasonably sized effect! We can visualize the individual effects more clearly by clearly by applying participant-wise mean centering:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>trials <span class="op">%&lt;&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(wid) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(</span>
+<span id="cb5-2"><a href="#cb5-2"></a>    <span class="dt">centered_log_recall_rt =</span> log_recall_rt <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(log_recall_rt),</span>
+<span id="cb5-3"><a href="#cb5-3"></a>    <span class="dt">centered_log_afc_rt =</span> log_afc_rt <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(log_afc_rt),</span>
+<span id="cb5-4"><a href="#cb5-4"></a>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>()</span>
+<span id="cb5-5"><a href="#cb5-5"></a></span>
+<span id="cb5-6"><a href="#cb5-6"></a><span class="kw">ggplot</span>(trials, <span class="kw">aes</span>(centered_log_afc_rt, centered_log_recall_rt, <span class="dt">group=</span>wid)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb5-7"><a href="#cb5-7"></a><span class="st">    </span><span class="kw">geom_smooth</span>(<span class="dt">method=</span>lm, <span class="dt">se=</span>F)</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-4-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>And here is the distribution of slopes (with 95% confidence intervals) and correlations for each participant.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>effects =<span class="st"> </span>trials <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="st">    </span><span class="kw">nest</span>(<span class="op">-</span>wid) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="st">    </span><span class="kw">mutate</span>(</span>
+<span id="cb6-4"><a href="#cb6-4"></a>        <span class="dt">fit =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span></span>
+<span id="cb6-5"><a href="#cb6-5"></a><span class="st">            </span><span class="kw">lm</span>(log_recall_rt <span class="op">~</span><span class="st"> </span>log_afc_rt, <span class="dt">data=</span>.) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb6-6"><a href="#cb6-6"></a><span class="st">            </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> T)</span>
+<span id="cb6-7"><a href="#cb6-7"></a>        )</span>
+<span id="cb6-8"><a href="#cb6-8"></a>    ) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb6-9"><a href="#cb6-9"></a><span class="st">    </span><span class="kw">unnest</span>(fit) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb6-10"><a href="#cb6-10"></a><span class="st">    </span><span class="kw">filter</span>(term <span class="op">==</span><span class="st"> &#39;log_afc_rt&#39;</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb6-11"><a href="#cb6-11"></a><span class="st">    </span><span class="kw">arrange</span>(estimate)</span>
+<span id="cb6-12"><a href="#cb6-12"></a></span>
+<span id="cb6-13"><a href="#cb6-13"></a>notick =<span class="st"> </span><span class="kw">theme</span>(</span>
+<span id="cb6-14"><a href="#cb6-14"></a>  <span class="dt">axis.text.x =</span> <span class="kw">element_blank</span>(),</span>
+<span id="cb6-15"><a href="#cb6-15"></a>  <span class="dt">axis.text.y =</span> <span class="kw">element_blank</span>(),</span>
+<span id="cb6-16"><a href="#cb6-16"></a>  <span class="dt">axis.ticks =</span> <span class="kw">element_blank</span>())</span>
+<span id="cb6-17"><a href="#cb6-17"></a></span>
+<span id="cb6-18"><a href="#cb6-18"></a>slopes =<span class="st"> </span><span class="kw">ggplot</span>(effects, <span class="kw">aes</span>(<span class="kw">reorder</span>(wid, estimate), estimate)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb6-19"><a href="#cb6-19"></a><span class="st">    </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb6-20"><a href="#cb6-20"></a><span class="st">    </span><span class="kw">geom_errorbar</span>(<span class="kw">aes</span>(<span class="dt">ymin=</span>conf.low , <span class="dt">ymax=</span>conf.high)) <span class="op">+</span></span>
+<span id="cb6-21"><a href="#cb6-21"></a><span class="st">    </span><span class="kw">geom_hline</span>(<span class="dt">yintercept=</span><span class="dv">0</span>, <span class="dt">color=</span><span class="st">&quot;red&quot;</span>) <span class="op">+</span></span>
+<span id="cb6-22"><a href="#cb6-22"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">y=</span><span class="st">&quot;slope&quot;</span>, <span class="dt">x=</span><span class="st">&quot;participant&quot;</span>) <span class="op">+</span></span>
+<span id="cb6-23"><a href="#cb6-23"></a><span class="st">    </span><span class="kw">coord_flip</span>() <span class="op">+</span><span class="st"> </span>notick</span>
+<span id="cb6-24"><a href="#cb6-24"></a></span>
+<span id="cb6-25"><a href="#cb6-25"></a>prop_slope_positive =<span class="st"> </span><span class="kw">with</span>(effects, <span class="kw">mean</span>(estimate <span class="op">&gt;</span><span class="st"> </span><span class="dv">0</span>))</span>
+<span id="cb6-26"><a href="#cb6-26"></a></span>
+<span id="cb6-27"><a href="#cb6-27"></a>corrs =<span class="st"> </span>trials <span class="op">%&gt;%</span></span>
+<span id="cb6-28"><a href="#cb6-28"></a><span class="st">    </span><span class="kw">group_by</span>(wid) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb6-29"><a href="#cb6-29"></a><span class="st">    </span><span class="kw">summarise</span>(<span class="dt">estimate=</span><span class="kw">cor</span>(log_recall_rt, log_afc_rt)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb6-30"><a href="#cb6-30"></a><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="kw">reorder</span>(wid, estimate), estimate)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb6-31"><a href="#cb6-31"></a><span class="st">        </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb6-32"><a href="#cb6-32"></a><span class="st">        </span><span class="kw">geom_hline</span>(<span class="dt">yintercept=</span><span class="dv">0</span>, <span class="dt">color=</span><span class="st">&quot;red&quot;</span>) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb6-33"><a href="#cb6-33"></a><span class="st">        </span><span class="kw">labs</span>(<span class="dt">y=</span><span class="st">&quot;correlation&quot;</span>, <span class="dt">x=</span><span class="st">&quot;participant&quot;</span>) <span class="op">+</span></span>
+<span id="cb6-34"><a href="#cb6-34"></a><span class="st">        </span><span class="kw">coord_flip</span>() <span class="op">+</span><span class="st"> </span>notick</span>
+<span id="cb6-35"><a href="#cb6-35"></a></span>
+<span id="cb6-36"><a href="#cb6-36"></a>slopes <span class="op">|</span><span class="st"> </span>corrs</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p>73% of participants have a positive slope.</p>
+</div>
+<div id="simulated-pairings" class="section level2">
+<h2>Simulated pairings</h2>
+<p>Another way to analyze this data is to look at what the RT differences would have been if we had paired the items as we plan to do in the critical experiment: slowest with fastest, second slowest with second fastest, and so on. After much exploration, we found that we get the best results when we ignore the AFC accuracy and throw out the first round (leaving just two RT measurements per word).</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>make_pairs =<span class="st"> </span><span class="cf">function</span>(filt, score) {</span>
+<span id="cb7-2"><a href="#cb7-2"></a>    afc <span class="op">%&gt;%</span></span>
+<span id="cb7-3"><a href="#cb7-3"></a><span class="st">        </span><span class="kw">filter</span>({{ filt }}) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-4"><a href="#cb7-4"></a><span class="st">        </span><span class="kw">mutate</span>(<span class="dt">score=</span>{{ score }}) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-5"><a href="#cb7-5"></a><span class="st">        </span><span class="kw">group_by</span>(wid, word) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-6"><a href="#cb7-6"></a><span class="st">        </span><span class="kw">summarise</span>(<span class="dt">score=</span><span class="kw">mean</span>(score)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-7"><a href="#cb7-7"></a><span class="st">        </span><span class="kw">group_by</span>(wid) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-8"><a href="#cb7-8"></a><span class="st">        </span><span class="kw">mutate</span>(<span class="dt">score  =</span> score <span class="op">-</span><span class="st"> </span><span class="kw">median</span>(score)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-9"><a href="#cb7-9"></a><span class="st">        </span><span class="kw">arrange</span>(score, <span class="dt">.by_group=</span>T) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-10"><a href="#cb7-10"></a><span class="st">        </span><span class="kw">mutate</span>(<span class="dt">kind=</span><span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&#39;easy&#39;</span>, <span class="st">&#39;hard&#39;</span>), <span class="dt">each=</span><span class="dv">10</span>), <span class="dt">pair=</span><span class="kw">c</span>(<span class="dv">10</span><span class="op">:</span><span class="dv">1</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">10</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-11"><a href="#cb7-11"></a><span class="st">        </span><span class="kw">left_join</span>(<span class="kw">select</span>(trials, wid, word, <span class="dt">recall_rt=</span>rt))</span>
+<span id="cb7-12"><a href="#cb7-12"></a>}</span>
+<span id="cb7-13"><a href="#cb7-13"></a></span>
+<span id="cb7-14"><a href="#cb7-14"></a>make_diff =<span class="st"> </span><span class="cf">function</span>(pairs) {</span>
+<span id="cb7-15"><a href="#cb7-15"></a>    pairs <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-16"><a href="#cb7-16"></a><span class="st">        </span><span class="kw">pivot_wider</span>(<span class="kw">c</span>(wid, pair), <span class="dt">values_from=</span>recall_rt, <span class="dt">names_from=</span>kind) <span class="op">%&gt;%</span></span>
+<span id="cb7-17"><a href="#cb7-17"></a><span class="st">        </span><span class="kw">mutate</span>(<span class="dt">diff =</span> <span class="kw">log</span>(hard) <span class="op">-</span><span class="st"> </span><span class="kw">log</span>(easy))</span>
+<span id="cb7-18"><a href="#cb7-18"></a>}</span>
+<span id="cb7-19"><a href="#cb7-19"></a></span>
+<span id="cb7-20"><a href="#cb7-20"></a>pairs =<span class="st"> </span><span class="kw">make_pairs</span>(round <span class="op">&gt;</span><span class="st"> </span><span class="dv">1</span>, <span class="kw">log</span>(rt))</span>
+<span id="cb7-21"><a href="#cb7-21"></a>p1 =<span class="st"> </span><span class="kw">ggplot</span>(pairs, <span class="kw">aes</span>(pair, <span class="kw">log</span>(recall_rt), <span class="dt">color=</span>kind)) <span class="op">+</span></span>
+<span id="cb7-22"><a href="#cb7-22"></a><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">position=</span><span class="kw">position_dodge2</span>(.<span class="dv">2</span>)) <span class="op">+</span></span>
+<span id="cb7-23"><a href="#cb7-23"></a><span class="st">    </span><span class="kw">geom_smooth</span>(<span class="dt">method=</span><span class="st">&#39;lm&#39;</span>, <span class="dt">se=</span>F)</span>
+<span id="cb7-24"><a href="#cb7-24"></a></span>
+<span id="cb7-25"><a href="#cb7-25"></a>dif =<span class="st"> </span><span class="kw">make_diff</span>(pairs)</span>
+<span id="cb7-26"><a href="#cb7-26"></a>p2 =<span class="st"> </span><span class="kw">ggplot</span>(dif, <span class="kw">aes</span>(pair, diff)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb7-27"><a href="#cb7-27"></a><span class="st">    </span><span class="kw">stat_summary</span>() <span class="op">+</span><span class="st"> </span></span>
+<span id="cb7-28"><a href="#cb7-28"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">y=</span><span class="st">&quot;log(hard RT) - log(easy RT)&quot;</span>) <span class="op">+</span></span>
+<span id="cb7-29"><a href="#cb7-29"></a><span class="st">    </span><span class="kw">geom_smooth</span>(<span class="dt">method=</span><span class="st">&#39;lm&#39;</span>) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb7-30"><a href="#cb7-30"></a><span class="st">    </span><span class="kw">geom_hline</span>(<span class="dt">yintercept=</span><span class="dv">0</span>)</span>
+<span id="cb7-31"><a href="#cb7-31"></a></span>
+<span id="cb7-32"><a href="#cb7-32"></a>p1 <span class="op">|</span><span class="st"> </span>p2</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-6-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>dif <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">with</span>(<span class="kw">lm</span>(diff <span class="op">~</span><span class="st"> </span>pair)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summ</span>(<span class="dt">scale=</span><span class="ot">TRUE</span>)</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.093
+</td>
+<td style="text-align:right;">
+0.023
+</td>
+<td style="text-align:right;">
+4.041
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+pair
+</td>
+<td style="text-align:right;">
+0.055
+</td>
+<td style="text-align:right;">
+0.023
+</td>
+<td style="text-align:right;">
+2.405
+</td>
+<td style="text-align:right;">
+0.017
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> Standard errors: OLS; Continuous predictors are mean-centered and scaled by 1 s.d.
+</td>
+</tr>
+</tfoot>
+</table>
+<p>There’s a clear difference between the easy (fast 2AFC RT) and hard (slow 2AFC RT) trials. And the effect grows with the extremity of the difference (pair 10 has the slowest and fastest words).</p>
+<div id="other-scoring-approaches" class="section level3">
+<h3>Other scoring approaches</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>try_strategy =<span class="st"> </span><span class="cf">function</span>(filt, score) {</span>
+<span id="cb9-2"><a href="#cb9-2"></a>    <span class="kw">make_pairs</span>({{filt}}, {{score}}) <span class="op">%&gt;%</span><span class="st"> </span>make_diff <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">lm</span>(diff <span class="op">~</span><span class="st"> </span>pair, <span class="dt">data=</span>.) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summ</span>(<span class="dt">scale=</span><span class="ot">TRUE</span>)</span>
+<span id="cb9-3"><a href="#cb9-3"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r fold-show"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a><span class="co"># Exclude first round, sort by log(rt) only</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a><span class="kw">try_strategy</span>(round <span class="op">&gt;</span><span class="st"> </span><span class="dv">1</span>, <span class="kw">log</span>(rt))</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.093
+</td>
+<td style="text-align:right;">
+0.023
+</td>
+<td style="text-align:right;">
+4.041
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+pair
+</td>
+<td style="text-align:right;">
+0.055
+</td>
+<td style="text-align:right;">
+0.023
+</td>
+<td style="text-align:right;">
+2.405
+</td>
+<td style="text-align:right;">
+0.017
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> Standard errors: OLS; Continuous predictors are mean-centered and scaled by 1 s.d.
+</td>
+</tr>
+</tfoot>
+</table>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r fold-show"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a><span class="co"># No exclusion</span></span>
+<span id="cb11-2"><a href="#cb11-2"></a><span class="kw">try_strategy</span>(<span class="ot">TRUE</span>, <span class="kw">log</span>(rt))</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.103
+</td>
+<td style="text-align:right;">
+0.023
+</td>
+<td style="text-align:right;">
+4.467
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+pair
+</td>
+<td style="text-align:right;">
+0.040
+</td>
+<td style="text-align:right;">
+0.023
+</td>
+<td style="text-align:right;">
+1.713
+</td>
+<td style="text-align:right;">
+0.087
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> Standard errors: OLS; Continuous predictors are mean-centered and scaled by 1 s.d.
+</td>
+</tr>
+</tfoot>
+</table>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r fold-show"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a><span class="co"># Sort by accuracy, then log(rt)</span></span>
+<span id="cb12-2"><a href="#cb12-2"></a><span class="kw">try_strategy</span>(round <span class="op">&gt;</span><span class="st"> </span><span class="dv">1</span>, <span class="dv">1000</span><span class="op">*</span>(<span class="dv">1</span><span class="op">-</span>correct) <span class="op">+</span><span class="st"> </span><span class="kw">log</span>(rt))</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.075
+</td>
+<td style="text-align:right;">
+0.024
+</td>
+<td style="text-align:right;">
+3.189
+</td>
+<td style="text-align:right;">
+0.002
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+pair
+</td>
+<td style="text-align:right;">
+0.054
+</td>
+<td style="text-align:right;">
+0.024
+</td>
+<td style="text-align:right;">
+2.289
+</td>
+<td style="text-align:right;">
+0.022
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> Standard errors: OLS; Continuous predictors are mean-centered and scaled by 1 s.d.
+</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+<div id="other-junk" class="section level1">
+<h1>Other junk</h1>
+<p>Below is a bunch of other stuff we tried that isn’t really worth looking at.</p>
+<div id="afc-accuracy" class="section level2">
+<h2>AFC accuracy</h2>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a><span class="kw">ggplot</span>(trials, <span class="kw">aes</span>(afc_accuracy, log_recall_rt)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb13-2"><a href="#cb13-2"></a><span class="st">    </span><span class="kw">stat_summary</span>()</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-11-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">with</span>(<span class="kw">lm</span>(log_recall_rt <span class="op">~</span><span class="st"> </span>afc_accuracy)) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+7.780
+</td>
+<td style="text-align:right;">
+0.122
+</td>
+<td style="text-align:right;">
+63.561
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+afc_accuracy
+</td>
+<td style="text-align:right;">
+-0.371
+</td>
+<td style="text-align:right;">
+0.126
+</td>
+<td style="text-align:right;">
+-2.935
+</td>
+<td style="text-align:right;">
+0.003
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> Standard errors: OLS
+</td>
+</tr>
+</tfoot>
+</table>
+<p>This looks promising, but it turns out this one is driven entirely by individual differences (each line is a participant). Mixed effects regression shows no effect of 2AFC trials, especially when we account for RT on the correct 2AFC trials.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>trials <span class="op">%&gt;%</span></span>
+<span id="cb15-2"><a href="#cb15-2"></a><span class="st">    </span><span class="kw">group_by</span>(wid, afc_accuracy) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb15-3"><a href="#cb15-3"></a><span class="st">    </span><span class="kw">summarise</span>(<span class="dt">log_recall_rt=</span><span class="kw">mean</span>(log_recall_rt)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb15-4"><a href="#cb15-4"></a><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(afc_accuracy, log_recall_rt, <span class="dt">group=</span>wid)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb15-5"><a href="#cb15-5"></a><span class="st">        </span><span class="kw">geom_line</span>() <span class="op">+</span><span class="st"> </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-12-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">with</span>(<span class="kw">lmer</span>(log_recall_rt <span class="op">~</span><span class="st"> </span>afc_accuracy <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>wid))) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+7.450
+</td>
+<td style="text-align:right;">
+0.114
+</td>
+<td style="text-align:right;">
+65.612
+</td>
+<td style="text-align:right;">
+917.058
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+afc_accuracy
+</td>
+<td style="text-align:right;">
+-0.022
+</td>
+<td style="text-align:right;">
+0.111
+</td>
+<td style="text-align:right;">
+-0.195
+</td>
+<td style="text-align:right;">
+1014.138
+</td>
+<td style="text-align:right;">
+0.845
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> p values calculated using Satterthwaite d.f.
+</td>
+</tr>
+</tfoot>
+</table>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">with</span>(<span class="kw">lmer</span>(log_recall_rt <span class="op">~</span><span class="st"> </span>afc_accuracy <span class="op">+</span><span class="st"> </span>log_afc_rt <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>wid))) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+5.504
+</td>
+<td style="text-align:right;">
+0.304
+</td>
+<td style="text-align:right;">
+18.104
+</td>
+<td style="text-align:right;">
+771.007
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+afc_accuracy
+</td>
+<td style="text-align:right;">
+-0.013
+</td>
+<td style="text-align:right;">
+0.109
+</td>
+<td style="text-align:right;">
+-0.119
+</td>
+<td style="text-align:right;">
+1019.314
+</td>
+<td style="text-align:right;">
+0.906
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+log_afc_rt
+</td>
+<td style="text-align:right;">
+0.272
+</td>
+<td style="text-align:right;">
+0.039
+</td>
+<td style="text-align:right;">
+6.914
+</td>
+<td style="text-align:right;">
+698.264
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> p values calculated using Satterthwaite d.f.
+</td>
+</tr>
+</tfoot>
+</table>
+</div>
+<div id="time-course" class="section level2">
+<h2>Time course</h2>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a><span class="kw">ggplot</span>(afc, <span class="kw">aes</span>(round, log_afc_rt)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb18-2"><a href="#cb18-2"></a><span class="st">    </span><span class="kw">stat_summary</span>()</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-13-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a><span class="kw">ggplot</span>(afc, <span class="kw">aes</span>(round, <span class="kw">as.numeric</span>(correct))) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb19-2"><a href="#cb19-2"></a><span class="st">    </span><span class="kw">stat_summary</span>()</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-13-2.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>2AFC RT goes down, as we would expect.</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>df =<span class="st"> </span>afc <span class="op">%&gt;%</span></span>
+<span id="cb20-2"><a href="#cb20-2"></a><span class="st">    </span><span class="kw">select</span>(wid, word, round, log_afc_rt) <span class="op">%&gt;%</span></span>
+<span id="cb20-3"><a href="#cb20-3"></a><span class="st">    </span><span class="kw">pivot_wider</span>(<span class="dt">names_from=</span>round, <span class="dt">values_from=</span>log_afc_rt, <span class="dt">names_prefix=</span><span class="st">&#39;log_afc_rt&#39;</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb20-4"><a href="#cb20-4"></a><span class="st">    </span><span class="kw">inner_join</span>(<span class="kw">select</span>(trials, wid, word, log_recall_rt))</span>
+<span id="cb20-5"><a href="#cb20-5"></a></span>
+<span id="cb20-6"><a href="#cb20-6"></a><span class="kw">lmer</span>(log_recall_rt <span class="op">~</span><span class="st">  </span>log_afc_rt1 <span class="op">+</span><span class="st"> </span>log_afc_rt2 <span class="op">+</span><span class="st"> </span>log_afc_rt3 <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>wid), <span class="dt">data=</span>df) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+5.021
+</td>
+<td style="text-align:right;">
+0.353
+</td>
+<td style="text-align:right;">
+14.231
+</td>
+<td style="text-align:right;">
+521.984
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+log_afc_rt1
+</td>
+<td style="text-align:right;">
+0.099
+</td>
+<td style="text-align:right;">
+0.030
+</td>
+<td style="text-align:right;">
+3.322
+</td>
+<td style="text-align:right;">
+960.106
+</td>
+<td style="text-align:right;">
+0.001
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+log_afc_rt2
+</td>
+<td style="text-align:right;">
+0.078
+</td>
+<td style="text-align:right;">
+0.039
+</td>
+<td style="text-align:right;">
+2.012
+</td>
+<td style="text-align:right;">
+928.945
+</td>
+<td style="text-align:right;">
+0.045
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+log_afc_rt3
+</td>
+<td style="text-align:right;">
+0.164
+</td>
+<td style="text-align:right;">
+0.042
+</td>
+<td style="text-align:right;">
+3.933
+</td>
+<td style="text-align:right;">
+970.067
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> p values calculated using Satterthwaite d.f.
+</td>
+</tr>
+</tfoot>
+</table>
+<p>The slope appears to be constant over rounds.</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a><span class="kw">select</span>(df, <span class="kw">starts_with</span>(<span class="st">&#39;log&#39;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">cor</span>(<span class="dt">use=</span><span class="st">&quot;pairwise.complete.obs&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span>kable</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="right">lo</th>
+<th>g_afc_rt1 lo</th>
+<th>g_afc_rt2 lo</th>
+<th>g_afc_rt3 lo</th>
+<th align="left">g_recall_rt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">log_afc_rt1</td>
+<td>1.0000000</td>
+<td>0.3632215</td>
+<td>0.3282305</td>
+<td align="left">0.2645305</td>
+</tr>
+<tr class="even">
+<td align="right">log_afc_rt2</td>
+<td>0.3632215</td>
+<td>1.0000000</td>
+<td>0.6751765</td>
+<td align="left">0.2876823</td>
+</tr>
+<tr class="odd">
+<td align="right">log_afc_rt3</td>
+<td>0.3282305</td>
+<td>0.6751765</td>
+<td>1.0000000</td>
+<td align="left">0.3090956</td>
+</tr>
+<tr class="even">
+<td align="right">log_recall_rt</td>
+<td>0.2645305</td>
+<td>0.2876823</td>
+<td>0.3090956</td>
+<td align="left">1.0000000</td>
+</tr>
+</tbody>
+</table>
+<p>But the correlation is higher in rounds 2 and 3. (Look at the last column in the correlation matrix)</p>
+</div>
+</div>
+<div id="word-type-effects" class="section level1">
+<h1>Word type effects</h1>
+<div id="accuracy" class="section level2">
+<h2>Accuracy</h2>
+<div id="all-participants-before-exclusion" class="section level3">
+<h3>All participants (before exclusion)</h3>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>all_trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(wid) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summarise</span>(<span class="dt">accuracy=</span><span class="kw">mean</span>(correct)) <span class="op">%&gt;%</span></span>
+<span id="cb22-2"><a href="#cb22-2"></a><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(accuracy)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb22-3"><a href="#cb22-3"></a><span class="st">        </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth=</span>.<span class="dv">1</span>)</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-16-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a><span class="kw">ggplot</span>(all_trials, <span class="kw">aes</span>(<span class="dt">fill=</span>response_type, <span class="dt">x=</span>word_type)) <span class="op">+</span></span>
+<span id="cb23-2"><a href="#cb23-2"></a><span class="st">     </span><span class="kw">geom_histogram</span>(<span class="dt">stat=</span><span class="st">&quot;count&quot;</span>) <span class="op">+</span><span class="st"> </span>response_type_colors</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-17-1.png" width="60%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="good-participants-after-exclusion" class="section level3">
+<h3>Good participants (after exclusion)</h3>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a><span class="kw">ggplot</span>(trials, <span class="kw">aes</span>(<span class="dt">fill=</span>response_type, <span class="dt">x=</span>word_type)) <span class="op">+</span></span>
+<span id="cb24-2"><a href="#cb24-2"></a><span class="st">     </span><span class="kw">geom_histogram</span>(<span class="dt">stat=</span><span class="st">&quot;count&quot;</span>) <span class="op">+</span><span class="st"> </span>response_type_colors</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-18-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a><span class="kw">glmer</span>(correct <span class="op">~</span><span class="st"> </span>word_type <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>wid), <span class="dt">data=</span>trials, <span class="dt">family=</span>binomial) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="5">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+2.251
+</td>
+<td style="text-align:right;">
+0.207
+</td>
+<td style="text-align:right;">
+10.877
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh
+</td>
+<td style="text-align:right;">
+0.851
+</td>
+<td style="text-align:right;">
+0.233
+</td>
+<td style="text-align:right;">
+3.659
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="reaction-time" class="section level2">
+<h2>Reaction time</h2>
+<div id="aggregate" class="section level3">
+<h3>Aggregate</h3>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a><span class="kw">ggplot</span>(trials, <span class="kw">aes</span>(<span class="dt">x=</span>response_type, <span class="dt">y=</span>rt, <span class="dt">color=</span>word_type)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb26-2"><a href="#cb26-2"></a><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">fun.data=</span>mean_se, <span class="dt">geom=</span><span class="st">&quot;pointrange&quot;</span>, <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="fl">0.1</span>)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb26-3"><a href="#cb26-3"></a><span class="st">    </span><span class="kw">theme</span>(<span class="dt">legend.position=</span><span class="kw">c</span>(<span class="fl">0.2</span>, <span class="fl">0.9</span>)) <span class="op">+</span><span class="st"> </span>word_type_colors</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-20-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(response_type, word_type) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summarise</span>(<span class="dt">rt =</span> <span class="kw">mean</span>(rt)) <span class="op">%&gt;%</span><span class="st"> </span>kable</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">response_type</th>
+<th align="left">word_type</th>
+<th align="right">rt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">correct</td>
+<td align="left">Low</td>
+<td align="right">1773.159</td>
+</tr>
+<tr class="even">
+<td align="left">correct</td>
+<td align="left">High</td>
+<td align="right">1791.512</td>
+</tr>
+<tr class="odd">
+<td align="left">intrusion</td>
+<td align="left">Low</td>
+<td align="right">2522.400</td>
+</tr>
+<tr class="even">
+<td align="left">intrusion</td>
+<td align="left">High</td>
+<td align="right">3145.500</td>
+</tr>
+<tr class="odd">
+<td align="left">other</td>
+<td align="left">Low</td>
+<td align="right">3214.108</td>
+</tr>
+<tr class="even">
+<td align="left">other</td>
+<td align="left">High</td>
+<td align="right">2686.077</td>
+</tr>
+<tr class="odd">
+<td align="left">timeout</td>
+<td align="left">Low</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="left">timeout</td>
+<td align="left">High</td>
+<td align="right">NA</td>
+</tr>
+<tr class="odd">
+<td align="left">empty</td>
+<td align="left">Low</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="left">empty</td>
+<td align="left">High</td>
+<td align="right">NA</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="by-participant" class="section level3">
+<h3>By participant</h3>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>grouped =<span class="st"> </span>trials <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb28-2"><a href="#cb28-2"></a><span class="st">    </span><span class="kw">group_by</span>(wid, word_type, response_type) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb28-3"><a href="#cb28-3"></a><span class="st">    </span><span class="kw">summarise</span>(<span class="kw">across</span>(<span class="kw">where</span>(is.numeric), mean)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb28-4"><a href="#cb28-4"></a><span class="st">    </span><span class="kw">ungroup</span>()</span>
+<span id="cb28-5"><a href="#cb28-5"></a></span>
+<span id="cb28-6"><a href="#cb28-6"></a><span class="kw">ggplot</span>(grouped, <span class="kw">aes</span>(<span class="dt">x=</span>word_type, <span class="dt">y=</span>rt, <span class="dt">color=</span>response_type, <span class="dt">group=</span>response_type)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb28-7"><a href="#cb28-7"></a><span class="st">    </span><span class="kw">geom_line</span>(<span class="dt">alpha=</span><span class="fl">0.3</span>, <span class="dt">size=</span><span class="dv">1</span>, <span class="kw">aes</span>(<span class="dt">group=</span><span class="kw">interaction</span>(response_type, wid))) <span class="op">+</span></span>
+<span id="cb28-8"><a href="#cb28-8"></a><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">fun.data=</span>mean_se, <span class="dt">geom=</span><span class="st">&quot;pointrange&quot;</span>) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb28-9"><a href="#cb28-9"></a><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">fun.data=</span>mean_se, <span class="dt">geom=</span><span class="st">&quot;line&quot;</span>, <span class="dt">size=</span><span class="dv">1</span>) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb28-10"><a href="#cb28-10"></a><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span>response_type) <span class="op">+</span></span>
+<span id="cb28-11"><a href="#cb28-11"></a><span class="st">    </span>response_type_colors <span class="op">+</span><span class="st"> </span><span class="kw">theme</span>(<span class="dt">legend.position=</span><span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-21-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a><span class="kw">ggplot</span>(<span class="kw">filter</span>(grouped, response_type <span class="op">==</span><span class="st"> &quot;correct&quot;</span>), <span class="kw">aes</span>(<span class="dt">x=</span>word_type, <span class="dt">y=</span>rt, <span class="dt">color=</span>response_type, <span class="dt">group=</span>response_type)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb29-2"><a href="#cb29-2"></a><span class="st">    </span><span class="kw">geom_line</span>(<span class="dt">alpha=</span><span class="fl">0.3</span>, <span class="dt">size=</span><span class="dv">1</span>, <span class="kw">aes</span>(<span class="dt">group=</span><span class="kw">interaction</span>(response_type, wid))) <span class="op">+</span></span>
+<span id="cb29-3"><a href="#cb29-3"></a><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">fun.data=</span>mean_se, <span class="dt">geom=</span><span class="st">&quot;pointrange&quot;</span>) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb29-4"><a href="#cb29-4"></a><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">fun.data=</span>mean_se, <span class="dt">geom=</span><span class="st">&quot;line&quot;</span>, <span class="dt">size=</span><span class="dv">1</span>) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb29-5"><a href="#cb29-5"></a><span class="st">    </span>response_type_colors <span class="op">+</span><span class="st"> </span><span class="kw">theme</span>(<span class="dt">legend.position=</span><span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-21-2.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>prop =<span class="st"> </span>grouped <span class="op">%&gt;%</span></span>
+<span id="cb30-2"><a href="#cb30-2"></a><span class="st">    </span><span class="kw">filter</span>(response_type <span class="op">==</span><span class="st"> &quot;correct&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb30-3"><a href="#cb30-3"></a><span class="st">    </span><span class="kw">group_by</span>(wid, word_type) <span class="op">%&gt;%</span></span>
+<span id="cb30-4"><a href="#cb30-4"></a><span class="st">    </span><span class="kw">summarise</span>(<span class="dt">rt=</span><span class="kw">mean</span>(rt)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb30-5"><a href="#cb30-5"></a><span class="st">    </span><span class="kw">pivot_wider</span>(<span class="dt">names_from=</span>word_type, <span class="dt">values_from=</span>rt) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb30-6"><a href="#cb30-6"></a><span class="st">    </span><span class="kw">with</span>(<span class="kw">round</span>(<span class="kw">mean</span>(Low <span class="op">&gt;</span><span class="st"> </span>High) <span class="op">*</span><span class="st"> </span><span class="dv">100</span>))</span>
+<span id="cb30-7"><a href="#cb30-7"></a><span class="co">## prop</span></span></code></pre></div>
+<p>50% of participants respond faster on high memorability trials (including only correct response trials).</p>
+</div>
+<div id="stats" class="section level3">
+<h3>Stats</h3>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a><span class="kw">lmer</span>(rt <span class="op">~</span><span class="st"> </span>word_type <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>wid), <span class="dt">data=</span>trials) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+1978.017
+</td>
+<td style="text-align:right;">
+116.059
+</td>
+<td style="text-align:right;">
+17.043
+</td>
+<td style="text-align:right;">
+62.722
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh
+</td>
+<td style="text-align:right;">
+-105.688
+</td>
+<td style="text-align:right;">
+60.931
+</td>
+<td style="text-align:right;">
+-1.735
+</td>
+<td style="text-align:right;">
+986.733
+</td>
+<td style="text-align:right;">
+0.083
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> p values calculated using Satterthwaite d.f.
+</td>
+</tr>
+</tfoot>
+</table>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a><span class="kw">lmer</span>(rt <span class="op">~</span><span class="st"> </span>word_type <span class="op">*</span><span class="st"> </span>response_type <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>wid), <span class="dt">data=</span>trials) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+1845.979
+</td>
+<td style="text-align:right;">
+107.221
+</td>
+<td style="text-align:right;">
+17.217
+</td>
+<td style="text-align:right;">
+64.578
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh
+</td>
+<td style="text-align:right;">
+-29.363
+</td>
+<td style="text-align:right;">
+58.612
+</td>
+<td style="text-align:right;">
+-0.501
+</td>
+<td style="text-align:right;">
+980.373
+</td>
+<td style="text-align:right;">
+0.617
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+response_typeintrusion
+</td>
+<td style="text-align:right;">
+357.931
+</td>
+<td style="text-align:right;">
+300.391
+</td>
+<td style="text-align:right;">
+1.192
+</td>
+<td style="text-align:right;">
+991.072
+</td>
+<td style="text-align:right;">
+0.234
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+response_typeother
+</td>
+<td style="text-align:right;">
+1025.651
+</td>
+<td style="text-align:right;">
+163.540
+</td>
+<td style="text-align:right;">
+6.272
+</td>
+<td style="text-align:right;">
+997.151
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+response_typetimeout
+</td>
+<td style="text-align:right;">
+4330.633
+</td>
+<td style="text-align:right;">
+473.978
+</td>
+<td style="text-align:right;">
+9.137
+</td>
+<td style="text-align:right;">
+993.649
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+response_typeempty
+</td>
+<td style="text-align:right;">
+4279.060
+</td>
+<td style="text-align:right;">
+657.436
+</td>
+<td style="text-align:right;">
+6.509
+</td>
+<td style="text-align:right;">
+986.949
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh:response_typeintrusion
+</td>
+<td style="text-align:right;">
+1129.334
+</td>
+<td style="text-align:right;">
+419.660
+</td>
+<td style="text-align:right;">
+2.691
+</td>
+<td style="text-align:right;">
+987.310
+</td>
+<td style="text-align:right;">
+0.007
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh:response_typeother
+</td>
+<td style="text-align:right;">
+-611.417
+</td>
+<td style="text-align:right;">
+306.676
+</td>
+<td style="text-align:right;">
+-1.994
+</td>
+<td style="text-align:right;">
+988.702
+</td>
+<td style="text-align:right;">
+0.046
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh:response_typetimeout
+</td>
+<td style="text-align:right;">
+-2620.306
+</td>
+<td style="text-align:right;">
+619.621
+</td>
+<td style="text-align:right;">
+-4.229
+</td>
+<td style="text-align:right;">
+984.410
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> p values calculated using Satterthwaite d.f.
+</td>
+</tr>
+</tfoot>
+</table>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a><span class="kw">lmer</span>(rt <span class="op">~</span><span class="st"> </span>word_type <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>wid), <span class="dt">data=</span><span class="kw">subset</span>(trials, correct)) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+1847.276
+</td>
+<td style="text-align:right;">
+108.505
+</td>
+<td style="text-align:right;">
+17.025
+</td>
+<td style="text-align:right;">
+60.390
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh
+</td>
+<td style="text-align:right;">
+-29.098
+</td>
+<td style="text-align:right;">
+52.057
+</td>
+<td style="text-align:right;">
+-0.559
+</td>
+<td style="text-align:right;">
+905.330
+</td>
+<td style="text-align:right;">
+0.576
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> p values calculated using Satterthwaite d.f.
+</td>
+</tr>
+</tfoot>
+</table>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a><span class="kw">lmer</span>(log_recall_rt <span class="op">~</span><span class="st"> </span>word_type <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>wid), <span class="dt">data=</span><span class="kw">subset</span>(trials, correct)) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Fixed Effects
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+d.f.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+7.400
+</td>
+<td style="text-align:right;">
+0.040
+</td>
+<td style="text-align:right;">
+184.765
+</td>
+<td style="text-align:right;">
+62.416
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh
+</td>
+<td style="text-align:right;">
+-0.004
+</td>
+<td style="text-align:right;">
+0.022
+</td>
+<td style="text-align:right;">
+-0.192
+</td>
+<td style="text-align:right;">
+905.637
+</td>
+<td style="text-align:right;">
+0.848
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> p values calculated using Satterthwaite d.f.
+</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+<div id="typing-time" class="section level2">
+<h2>Typing time</h2>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a><span class="kw">ggplot</span>(trials, <span class="kw">aes</span>(<span class="dt">x=</span>response_type, <span class="dt">y=</span>type_time, <span class="dt">color=</span>word_type)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb35-2"><a href="#cb35-2"></a><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">fun.data=</span>mean_se, <span class="dt">geom=</span><span class="st">&quot;pointrange&quot;</span>, <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="fl">0.1</span>)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb35-3"><a href="#cb35-3"></a><span class="st">    </span><span class="kw">theme</span>(<span class="dt">legend.position=</span><span class="kw">c</span>(<span class="fl">0.2</span>, <span class="fl">0.9</span>)) <span class="op">+</span><span class="st"> </span>word_type_colors</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-27-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(response_type, word_type) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summarise</span>(<span class="dt">type_time =</span> <span class="kw">mean</span>(type_time)) <span class="op">%&gt;%</span><span class="st"> </span>kable</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">response_type</th>
+<th align="left">word_type</th>
+<th align="right">type_time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">correct</td>
+<td align="left">Low</td>
+<td align="right">2883.395</td>
+</tr>
+<tr class="even">
+<td align="left">correct</td>
+<td align="left">High</td>
+<td align="right">2961.577</td>
+</tr>
+<tr class="odd">
+<td align="left">intrusion</td>
+<td align="left">Low</td>
+<td align="right">3396.080</td>
+</tr>
+<tr class="even">
+<td align="left">intrusion</td>
+<td align="left">High</td>
+<td align="right">3833.059</td>
+</tr>
+<tr class="odd">
+<td align="left">other</td>
+<td align="left">Low</td>
+<td align="right">4958.709</td>
+</tr>
+<tr class="even">
+<td align="left">other</td>
+<td align="left">High</td>
+<td align="right">4656.375</td>
+</tr>
+<tr class="odd">
+<td align="left">timeout</td>
+<td align="left">Low</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="left">timeout</td>
+<td align="left">High</td>
+<td align="right">NA</td>
+</tr>
+<tr class="odd">
+<td align="left">empty</td>
+<td align="left">Low</td>
+<td align="right">6605.913</td>
+</tr>
+<tr class="even">
+<td align="left">empty</td>
+<td align="left">High</td>
+<td align="right">4320.307</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a><span class="kw">lm</span>(type_time <span class="op">~</span><span class="st"> </span>word_type, <span class="dt">data=</span><span class="kw">subset</span>(trials, correct)) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+2883.395
+</td>
+<td style="text-align:right;">
+66.867
+</td>
+<td style="text-align:right;">
+43.121
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh
+</td>
+<td style="text-align:right;">
+78.182
+</td>
+<td style="text-align:right;">
+92.984
+</td>
+<td style="text-align:right;">
+0.841
+</td>
+<td style="text-align:right;">
+0.401
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> Standard errors: OLS
+</td>
+</tr>
+</tfoot>
+</table>
+</div>
+<div id="total-response-time" class="section level2">
+<h2>Total response time</h2>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1"></a><span class="kw">ggplot</span>(trials, <span class="kw">aes</span>(<span class="dt">x=</span>response_type, <span class="dt">y=</span>rt<span class="op">+</span>type_time, <span class="dt">color=</span>word_type)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb38-2"><a href="#cb38-2"></a><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">fun.data=</span>mean_se, <span class="dt">geom=</span><span class="st">&quot;pointrange&quot;</span>, <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="fl">0.1</span>)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb38-3"><a href="#cb38-3"></a><span class="st">    </span><span class="kw">theme</span>(<span class="dt">legend.position=</span><span class="kw">c</span>(<span class="fl">0.2</span>, <span class="fl">0.9</span>)) <span class="op">+</span><span class="st"> </span>word_type_colors</span></code></pre></div>
+<p><img src="figs/unnamed-chunk-29-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(response_type, word_type) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summarise</span>(<span class="dt">total_time =</span> <span class="kw">mean</span>(rt<span class="op">+</span>type_time)) <span class="op">%&gt;%</span><span class="st"> </span>kable</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">response_type</th>
+<th align="left">word_type</th>
+<th align="right">total_time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">correct</td>
+<td align="left">Low</td>
+<td align="right">4656.554</td>
+</tr>
+<tr class="even">
+<td align="left">correct</td>
+<td align="left">High</td>
+<td align="right">4753.089</td>
+</tr>
+<tr class="odd">
+<td align="left">intrusion</td>
+<td align="left">Low</td>
+<td align="right">5918.480</td>
+</tr>
+<tr class="even">
+<td align="left">intrusion</td>
+<td align="left">High</td>
+<td align="right">6978.559</td>
+</tr>
+<tr class="odd">
+<td align="left">other</td>
+<td align="left">Low</td>
+<td align="right">8172.817</td>
+</tr>
+<tr class="even">
+<td align="left">other</td>
+<td align="left">High</td>
+<td align="right">7342.452</td>
+</tr>
+<tr class="odd">
+<td align="left">timeout</td>
+<td align="left">Low</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="left">timeout</td>
+<td align="left">High</td>
+<td align="right">NA</td>
+</tr>
+<tr class="odd">
+<td align="left">empty</td>
+<td align="left">Low</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="left">empty</td>
+<td align="left">High</td>
+<td align="right">NA</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1"></a><span class="kw">lm</span>(rt <span class="op">+</span><span class="st"> </span>type_time <span class="op">~</span><span class="st"> </span>word_type, <span class="dt">data=</span><span class="kw">subset</span>(trials, correct)) <span class="op">%&gt;%</span><span class="st"> </span>summ</span></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Est.
+</th>
+<th style="text-align:right;">
+S.E.
+</th>
+<th style="text-align:right;">
+t val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+4656.554
+</td>
+<td style="text-align:right;">
+109.600
+</td>
+<td style="text-align:right;">
+42.487
+</td>
+<td style="text-align:right;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+word_typeHigh
+</td>
+<td style="text-align:right;">
+96.535
+</td>
+<td style="text-align:right;">
+152.408
+</td>
+<td style="text-align:right;">
+0.633
+</td>
+<td style="text-align:right;">
+0.527
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> Standard errors: OLS
+</td>
+</tr>
+</tfoot>
+</table>
+</div>
+<div id="check-response-coding" class="section level2">
+<h2>Check response coding</h2>
+<div id="responses-classified-as-other-incorrect-but-not-intrusion" class="section level3">
+<h3>Responses classified as “other” (incorrect but not intrusion)</h3>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(word <span class="op">==</span><span class="st"> </span>response)  <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">with</span>(<span class="kw">all</span>(correct)) <span class="op">%&gt;%</span><span class="st"> </span>stopifnot</span>
+<span id="cb41-2"><a href="#cb41-2"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(response_type <span class="op">==</span><span class="st"> &quot;other&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(word, response) <span class="op">%&gt;%</span><span class="st"> </span>kable</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">word</th>
+<th align="left">response</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">dandelion</td>
+<td align="left">daffodil</td>
+</tr>
+<tr class="even">
+<td align="left">tread</td>
+<td align="left">mark</td>
+</tr>
+<tr class="odd">
+<td align="left">quill</td>
+<td align="left">feather</td>
+</tr>
+<tr class="even">
+<td align="left">vagrant</td>
+<td align="left">homeless</td>
+</tr>
+<tr class="odd">
+<td align="left">keeper</td>
+<td align="left">guardian</td>
+</tr>
+<tr class="even">
+<td align="left">keeper</td>
+<td align="left">eqw</td>
+</tr>
+<tr class="odd">
+<td align="left">barracuda</td>
+<td align="left">chapagie</td>
+</tr>
+<tr class="even">
+<td align="left">grizzly</td>
+<td align="left">fefs</td>
+</tr>
+<tr class="odd">
+<td align="left">tread</td>
+<td align="left">e</td>
+</tr>
+<tr class="even">
+<td align="left">seagull</td>
+<td align="left">fd</td>
+</tr>
+<tr class="odd">
+<td align="left">personnel</td>
+<td align="left">partner</td>
+</tr>
+<tr class="even">
+<td align="left">goddess</td>
+<td align="left">superb</td>
+</tr>
+<tr class="odd">
+<td align="left">ozone</td>
+<td align="left">ozern</td>
+</tr>
+<tr class="even">
+<td align="left">vagrant</td>
+<td align="left">vapous</td>
+</tr>
+<tr class="odd">
+<td align="left">traitor</td>
+<td align="left">trader</td>
+</tr>
+<tr class="even">
+<td align="left">villain</td>
+<td align="left">villian</td>
+</tr>
+<tr class="odd">
+<td align="left">fellow</td>
+<td align="left">tranquil</td>
+</tr>
+<tr class="even">
+<td align="left">stairs</td>
+<td align="left">staircases</td>
+</tr>
+<tr class="odd">
+<td align="left">finger</td>
+<td align="left">leg</td>
+</tr>
+<tr class="even">
+<td align="left">house</td>
+<td align="left">home</td>
+</tr>
+<tr class="odd">
+<td align="left">frog</td>
+<td align="left">forg</td>
+</tr>
+<tr class="even">
+<td align="left">rebel</td>
+<td align="left">rag</td>
+</tr>
+<tr class="odd">
+<td align="left">tread</td>
+<td align="left">trail</td>
+</tr>
+<tr class="even">
+<td align="left">tread</td>
+<td align="left">trape</td>
+</tr>
+<tr class="odd">
+<td align="left">roost</td>
+<td align="left">roote</td>
+</tr>
+<tr class="even">
+<td align="left">critic</td>
+<td align="left">civic]</td>
+</tr>
+<tr class="odd">
+<td align="left">captive</td>
+<td align="left">impact</td>
+</tr>
+<tr class="even">
+<td align="left">rouge</td>
+<td align="left">rogue</td>
+</tr>
+<tr class="odd">
+<td align="left">villain</td>
+<td align="left">killer</td>
+</tr>
+<tr class="even">
+<td align="left">patient</td>
+<td align="left">secrets</td>
+</tr>
+<tr class="odd">
+<td align="left">handkerchief</td>
+<td align="left">hankerchief</td>
+</tr>
+<tr class="even">
+<td align="left">tart</td>
+<td align="left">idk</td>
+</tr>
+<tr class="odd">
+<td align="left">personnel</td>
+<td align="left">personelle</td>
+</tr>
+<tr class="even">
+<td align="left">patient</td>
+<td align="left">vacation</td>
+</tr>
+<tr class="odd">
+<td align="left">penguin</td>
+<td align="left">airport</td>
+</tr>
+<tr class="even">
+<td align="left">application</td>
+<td align="left">applicant</td>
+</tr>
+<tr class="odd">
+<td align="left">suburb</td>
+<td align="left">suburban</td>
+</tr>
+<tr class="even">
+<td align="left">personnel</td>
+<td align="left">personell</td>
+</tr>
+<tr class="odd">
+<td align="left">keeper</td>
+<td align="left">partner</td>
+</tr>
+<tr class="even">
+<td align="left">patient</td>
+<td align="left">patience</td>
+</tr>
+<tr class="odd">
+<td align="left">rouge</td>
+<td align="left">terrain</td>
+</tr>
+<tr class="even">
+<td align="left">roost</td>
+<td align="left">vacation</td>
+</tr>
+<tr class="odd">
+<td align="left">captive</td>
+<td align="left">captian</td>
+</tr>
+<tr class="even">
+<td align="left">antelope</td>
+<td align="left">envelop</td>
+</tr>
+<tr class="odd">
+<td align="left">rouge</td>
+<td align="left">rogue</td>
+</tr>
+<tr class="even">
+<td align="left">cookie</td>
+<td align="left">cookies</td>
+</tr>
+<tr class="odd">
+<td align="left">grizzly</td>
+<td align="left">quikky</td>
+</tr>
+<tr class="even">
+<td align="left">editorial</td>
+<td align="left">literature</td>
+</tr>
+<tr class="odd">
+<td align="left">roost</td>
+<td align="left">rooster</td>
+</tr>
+<tr class="even">
+<td align="left">daisy</td>
+<td align="left">target</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="non-exact-matches-classified-as-correct" class="section level3">
+<h3>Non-exact matches classified as correct</h3>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>trials <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(correct <span class="op">&amp;</span><span class="st"> </span>word <span class="op">!=</span><span class="st"> </span>response) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(word, response) <span class="op">%&gt;%</span><span class="st"> </span>kable</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">word</th>
+<th align="left">response</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">goddess</td>
+<td align="left">goddness</td>
+</tr>
+<tr class="even">
+<td align="left">villain</td>
+<td align="left">villai</td>
+</tr>
+<tr class="odd">
+<td align="left">volunteer</td>
+<td align="left">volunteee</td>
+</tr>
+<tr class="even">
+<td align="left">barracuda</td>
+<td align="left">baraccuda</td>
+</tr>
+<tr class="odd">
+<td align="left">chimney</td>
+<td align="left">chimeny</td>
+</tr>
+<tr class="even">
+<td align="left">barracuda</td>
+<td align="left">baracuda</td>
+</tr>
+<tr class="odd">
+<td align="left">shoelace</td>
+<td align="left">shoelaces</td>
+</tr>
+<tr class="even">
+<td align="left">seagull</td>
+<td align="left">seagul</td>
+</tr>
+<tr class="odd">
+<td align="left">horse</td>
+<td align="left">horses</td>
+</tr>
+<tr class="even">
+<td align="left">suburb</td>
+<td align="left">suburbs</td>
+</tr>
+<tr class="odd">
+<td align="left">tulip</td>
+<td align="left">tulips</td>
+</tr>
+<tr class="even">
+<td align="left">critic</td>
+<td align="left">critc</td>
+</tr>
+<tr class="odd">
+<td align="left">bug</td>
+<td align="left">bugs</td>
+</tr>
+<tr class="even">
+<td align="left">barracuda</td>
+<td align="left">barricuda</td>
+</tr>
+<tr class="odd">
+<td align="left">scapegoat</td>
+<td align="left">scapegaot</td>
+</tr>
+<tr class="even">
+<td align="left">refrigerator</td>
+<td align="left">refridgerator</td>
+</tr>
+<tr class="odd">
+<td align="left">handkerchief</td>
+<td align="left">handerchief</td>
+</tr>
+<tr class="even">
+<td align="left">jeans</td>
+<td align="left">jean</td>
+</tr>
+<tr class="odd">
+<td align="left">flower</td>
+<td align="left">flowers</td>
+</tr>
+<tr class="even">
+<td align="left">jeans</td>
+<td align="left">jean</td>
+</tr>
+<tr class="odd">
+<td align="left">banana</td>
+<td align="left">bananna</td>
+</tr>
+<tr class="even">
+<td align="left">cauliflower</td>
+<td align="left">califlower</td>
+</tr>
+<tr class="odd">
+<td align="left">eagle</td>
+<td align="left">eagles</td>
+</tr>
+<tr class="even">
+<td align="left">suburb</td>
+<td align="left">subrub</td>
+</tr>
+<tr class="odd">
+<td align="left">tomato</td>
+<td align="left">tomatoes</td>
+</tr>
+<tr class="even">
+<td align="left">handkerchief</td>
+<td align="left">handkerchied</td>
+</tr>
+<tr class="odd">
+<td align="left">suburb</td>
+<td align="left">suburbs</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+   
+   
+           </section>
+  </div>
+  </div>
+  </div>
+  </div>
+      
+      
+
+  <script>
+    $(document).ready(function () {
+
+		// add bootstrap table styles to pandoc tables
+	$('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+		
+ 		
+		$('#content img').addClass("image-lb");
+	$('#content').magnificPopup({
+	    type:'image',
+	    closeOnContentClick: false,
+	    closeBtnInside: false,
+	    delegate: '.image-lb',
+	    gallery: {enabled: false },
+	    image: {
+	        verticalFit: true,
+		titleSrc: 'alt'
+	    }
+ 	});
+ 	    });
+  </script>
+
+
+
+    <!-- dynamically load mathjax for compatibility with self-contained -->
+  <script>
+    (function () {
+	var script = document.createElement("script");
+	script.type = "text/javascript";
+	script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+	document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+  
+</body>
+</html>

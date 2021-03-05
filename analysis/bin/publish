@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 filename="${1%.*}"
-R -e "rmarkdown::render('$filename.rmd', output_format = 'html_document', encoding = 'UTF-8')"
+R -e "rmarkdown::render('$filename.rmd', encoding = 'UTF-8')"
 if [ $? -ne 0 ]; then
    echo "Error compiling $filename.rmd"
    exit
