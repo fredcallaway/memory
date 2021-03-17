@@ -42,3 +42,5 @@ word_type_colors = scale_colour_manual(values=c(
 
 knitr::opts_chunk$set(out.width="60%", fig.align="center")
 
+# %% ==================== this ====================
+

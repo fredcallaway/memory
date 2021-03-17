@@ -5,11 +5,7 @@ author: "fredcallaway"
 output:
   rmdformats::robobook:
     code_folding: hide
-    self_contained: false
-    thumbnails: false
-    lightbox: true
-pkgdown:
-  as_is: true   
+    self_contained: true
 ---
 
 
@@ -153,25 +149,29 @@ notick = theme(
   axis.text.y = element_blank(),
   axis.ticks = element_blank())
 
-slopes = ggplot(effects, aes(reorder(wid, estimate), estimate)) + 
+corrs = trials %>%
+    group_by(wid) %>% 
+    summarise(cor=cor(log_recall_rt, log_afc_rt, use="complete"))
+
+effects = left_join(effects, corrs)
+
+p1 = ggplot(effects, aes(reorder(wid, estimate), estimate)) + 
     geom_point() +
     geom_errorbar(aes(ymin=conf.low , ymax=conf.high)) +
     geom_hline(yintercept=0, color="red") +
     labs(y="slope", x="participant") +
     coord_flip() + notick
 
-prop_slope_positive = with(effects, mean(estimate > 0))
 
-corrs = trials %>%
-    group_by(wid) %>% 
-    summarise(estimate=cor(log_recall_rt, log_afc_rt)) %>% 
-    ggplot(aes(reorder(wid, estimate), estimate)) + 
+p2 = ggplot(effects, aes(reorder(wid, estimate), cor)) + 
         geom_point() +
         geom_hline(yintercept=0, color="red") + 
         labs(y="correlation", x="participant") +
         coord_flip() + notick
 
-slopes | corrs
+prop_slope_positive = with(effects, mean(estimate > 0))
+
+p1 | p2
 ```
 
 `r round(100 * prop_slope_positive)`% of participants have a positive slope.
@@ -201,7 +201,7 @@ make_diff = function(pairs) {
         mutate(diff = log(hard) - log(easy))
 }
 
-pairs = make_pairs(round > 1, log(rt))
+pairs = make_pairs(TRUE, log(rt))
 p1 = ggplot(pairs, aes(pair, log(recall_rt), color=kind)) +
     stat_summary(position=position_dodge2(.2)) +
     geom_smooth(method='lm', se=F)
@@ -241,6 +241,11 @@ try_strategy(TRUE, log(rt))
 try_strategy(round > 1, 1000*(1-correct) + log(rt))
 ```
 
+```{r}
+try_strategy(round > 1, log(rt))
+try_strategy(TRUE, log(rt))
+
+```
 
 # Other junk
 
