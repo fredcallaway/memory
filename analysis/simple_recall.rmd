@@ -251,6 +251,12 @@ try_strategy(TRUE, log(rt))
 
 Below is a bunch of other stuff we tried that isn't really worth looking at.
 
+## Timeouts
+
+```{r}
+all_trials %>% summarise(mean(response_type == "timeout"))
+```
+
 ## AFC accuracy
 
 ```{r}

@@ -1,5 +1,4 @@
-knitr::opts_chunk$set(fig.path='figs/', # fig.width=12, fig.height=8, f
-                      warning=FALSE, message=FALSE)
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
 library("tidyverse")
 library("lme4")
 library("jtools")
@@ -7,6 +6,9 @@ library(magrittr)
 library(purrr)
 library(rmdformats) 
 library(patchwork)
+library(jsonlite)
+library(tidyjson)
+
 options(
     "summ-model.info"=FALSE, 
     "summ-model.fit"=FALSE, 
@@ -41,6 +43,21 @@ word_type_colors = scale_colour_manual(values=c(
 ), aesthetics=c("fill", "colour"), name="Word Memorability")
 
 knitr::opts_chunk$set(out.width="60%", fig.align="center")
+
+json_to_columns <- function(df, column){
+    json_df = df %>% 
+        pull({{column}}) %>% 
+        spread_all %>%
+        as_tibble %>%
+        select(-document.id)
+    df %>% 
+        select(-{{column}}) %>% 
+        bind_cols(json_df)
+}
+
+zscore = function(x) (x - mean(x, na.rm=T)) / sd(x, na.rm=T)
+
+
 
 # %% ==================== this ====================
 
