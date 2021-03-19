@@ -8,6 +8,7 @@ library(rmdformats)
 library(patchwork)
 library(jsonlite)
 library(tidyjson)
+library(ggbeeswarm)
 
 options(
     "summ-model.info"=FALSE, 
@@ -25,7 +26,13 @@ ORANGE =  "#FF7F00"
 YELLOW =  "#FFDD47" 
 GRAY = "#8E8E8E"
 BLACK = "#1B1B1B"
-theme_set(theme_classic(base_size = 18))
+theme_set(theme_bw(base_size = 18))
+theme_update(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+)
+update_geom_defaults("line", list(size = 1.75))
+
 kable = knitr::kable
 glue = glue::glue
 

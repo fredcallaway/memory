@@ -6,6 +6,15 @@ if [ $? -ne 0 ]; then
    exit
 fi
 
+echo -n "Confirm publish [y/n]"
+read confirm
+if [ $confirm == "y" ]; then
+    echo good to go
+else
+    echo canceling publish
+    exit 1
+fi
+
 newname=$filename-`date +"%y-%m-%d"`.html
 newpath=reports/$newname
 mv $filename.html $newpath
@@ -13,5 +22,6 @@ git add .
 git commit -m "$newpath"
 
 scp $newpath fredc@simcoe:~/www.fredcallaway.com/docs/reports/memory
+open -a 'Google Chrome' $newpath
 
 echo www.fredcallaway.com/reports/memory/$newname

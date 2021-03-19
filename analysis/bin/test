@@ -1,0 +1,11 @@
+#!/bin/bash
+# Ask the user for their name
+echo Hello, who am I talking to?
+read varname
+
+if [ $varname == "y" ]; then
+    echo good to go
+else
+    echo canceling publish
+    exit 1
+fi

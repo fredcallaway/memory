@@ -1,0 +1,186 @@
+---
+title: Multi-cue recall (v3.3)
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+---
+
+
+```{r setup, include=FALSE}
+source("setup.r")
+
+VERSIONS = c('v3.3')
+
+load_data = function(type) {
+    VERSIONS %>% 
+    map(~ read_csv(glue('../data/{.x}/{type}.csv'))) %>% 
+    bind_rows
+}
+
+participants = load_data('participants')
+
+multi = load_data('multi-recall') %>%
+    filter(!practice) %>%
+    mutate(
+        response_type = factor(response_type, 
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
+        correct = response_type == "correct",
+        rt = typing_rt,
+        presentation_times = map(presentation_times, fromJSON),
+        first_pres_time = map_dbl(presentation_times, 1),
+        choose_first = as.numeric(word == first_word),
+        n_pres = lengths(presentation_times)
+    )
+
+afc = load_data('afc') %>% 
+    mutate(
+        round = rep(1:3, each=20, times=length(unique(wid))),
+        log_afc_rt = log(rt)
+    ) %>% 
+    filter(!practice) %>% select(-practice)
+
+afc_scores = afc %>% 
+    group_by(wid, word) %>% 
+    summarise(strength = -mean(log(rt))) %>%
+    group_by(wid) %>% 
+    mutate(
+        strength_z = zscore(strength),
+    )
+
+multi = multi %>% 
+    left_join(afc_scores, c("wid", "first_word" = "word")) %>% 
+    left_join(afc_scores, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
+    mutate(first_advantage = strength_z_first - strength_z_second)
+
+multi = multi  %>% 
+    group_by(wid) %>% 
+    mutate(
+        typing_rt_z = zscore(typing_rt)
+    )
+```
+
+## Participants
+
+- N = `r nrow(participants)`
+
+
+## Probability of remembering first word
+
+As a sanity check, we first ask if our memory strength index predicts
+participants choices about which image to recall. We operationalize memory
+strength as the within-participant, Z-scored, mean-log 2AFC RT (that's a mouthful!)
+
+```{r}
+ggplot(multi, aes(strength_z_first, choose_first)) + 
+    stat_summary_bin() + geom_smooth(method='lm')
+
+lmer(choose_first ~ strength_z_first + (1|wid), data=multi) %>% summ
+```
+
+OK that's good. You might think we should be using the difference in strength
+between the first and second image, but that actually is a worse predictor. Why?
+Well...
+
+<!-- 
+The strength of just the first shown image has a stronger effect than the difference
+in strength.
+```{r}
+ggplot(multi, aes(first_advantage, choose_first)) + 
+    stat_summary_bin() + geom_smooth(method='lm')
+
+lmer(choose_first ~ first_advantage + (1|wid), data=multi) %>% summ
+``` 
+-->
+
+
+## Number of presentations
+
+Unfortunately, most trials still have only one presentation because the participant
+chooses to recall for the first image without seeing the second image.
+
+```{r}
+ggplot(multi, aes(n_pres)) + 
+    geom_bar()
+```
+
+This is less likely when the memory strength for the first-seen image is low.
+
+```{r}
+ggplot(multi, aes(strength_z_first, as.numeric(n_pres == 1))) + 
+    stat_summary_bin(bins=5) +
+    stat_smooth(method="glm", method.args = list(family="binomial"))
+
+glmer(n_pres == 1 ~ strength_z_first + (1|wid), family='binomial', data=multi) %>% summ
+
+ggplot(multi, aes(n_pres, strength_z_first)) + 
+    stat_summary()
+
+```
+
+## First presentation duration
+
+The previous result could be taken as evidence of rational memory search, but
+it could also just be the result of recall being terminated quickly because
+the memory is strong. 
+
+Here's a stronger test. Consider only the trials with more than one presentation.
+Do participants switch away from the first image more quickly when they have
+a worse memory of it? 
+
+```{r}
+multi %>% 
+    filter(n_pres > 1) %>% 
+    ggplot(aes(strength_z_first, first_pres_time)) + 
+        stat_summary_bin() +
+        geom_smooth(method='lm')
+
+lmer(first_pres_time ~ strength_z_first + (1|wid), data=multi) %>% summ
+```
+
+At least it's trending in the right direction!
+
+
+## Reaction time
+
+```{r}
+multi %>%
+    ggplot(aes(typing_rt)) + 
+        geom_density(fill="black", alpha=0.1)
+
+multi %>% 
+    ggplot(aes(factor(n_pres), typing_rt)) + 
+        geom_quasirandom() +
+        stat_summary(color="red") + ylim(0, NA)
+
+```
+
+
+
+```{r}
+# multi %>% filter(wid == first(participants$wid)) %>% 
+#     select(strength_first, strength_second, abs(first_advantage)) %>% 
+#     arrange(`abs(first_advantage)`) %>% 
+#     pivot_longer(c(strength_first, strength_second)) %>% 
+#     ggplot()
+# Check javascript score computation
+check_score <- participants %>%
+    select(wid, afc_scores) %>%
+    json_to_columns(afc_scores) %>% 
+    pivot_longer(-wid, names_to="word") %>% 
+    mutate(js_strength = -value) %>% 
+    inner_join(afc_scores)
+
+# max(check_score$js_score - check_score$score)
+stopifnot(mean(check_score$js_strength - check_score$strength) < .1)
+```
+
+
+
+
+
+
