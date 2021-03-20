@@ -6,6 +6,7 @@ if [ $? -ne 0 ]; then
    exit
 fi
 
+open -a 'Google Chrome' "$filename.html"
 echo -n "Confirm publish [y/n]"
 read confirm
 if [ $confirm == "y" ]; then
@@ -17,11 +18,11 @@ fi
 
 newname=$filename-`date +"%y-%m-%d"`.html
 newpath=reports/$newname
-mv $filename.html $newpath
+mv "$filename.html" $newpath
 git add .
 git commit -m "$newpath"
 
 scp $newpath fredc@simcoe:~/www.fredcallaway.com/docs/reports/memory
-open -a 'Google Chrome' $newpath
 
+echo www.fredcallaway.com/reports/memory/$newname | pbcopy
 echo www.fredcallaway.com/reports/memory/$newname
