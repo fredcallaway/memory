@@ -343,6 +343,10 @@ glmer(correct ~ word_type + (1|wid), data=trials, family=binomial) %>% summ
 
 ## Reaction time
 
+```{r}
+trials %>% filter(rt < 5000) %>% ggplot(aes(rt)) + geom_histogram()
+```
+
 ### Aggregate
 
 ```{r}

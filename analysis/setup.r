@@ -1,4 +1,5 @@
-knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, out.width="60%", fig.align="center")
+
 library("tidyverse")
 library("lme4")
 library("jtools")
@@ -48,8 +49,6 @@ word_type_colors = scale_colour_manual(values=c(
     BLUE,
     YELLOW
 ), aesthetics=c("fill", "colour"), name="Word Memorability")
-
-knitr::opts_chunk$set(out.width="60%", fig.align="center")
 
 json_to_columns <- function(df, column){
     json_df = df %>% 

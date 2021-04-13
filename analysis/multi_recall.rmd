@@ -153,9 +153,13 @@ multi %>%
         geom_density(fill="black", alpha=0.1)
 
 multi %>% 
-    ggplot(aes(factor(n_pres), typing_rt)) + 
+    ggplot(aes(factor(n_pres), typing_rt, color=wid)) + 
         geom_quasirandom() +
         stat_summary(color="red") + ylim(0, NA)
+
+multi %>% 
+    ggplot(aes(wid, as.numeric(n_pres > 1))) +
+        stat_summary(fun.y=sum)
 
 ```
 
