@@ -1,4 +1,4 @@
-knitr::opts_chunk$set(warning=FALSE, message=FALSE, out.width="60%", fig.align="center")
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center")
 
 library("tidyverse")
 library("lme4")
@@ -27,12 +27,13 @@ ORANGE =  "#FF7F00"
 YELLOW =  "#FFDD47" 
 GRAY = "#8E8E8E"
 BLACK = "#1B1B1B"
-theme_set(theme_bw(base_size = 18))
+theme_set(theme_bw(base_size = 14))
 theme_update(
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank()
 )
-update_geom_defaults("line", list(size = 1.75))
+
+update_geom_defaults("line", list(size = 1.2))
 
 kable = knitr::kable
 glue = glue::glue
@@ -61,9 +62,20 @@ json_to_columns <- function(df, column){
         bind_cols(json_df)
 }
 
-zscore = function(x) (x - mean(x, na.rm=T)) / sd(x, na.rm=T)
 
-
-
-# %% ==================== this ====================
+system('mkdir -p figs')
+system('mkdir -p .fighist')
+fig = function(name="tmp", w=4, h=4, dpi=320, ...) {
+    if (isTRUE(getOption('knitr.in.progress'))) {
+        show(last_plot())
+        return()
+    }
+    ggsave("/tmp/fig.png", width=w, height=h, dpi=dpi, ...)
+    stamp = format(Sys.time(), "%m-%d-%H-%M-%S")
+    p = glue('.fighist/{name}-{stamp}.png')
+    system(glue('mv /tmp/fig.png {p}'))
+    system(glue('cp {p} figs/{name}.png'))
+    # invisible(dev.off())
+    # knitr::include_graphics(p)
+}
 

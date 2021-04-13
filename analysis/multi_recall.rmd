@@ -1,5 +1,5 @@
 ---
-title: Multi-cue recall (v3.3)
+title: Multi-cue recall (v3.4)
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
@@ -12,7 +12,7 @@ output:
 ```{r setup, include=FALSE}
 source("setup.r")
 
-VERSIONS = c('v3.3')
+VERSIONS = c('v3.4')
 
 load_data = function(type) {
     VERSIONS %>% 
@@ -32,14 +32,17 @@ multi = load_data('multi-recall') %>%
         correct = response_type == "correct",
         rt = typing_rt,
         presentation_times = map(presentation_times, fromJSON),
-        first_pres_time = map_dbl(presentation_times, 1),
+        first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
         choose_first = as.numeric(word == first_word),
-        n_pres = lengths(presentation_times)
+        n_pres = lengths(presentation_times),
+        odd_pres = mod(n_pres, 2) == 1,
+        last_word = if_else(odd_pres, first_word, second_word),
+        chosen_word = if_else(choose_first, first_word, second_word),
+        choose_last_seen = last_word == chosen_word
     )
 
 afc = load_data('afc') %>% 
     mutate(
-        round = rep(1:3, each=20, times=length(unique(wid))),
         log_afc_rt = log(rt)
     ) %>% 
     filter(!practice) %>% select(-practice)
@@ -49,20 +52,32 @@ afc_scores = afc %>%
     summarise(strength = -mean(log(rt))) %>%
     group_by(wid) %>% 
     mutate(
-        strength_z = zscore(strength),
+        strength_z = scale(strength),
     )
 
 multi = multi %>% 
     left_join(afc_scores, c("wid", "first_word" = "word")) %>% 
     left_join(afc_scores, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
-    mutate(first_advantage = strength_z_first - strength_z_second)
+    mutate(
+        first_advantage = strength_z_first - strength_z_second,
+        chosen_strength = if_else(choose_first, strength_z_first, strength_z_second),
+    )
 
 multi = multi  %>% 
     group_by(wid) %>% 
     mutate(
-        typing_rt_z = zscore(typing_rt)
+        typing_rt_z = scale(typing_rt)
     )
 ```
+
+```{r}
+# Sanity checks
+
+
+
+
+```
+
 
 ## Participants
 
@@ -76,26 +91,24 @@ participants choices about which image to recall. We operationalize memory
 strength as the within-participant, Z-scored, mean-log 2AFC RT (that's a mouthful!)
 
 ```{r}
-ggplot(multi, aes(strength_z_first, choose_first)) + 
-    stat_summary_bin() + geom_smooth(method='lm')
+ggplot(multi, aes(strength_z_first, as.numeric(choose_first))) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
 
 lmer(choose_first ~ strength_z_first + (1|wid), data=multi) %>% summ
 ```
 
-OK that's good. You might think we should be using the difference in strength
-between the first and second image, but that actually is a worse predictor. Why?
-Well...
+We can also look at the difference between first and second. It's a worse
+predictor, but both do contribute (when specified as separate terms).
 
-<!-- 
-The strength of just the first shown image has a stronger effect than the difference
-in strength.
 ```{r}
-ggplot(multi, aes(first_advantage, choose_first)) + 
-    stat_summary_bin() + geom_smooth(method='lm')
+ggplot(multi, aes(strength_z_first - strength_z_second, as.numeric(choose_first))) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
 
-lmer(choose_first ~ first_advantage + (1|wid), data=multi) %>% summ
-``` 
--->
+lmer(choose_first ~ I(strength_z_first - strength_z_second) + (1|wid), data=multi) %>% summ
+lmer(choose_first ~ strength_z_first + strength_z_second + (1|wid), data=multi) %>% summ
+```
 
 
 ## Number of presentations
@@ -153,6 +166,16 @@ multi %>%
         geom_density(fill="black", alpha=0.1)
 
 multi %>% 
+    ggplot(aes(chosen_strength, choice_rt)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    geom_smooth()
+
+multi %>% 
+    ggplot(aes(strength_z_first + strength_z_second, choice_rt)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    geom_smooth()
+
+multi %>% 
     ggplot(aes(factor(n_pres), typing_rt, color=wid)) + 
         geom_quasirandom() +
         stat_summary(color="red") + ylim(0, NA)
@@ -161,9 +184,69 @@ multi %>%
     ggplot(aes(wid, as.numeric(n_pres > 1))) +
         stat_summary(fun.y=sum)
 
+multi %>% 
+    filter(n_pres == 1) %>%
+    ggplot(aes(strength_z_first, choice_rt)) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method=lm)
+
+multi %>% 
+    ggplot(aes(strength_z_first, as.numeric(n_pres == 1))) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
+```
+
+## Choosing not-seen
+
+```{r}
+multi %>% 
+    filter(n_pres > 0) %>% 
+    filter(response_type != "timeout") %>% 
+    mutate(
+        odd_pres = mod(n_pres, 2) == 1,
+        last_word = if_else(odd_pres, first_word, second_word),
+        chosen_word = if_else(choose_first, first_word, second_word),
+        choose_last_seen = last_word == chosen_word
+    ) %>% 
+    group_by(wid, choose_last_seen, correct) %>% 
+    summarise(n=n()) %>% 
+    ggplot(aes(fct_reorder(wid, n), n, fill=interaction(choose_last_seen, correct))) + 
+        geom_bar(stat="identity") + 
+        theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) + xlab("participant")
+    head
+
+```
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 0) %>% 
+    filter(response_type != "timeout") %>% 
+    mutate(
+        odd_pres = mod(n_pres, 2) == 1,
+        last_word = if_else(odd_pres, first_word, second_word),
+        chosen_word = if_else(choose_first, first_word, second_word),
+        choose_last_seen = last_word == chosen_word
+    ) 
+X %>% 
+    ggplot(aes(choose_last_seen, as.numeric(correct), group=wid)) +
+        stat_summary(fun.data=mean_cl_boot, geom="line")
+
+# %% --------
+X %>% ggplot(aes(wid, choose_last_seen, color=correct, group=correct)) +
+    geom
+
 ```
 
 
+```{r}
+multi %>% 
+    ggplot(aes(typing_rt - choice_rt)) + geom_histogram()
+
+multi %>% 
+    ggplot(aes(chosen_strength, typing_rt - choice_rt)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    geom_smooth(method="lm")
+```
 
 ```{r}
 # multi %>% filter(wid == first(participants$wid)) %>% 
@@ -172,15 +255,15 @@ multi %>%
 #     pivot_longer(c(strength_first, strength_second)) %>% 
 #     ggplot()
 # Check javascript score computation
-check_score <- participants %>%
-    select(wid, afc_scores) %>%
-    json_to_columns(afc_scores) %>% 
-    pivot_longer(-wid, names_to="word") %>% 
-    mutate(js_strength = -value) %>% 
-    inner_join(afc_scores)
+# check_score <- participants %>%
+#     select(wid, afc_scores) %>%
+#     json_to_columns(afc_scores) %>% 
+#     pivot_longer(-wid, names_to="word") %>% 
+#     mutate(js_strength = -value) %>% 
+#     inner_join(afc_scores)
 
-# max(check_score$js_score - check_score$score)
-stopifnot(mean(check_score$js_strength - check_score$strength) < .1)
+# # max(check_score$js_score - check_score$score)
+# stopifnot(mean(check_score$js_strength - check_score$strength) < .1)
 ```
 
 
