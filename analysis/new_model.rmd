@@ -1,0 +1,103 @@
+---
+title: Binomial model predictions
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+source("setup.r")
+
+read_sim = function(name) {
+    read_csv(glue("../model/results/sim_{name}_apr20.csv")) %>% mutate(name=!!name)
+}
+
+raw_df = bind_rows(read_sim("optimal"), read_sim("random")) 
+```
+
+```{r}
+df = raw_df %>% mutate(
+    correct = outcome != -1,
+    presentation_times = map(presentation_times, fromJSON),
+    rt = duration_first + duration_second,
+    prop_fix = duration_first / rt,
+    rel_present = duration_first - duration_second,
+    first_fix_duration = map_dbl(presentation_times, 1, .default=NaN),
+    second_fix_duration = map_dbl(presentation_times, 2, .default=NaN),
+    choose_first = outcome == 1,
+    n_pres = lengths(presentation_times),
+    odd_pres = mod(n_pres, 2) == 1,
+    rel_strength = strength_first - strength_second,
+    strength_first_bin = cut(strength_first, 5, ordered=T),
+    strength_second_bin = cut(strength_second, 5, ordered=T)
+)
+optimal = filter(df, name=="optimal")
+random = filter(df, name=="random")
+```
+
+## Fixation proportion by relative memory strength
+```{r,fig.width=7.5, fig.height=3}
+df %>% filter(correct) %>% ggplot(aes(rel_strength, prop_fix)) + geom_smooth(se=F) + facet_wrap(~name)
+
+df %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(rel_strength, prop_fix)) + geom_smooth(se=F) + facet_wrap(~name)
+
+df %>% ggplot(aes(rel_strength, prop_fix, color=correct)) + geom_smooth(se=F) + facet_wrap(~name)
+
+```
+
+## First fixation duration by first fixated item strength
+```{r,fig.width=7.5, fig.height=3}
+ggplot(df, aes(strength_first, first_fix_duration)) + geom_smooth(se=F) + facet_wrap(~name)
+```
+
+
+## Second fixation duration
+```{r,fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres > 2) %>% 
+    ggplot(aes(strength_second, second_fix_duration)) + geom_smooth(se=F) + facet_wrap(~name)
+
+df %>% 
+    filter(n_pres > 2) %>% 
+    ggplot(aes(strength_first, second_fix_duration)) + geom_smooth(se=F) + facet_wrap(~name)
+
+optimal %>% 
+    filter(n_pres > 2)  %>% 
+    with(lm(second_fix_duration ~ strength_first + strength_second)) %>% summ
+```
+
+### Split by which target is remembered
+
+```{r,fig.width=7.5, fig.height=3}
+ggplot(df, aes(strength_first, first_fix_duration, color=choose_first)) + 
+    geom_smooth() + facet_wrap(~name)
+```
+
+```{r,fig.width=7.5, fig.height=3}
+df %>% ggplot(aes(rel_strength, prop_fix, color=factor(outcome), group=factor(outcome))) + 
+    geom_smooth() + facet_wrap(~name)
+```
+
+
+## Choice probability
+
+Conditioning on remembering a target, how likely is the first seen one to be remembered?
+
+```{r,fig.width=7.5, fig.height=3}
+df %>% filter(correct) %>% mutate(
+    strength_first_bin = cut(strength_first, 5, ordered=T)
+) %>% ggplot(aes(rel_strength, as.numeric(choose_first), color=strength_first_bin)) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x, se=F) + facet_wrap(~name) +
+    ylab("p(remember first seen)")
+```
+
+
+
+
+
+

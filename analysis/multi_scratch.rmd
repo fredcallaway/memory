@@ -1,0 +1,78 @@
+
+## Reaction time
+
+```{r}
+multi %>%
+    ggplot(aes(typing_rt)) + 
+        geom_density(fill="black", alpha=0.1)
+
+multi %>% 
+    ggplot(aes(chosen_strength, choice_rt)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    geom_smooth()
+
+multi %>% 
+    ggplot(aes(strength_first + strength_second, choice_rt)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    geom_smooth()
+
+multi %>% 
+    ggplot(aes(factor(n_pres), typing_rt, color=wid)) + 
+        geom_quasirandom() +
+        stat_summary(color="red") + ylim(0, NA)
+
+multi %>% 
+    ggplot(aes(wid, as.numeric(n_pres > 1))) +
+        stat_summary(fun.y=sum)
+
+multi %>% 
+    filter(n_pres == 1) %>%
+    ggplot(aes(strength_first, choice_rt)) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method=lm)
+
+multi %>% 
+    ggplot(aes(strength_first, as.numeric(n_pres == 1))) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
+```
+
+## Choosing not-seen
+
+```{r}
+multi %>% 
+    filter(n_pres > 0) %>% 
+    filter(response_type != "timeout") %>% 
+    mutate(
+        odd_pres = mod(n_pres, 2) == 1,
+        last_word = if_else(odd_pres, first_word, second_word),
+        chosen_word = if_else(choose_first, first_word, second_word),
+        choose_last_seen = last_word == chosen_word
+    ) %>% 
+    group_by(wid, choose_last_seen, correct) %>% 
+    summarise(n=n()) %>% 
+    ggplot(aes(fct_reorder(wid, n), n, fill=interaction(choose_last_seen, correct))) + 
+        geom_bar(stat="identity") + 
+        theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) + xlab("participant")
+    head
+
+```
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 0) %>% 
+    filter(response_type != "timeout") %>% 
+    mutate(
+        odd_pres = mod(n_pres, 2) == 1,
+        last_word = if_else(odd_pres, first_word, second_word),
+        chosen_word = if_else(choose_first, first_word, second_word),
+        choose_last_seen = last_word == chosen_word
+    ) 
+
+X %>% 
+    ggplot(aes(choose_last_seen, as.numeric(correct), group=wid)) +
+        stat_summary(fun.data=mean_cl_boot, geom="line")
+```
+
+
+

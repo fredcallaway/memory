@@ -12,8 +12,8 @@ output:
 ```{r setup, include=FALSE}
 source("setup.r")
 
-VERSIONS = c('v4.0')
-# VERSIONS = c('v2.0', 'v2.0B')
+# VERSIONS = c('v4.0')
+VERSIONS = c('v2.0', 'v2.0B')
 
 load_data = function(type) {
     VERSIONS %>% 

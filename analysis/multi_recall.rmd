@@ -12,7 +12,7 @@ output:
 ```{r setup, include=FALSE}
 source("setup.r")
 
-VERSIONS = c('v3.4')
+VERSIONS = c('v3.4', 'v3.5')
 
 load_data = function(type) {
     VERSIONS %>% 
@@ -33,12 +33,16 @@ multi = load_data('multi-recall') %>%
         rt = typing_rt,
         presentation_times = map(presentation_times, fromJSON),
         first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
-        choose_first = as.numeric(word == first_word),
+        choose_first = word == first_word,
         n_pres = lengths(presentation_times),
         odd_pres = mod(n_pres, 2) == 1,
         last_word = if_else(odd_pres, first_word, second_word),
         chosen_word = if_else(choose_first, first_word, second_word),
-        choose_last_seen = last_word == chosen_word
+        choose_last_seen = last_word == chosen_word,
+        presentation_times_first = map(presentation_times, ~ .x[c(T, F)]),
+        presentation_times_second = map(presentation_times, ~ .x[c(F, T)]),
+        total_first = map_dbl(presentation_times_first, ~sum(unlist(.x)), .default=0),
+        total_second = replace_na(map_dbl(presentation_times_second, ~sum(unlist(.x)), .default=0), 0),
     )
 
 afc = load_data('afc') %>% 
@@ -49,18 +53,18 @@ afc = load_data('afc') %>%
 
 afc_scores = afc %>% 
     group_by(wid, word) %>% 
-    summarise(strength = -mean(log(rt))) %>%
+    summarise(raw_strength = -mean(log(rt))) %>%
     group_by(wid) %>% 
     mutate(
-        strength_z = scale(strength),
+        strength = scale(raw_strength),
     )
 
 multi = multi %>% 
     left_join(afc_scores, c("wid", "first_word" = "word")) %>% 
     left_join(afc_scores, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
     mutate(
-        first_advantage = strength_z_first - strength_z_second,
-        chosen_strength = if_else(choose_first, strength_z_first, strength_z_second),
+        relative_strength = strength_first - strength_second,
+        chosen_strength = if_else(choose_first, strength_first, strength_second),
     )
 
 multi = multi  %>% 
@@ -70,204 +74,207 @@ multi = multi  %>%
     )
 ```
 
-```{r}
-# Sanity checks
-
-
-
-
-```
-
-
 ## Participants
 
 - N = `r nrow(participants)`
 
 
-## Probability of remembering first word
+## Sanity and data-quality checks
+
+### Probability of remembering first word
 
 As a sanity check, we first ask if our memory strength index predicts
 participants choices about which image to recall. We operationalize memory
-strength as the within-participant, Z-scored, mean-log 2AFC RT (that's a mouthful!)
+strength as the within-participant Z-scored, mean-log 2AFC RT (that's a mouthful!)
 
 ```{r}
-ggplot(multi, aes(strength_z_first, as.numeric(choose_first))) + 
+
+multi %>% ggplot(aes(strength_first, as.numeric(choose_first))) +
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
     geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
 
-lmer(choose_first ~ strength_z_first + (1|wid), data=multi) %>% summ
+lmer(choose_first ~ strength_first + (strength_first|wid), data=multi) %>% summ
 ```
 
-We can also look at the difference between first and second. It's a worse
-predictor, but both do contribute (when specified as separate terms).
+Note: unless otherwise stated, all regression tables are maximal linear mixed effects models
+(i.e. random slopes and intercepts). Plotted regression lines are plain old OLS.
+
+We can also look at the difference between first and second, and how each strength
+contributed independently. 
 
 ```{r}
-ggplot(multi, aes(strength_z_first - strength_z_second, as.numeric(choose_first))) + 
+multi %>% ggplot(aes(strength_first - strength_second, as.numeric(choose_first))) + 
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
     geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
 
-lmer(choose_first ~ I(strength_z_first - strength_z_second) + (1|wid), data=multi) %>% summ
-lmer(choose_first ~ strength_z_first + strength_z_second + (1|wid), data=multi) %>% summ
+lmer(choose_first ~ relative_strength + (relative_strength|wid), data=multi) %>% summ
+lmer(choose_first ~ strength_first + strength_second + (strength_first + strength_second |wid), data=multi) %>% summ
 ```
 
+### Number of presentations
 
-## Number of presentations
-
-Unfortunately, most trials still have only one presentation because the participant
-chooses to recall for the first image without seeing the second image.
+Many trials have one presentation. The zero-presentation trials are mostly
+from two uncooperative (or confused) participants. Importantly we get a decent
+proportion of trials where both items are seen.
 
 ```{r}
-ggplot(multi, aes(n_pres)) + 
+multi %>% filter(n_pres <= 7) %>% ggplot(aes(n_pres)) + 
     geom_bar()
-```
-
-This is less likely when the memory strength for the first-seen image is low.
-
-```{r}
-ggplot(multi, aes(strength_z_first, as.numeric(n_pres == 1))) + 
-    stat_summary_bin(bins=5) +
-    stat_smooth(method="glm", method.args = list(family="binomial"))
-
-glmer(n_pres == 1 ~ strength_z_first + (1|wid), family='binomial', data=multi) %>% summ
-
-ggplot(multi, aes(n_pres, strength_z_first)) + 
-    stat_summary()
 
 ```
 
-## First presentation duration
+Both cues are seen (n_pres ≥ 2) on `r round(mean(multi$n_pres >= 2)*100)`% of trials.
 
-The previous result could be taken as evidence of rational memory search, but
-it could also just be the result of recall being terminated quickly because
-the memory is strong. 
+::: {.alert .alert-info}
+**Conclusion:**  We have a reliable measurement of memory strength (it
+predicts which target people remember) and we get enough switching to analyze
+that behavior.
+:::
 
-Here's a stronger test. Consider only the trials with more than one presentation.
-Do participants switch away from the first image more quickly when they have
-a worse memory of it? 
+Now let's look for evidence of rational memory search.
 
-```{r}
-multi %>% 
-    filter(n_pres > 1) %>% 
-    ggplot(aes(strength_z_first, first_pres_time)) + 
-        stat_summary_bin() +
-        geom_smooth(method='lm')
+## Proportion presentation time
 
-lmer(first_pres_time ~ strength_z_first + (1|wid), data=multi) %>% summ
-```
-
-At least it's trending in the right direction!
-
-
-## Reaction time
-
-```{r}
-multi %>%
-    ggplot(aes(typing_rt)) + 
-        geom_density(fill="black", alpha=0.1)
-
-multi %>% 
-    ggplot(aes(chosen_strength, choice_rt)) + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
-    geom_smooth()
-
-multi %>% 
-    ggplot(aes(strength_z_first + strength_z_second, choice_rt)) + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
-    geom_smooth()
-
-multi %>% 
-    ggplot(aes(factor(n_pres), typing_rt, color=wid)) + 
-        geom_quasirandom() +
-        stat_summary(color="red") + ylim(0, NA)
-
-multi %>% 
-    ggplot(aes(wid, as.numeric(n_pres > 1))) +
-        stat_summary(fun.y=sum)
-
-multi %>% 
-    filter(n_pres == 1) %>%
-    ggplot(aes(strength_z_first, choice_rt)) +
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
-    geom_smooth(method=lm)
-
-multi %>% 
-    ggplot(aes(strength_z_first, as.numeric(n_pres == 1))) +
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
-    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
-```
-
-## Choosing not-seen
-
-```{r}
-multi %>% 
-    filter(n_pres > 0) %>% 
-    filter(response_type != "timeout") %>% 
-    mutate(
-        odd_pres = mod(n_pres, 2) == 1,
-        last_word = if_else(odd_pres, first_word, second_word),
-        chosen_word = if_else(choose_first, first_word, second_word),
-        choose_last_seen = last_word == chosen_word
-    ) %>% 
-    group_by(wid, choose_last_seen, correct) %>% 
-    summarise(n=n()) %>% 
-    ggplot(aes(fct_reorder(wid, n), n, fill=interaction(choose_last_seen, correct))) + 
-        geom_bar(stat="identity") + 
-        theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) + xlab("participant")
-    head
-
-```
+The simplest test of rational memory: do people spend more time looking at the cue
+that they have a stronger memory of? This plot only considers trials where
+both cues are seen.
 
 ```{r}
 X = multi %>% 
-    filter(n_pres > 0) %>% 
-    filter(response_type != "timeout") %>% 
-    mutate(
-        odd_pres = mod(n_pres, 2) == 1,
-        last_word = if_else(odd_pres, first_word, second_word),
-        chosen_word = if_else(choose_first, first_word, second_word),
-        choose_last_seen = last_word == chosen_word
-    ) 
+    filter(n_pres >= 2) %>% 
+    mutate(prop_first = (total_first) / (total_first + total_second)) 
+
+X %>% ggplot(aes(strength_first - strength_second, prop_first)) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(prop_first ~ relative_strength + (relative_strength|wid), data=.) %>% summ
+X %>% lmer(prop_first ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
+```
+
+::: {.alert .alert-info}
+**Conclusion:** It seems like people are spending more time on the one they
+have a stronger memory for. However, it should be noted that this effect can also emerge
+in a random switching model (although not nearly this strongly in the parameters I've 
+looked at).
+:::
+
+
+## First presentation duration
+
+As we saw in my paper on fixations in simple choice, total presentation time
+can be a slightly tricky measure becuase recall cuts off the final
+fixation/presentation. The duration of the first presentation is potentially a
+more reliable cue.
+
+Consider only the trials with more than one presentation.
+Do participants switch away from the first image more quickly when they have
+a worse memory of it?
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 1)
+
+X %>% ggplot(aes(strength_first, first_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+```
+
+Very odd. The plotted fixed effect is non-significant (and slightly negative) while the 
+mixed effects model gives a (barely) significant positive effect.
+Not sure what to make of this, but it suggests that some participants may be
+more rational than others. This could be a direction to explore more.
+
+### Least memorable
+
+It looks like there might be something going on with the least
+memorable cues. Looking only at trials where the strength of the first item
+is more than 1 SD below the mean, we do see an effect. But of course this is
+a prototypical case of p-hacking.
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 1) %>% 
+    filter(strength_first < -1)
+
+X %>% ggplot(aes(strength_first, first_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
 X %>% 
-    ggplot(aes(choose_last_seen, as.numeric(correct), group=wid)) +
-        stat_summary(fun.data=mean_cl_boot, geom="line")
-
-# %% --------
-X %>% ggplot(aes(wid, choose_last_seen, color=correct, group=correct)) +
-    geom
+    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+    # lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
 
 ```
 
+::: {.alert .alert-info}
+**Conclusion:** There is weak evidence that some people are able to recognize 
+cues with low memory strength and switch away from them faster, especially for
+cues with very low strength. There appears to be substantial individual variation
+that could be worth further exploration.
+:::
+
+
+## Second presentation duration
+
+We can do a similar analysis for the second presentation duration. In this case,
+however, the duration may depend on the strength of both the first and second cues.
+
+### Second-seen strength
 
 ```{r}
-multi %>% 
-    ggplot(aes(typing_rt - choice_rt)) + geom_histogram()
+X = multi %>% 
+    filter(n_pres > 2) %>% 
+    mutate(second_pres_time = map_dbl(presentation_times, 2, .default=NaN))
 
-multi %>% 
-    ggplot(aes(chosen_strength, typing_rt - choice_rt)) + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
-    geom_smooth(method="lm")
+X %>% ggplot(aes(strength_second, second_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(second_pres_time ~ strength_second + (1|wid), data=.) %>% summ
+
 ```
-
+### First-seen strength
 ```{r}
-# multi %>% filter(wid == first(participants$wid)) %>% 
-#     select(strength_first, strength_second, abs(first_advantage)) %>% 
-#     arrange(`abs(first_advantage)`) %>% 
-#     pivot_longer(c(strength_first, strength_second)) %>% 
-#     ggplot()
-# Check javascript score computation
-# check_score <- participants %>%
-#     select(wid, afc_scores) %>%
-#     json_to_columns(afc_scores) %>% 
-#     pivot_longer(-wid, names_to="word") %>% 
-#     mutate(js_strength = -value) %>% 
-#     inner_join(afc_scores)
 
-# # max(check_score$js_score - check_score$score)
-# stopifnot(mean(check_score$js_strength - check_score$strength) < .1)
+X %>% ggplot(aes(strength_first, second_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(second_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+
+```
+### Relative strength (first - second)
+```{r}
+
+X %>% ggplot(aes(relative_strength, second_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(second_pres_time ~ relative_strength + (relative_strength|wid), data=.) %>% summ
 ```
 
+We see no effect of the strength of the second-seen item on the duration of
+the second presentation. But we see (in the plot) a strong effect of the
+first-seen strength. The relative strength is a stronger predictor indicating
+that the second strength is playing a role. In a cruel twist of fate, the
+random slopes kill all our effects this time. However, the second two effects
+(first and relative) survive random intercepts. So I suspect we will get a
+significant effect in a larger sample.
 
+::: {.alert .alert-info}
+**Conclusion:** We see fairly compelling evidence of rationality in the decision
+to switch *back* to the first item. Oddly, this effect is strong in aggregate but
+insignificant in a mixed effects model, the opposite as the previous analysis.
+:::
 
+## Discussion
 
-
-
+Overall, this looks pretty good to me. Before gathering more data, I would
+like to (1) talk through the paradigm to make sure we don't have any reviewer
+traps and (2) think about additional predictions we might want to
+pre-register. Although what we have now might already be enough to make the
+first-order point, that people can use progress signals to direct their memory
+recall strategies.
