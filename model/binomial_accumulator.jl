@@ -2,6 +2,7 @@ using Parameters
 using Distributions
 using SplitApplyCombine
 using StatsBase
+using StatsFuns
 
 @with_kw struct MetaMDP{N}
     threshold::Int = 100
@@ -25,7 +26,7 @@ struct Belief{N}
 end
 
 
-initial_belief(m::MetaMDP) = Belief(0, 0, Tuple((1,1) for i in 1:n_item(m)))
+initial_belief(m::MetaMDP) = Belief(0, 1, Tuple((1,1) for i in 1:n_item(m)))  # note assume focus first item first
 # terminal_belief(m::MetaMDP, c::Int=-1) = Belief(-1, c, Tuple((-1, -1) for i in 1:n_item(m)))
 is_terminal(b) = b.n_step == -1
 # max_cost(m::MetaMDP) = m.miss_cost
@@ -81,10 +82,8 @@ struct ValueFunction{F}
 end
 
 function default_hash(b::Belief{2})
-    # hash(b.focused, hash(b.n_step, hash(b.counts)))
-    # hash(b.focused, hash(b.counts))
-    hash(b.counts[1]) << Int(b.focused == 1) +
-    hash(b.counts[2]) << Int(b.focused == 2)
+    not_focused = b.focused == 1 ? 2 : 1
+    hash(b.counts[b.focused], hash(b.counts[not_focused]))
 end
 
 ValueFunction(m::MetaMDP, hasher::Function) = ValueFunction(m, hasher, Dict{UInt64, Float64}())
@@ -168,6 +167,7 @@ end
 
 abstract type Policy end
 
+
 struct RandomPolicy <: Policy
     m::MetaMDP
 end
@@ -188,6 +188,7 @@ function act(pol::RandomSwitchPolicy, b::Belief)
     end
 end
 
+
 struct OptimalPolicy <: Policy
     m::MetaMDP
     V::ValueFunction
@@ -197,17 +198,34 @@ OptimalPolicy(m::MetaMDP) = OptimalPolicy(m, ValueFunction(m))
 OptimalPolicy(V::ValueFunction) = OptimalPolicy(V.m, V)
 
 function act(pol::OptimalPolicy, b::Belief)
-    rand(argmaxes(c->Q(pol.V, b, c), 1:n_item(b)))
+    rand(argmaxes(c -> Q(pol.V, b, c), 1:n_item(b)))
 end
 
-function simulate(policy; b=initial_belief(policy.m), s=nothing)
+
+struct SoftOptimalPolicy <: Policy
+    m::MetaMDP
+    V::ValueFunction
+    β::Float64
+end
+
+SoftOptimalPolicy(m::MetaMDP; β::Real) = SoftOptimalPolicy(m, ValueFunction(m), float(β))
+SoftOptimalPolicy(V::ValueFunction; β::Real) = SoftOptimalPolicy(V.m, V, float(β))
+
+function act(pol::SoftOptimalPolicy, b::Belief)
+    p = softmax!(map(c-> pol.β * Q(pol.V, b, c), 1:n_item(b)))
+    sample(Weights(p))
+end
+
+
+function simulate(policy; b=initial_belief(policy.m), s=nothing, save_beliefs=false)
     m = policy.m
     total_cost = 0.
     bs = Belief[]
     cs = Int[]
     while !is_terminal(b)
         c = act(policy, b)
-        push!(bs, b); push!(cs, c)
+        save_beliefs && push!(bs, b)
+        push!(cs, c)
 
         p, b1, cost = invert(results(m, b, s, c))
         i = sample(Weights(p))
