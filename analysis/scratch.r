@@ -1,3 +1,23 @@
+
+# %% ==================== Giving up ====================
+
+trials %>% filter(response_type == "other") %>% with(response)
+
+# for simple v4.0 23 is the number of "give up" responses
+
+23 / nrow(trials)
+
+
+
+# %% --------
+
+
+# %% --------
+trials %>% ggplot(aes(log_afc_rt, log_recall_rt)) + geom_smooth()
+fig()
+# %% ==================== Others ====================
+
+
 # This is less likely when the memory strength for the first-seen image is low.
 
 ```{r}

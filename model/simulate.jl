@@ -13,7 +13,7 @@ mkpath("tmp/sim")
 mkpath("results")
 # %% --------
 
-G = grid(step_size=[1,2,4], max_step=[60], difficulty=.4:.1:.6, switch_cost=[0, 1, 2], miss_cost=[0, 600])
+G = grid(step_size=[4], max_step=[60], difficulty=.4:.05:.6, switch_cost=[0, 2, 4], miss_cost=[0, 600])
 
 @everywhere function make_mdp(g)
     @unpack step_size, max_step, difficulty, switch_cost, miss_cost = g
@@ -25,7 +25,7 @@ end
 @everywhere function generate_sims(policy::Policy)
     sims = NamedTuple[]    
     foreach(.3:.1:.6) do v0
-        foreach(.05:.05:.2) do vd
+        foreach(0:.01:.2) do vd
             s = (v0 - vd, v0 + vd)
             foreach(1:1000) do i
                 sim = simulate(policy; s)

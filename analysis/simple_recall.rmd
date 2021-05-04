@@ -12,8 +12,8 @@ output:
 ```{r setup, include=FALSE}
 source("setup.r")
 
-# VERSIONS = c('v4.0')
-VERSIONS = c('v2.0', 'v2.0B')
+VERSIONS = c('v4.0')
+# VERSIONS = c('v2.0', 'v2.0B')
 
 load_data = function(type) {
     VERSIONS %>% 
@@ -62,15 +62,16 @@ x2 = afc %>%
 all_trials = inner_join(all_trials, inner_join(x1, x2))
 ```
 
-### March 4 update
-- Add 29 more participants
-- Add simulated pairings analysis
+### May 4 update
+- Add GAM model
 
 ### Exclusions
 
 ```{r}
 
 trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.25)
+trials = trials %>% filter(rt > 50) %>% filter(n() >= 37)
+
 n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
 N = length(unique(trials$wid))
 
@@ -85,9 +86,11 @@ trials %<>% mutate(
     recall_rt = rt,
     log_recall_rt = log(rt)
 )
+
+trials %>% select(wid, rt, correct, afc_rt, afc_accuracy) %>% write_csv("../model/tofit/simple.csv")
 ```
 
-- Excluding `r n_exclude` participants who gave incorrect resonses on fewer than 25% of recall trials, leaving `r N` participants in the analysis.
+- Excluding `r n_exclude` participants who gave orrect resonses on fewer than 25% of recall trials or responded in under 50ms on more than one trial (indicating a recording error), leaving `r N` participants in the analysis.
 <!-- - Excluding `r sum(afc_drop_rt)` AFC reaction times more than 5 sds from the mean. -->
 <!-- - Dropping `r n_drop_rt` recall trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis. -->
 
@@ -173,6 +176,34 @@ p2 = ggplot(effects, aes(reorder(wid, estimate), cor)) +
 prop_slope_positive = with(effects, mean(estimate > 0))
 
 p1 | p2
+```
+
+## Non-parametric GAM fit
+
+```{r}
+library(mgcv)
+# trials$wid = factor(trials$wid)
+m = gam(log_recall_rt ~ s(log_afc_rt, bs = "cs", k = 10) +
+                        s(wid, log_afc_rt, bs='re'),
+        data=trials, method="REML")
+
+# bounds = trials %>% summarise(lo=quantile(afc_rt, .05), hi=quantile(afc_rt, .95))
+bounds = trials %>% summarise(lo=min(afc_rt), hi=max(afc_rt))
+
+preds = expand.grid(
+    wid = unique(trials$wid), 
+    log_afc_rt = seq(4.5, 9, .05)  
+) %>% mutate(
+    log_recall_rt=predict(m, newdata=.),
+    recall_rt=exp(log_recall_rt),
+    afc_rt=exp(log_afc_rt)
+) %>% left_join(bounds) %>% filter(afc_rt > lo & afc_rt < hi)
+
+preds %>% group_by(wid) %>% summarise(mrr = mean(recall_rt)) %>% filter(mrr < 1000)
+
+preds %>% ggplot(aes(log_afc_rt, log_recall_rt, group=wid)) + 
+    geom_line(size=.5)
+
 ```
 
 `r round(100 * prop_slope_positive)`% of participants have a positive slope.

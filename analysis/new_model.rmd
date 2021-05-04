@@ -12,7 +12,7 @@ output:
 source("setup.r")
 
 read_sim = function(name) {
-    read_csv(glue("../model/results/sim_{name}_apr20.csv")) %>% mutate(name=!!name)
+    read_csv(glue("../model/results/sim_{name}.csv")) %>% mutate(name=!!name)
 }
 
 raw_df = bind_rows(read_sim("optimal"), read_sim("random")) 
@@ -36,6 +36,8 @@ df = raw_df %>% mutate(
 )
 optimal = filter(df, name=="optimal")
 random = filter(df, name=="random")
+
+mean(random$n_pres)
 ```
 
 ## Fixation proportion by relative memory strength
@@ -44,7 +46,8 @@ df %>% filter(correct) %>% ggplot(aes(rel_strength, prop_fix)) + geom_smooth(se=
 
 df %>% 
     filter(n_pres >= 2) %>% 
-    ggplot(aes(rel_strength, prop_fix)) + geom_smooth(se=F) + facet_wrap(~name)
+    ggplot(aes(rel_strength, prop_fix)) + geom_smooth(se=F) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + facet_wrap(~name)
 
 df %>% ggplot(aes(rel_strength, prop_fix, color=correct)) + geom_smooth(se=F) + facet_wrap(~name)
 
@@ -52,7 +55,9 @@ df %>% ggplot(aes(rel_strength, prop_fix, color=correct)) + geom_smooth(se=F) + 
 
 ## First fixation duration by first fixated item strength
 ```{r,fig.width=7.5, fig.height=3}
-ggplot(df, aes(strength_first, first_fix_duration)) + geom_smooth(se=F) + facet_wrap(~name)
+df %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(strength_first, first_fix_duration)) + geom_smooth(se=F) + facet_wrap(~name)
 ```
 
 

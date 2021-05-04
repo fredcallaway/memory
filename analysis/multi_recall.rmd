@@ -185,7 +185,37 @@ X %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
 Very odd. The plotted fixed effect is non-significant (and slightly negative) while the 
 mixed effects model gives a (barely) significant positive effect.
 Not sure what to make of this, but it suggests that some participants may be
-more rational than others. This could be a direction to explore more.
+more rational than others.
+
+However, looking at the slopes of individual regressions, it doesn't look like
+there's a real effect here.
+
+```{r}
+effects = multi %>% 
+    filter(n_pres > 1) %>% 
+    mutate(fpt_z = scale(first_pres_time)) %>%
+    filter(n() > 5) %>% 
+    nest(-wid) %>% 
+    mutate(
+        fit = map(data, ~ 
+            lm(first_pres_time_z ~ strength_first, data=.) %>% 
+            tidy(conf.int = T)
+        )
+    ) %>% 
+    unnest(fit) %>% 
+    filter(term == 'strength_first') %>% 
+    arrange(estimate)
+
+ggplot(effects, aes(reorder(wid, estimate), estimate)) + 
+    geom_hline(yintercept=0, color="red") +
+    geom_point() +
+    geom_errorbar(aes(ymin=conf.low , ymax=conf.high)) +
+    labs(y="slope(first_pres_time ~ strength_first) [ms/σ]", x="participant") +
+    coord_flip() + theme(
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()
+    )
+```
 
 ### Least memorable
 

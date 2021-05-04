@@ -3,13 +3,32 @@ using AxisKeys
 using SplitApplyCombine
 import Base.Iterators: product
 
+# %% ==================== Project-specific ====================
+
+# length of each presentation
+function parse_presentations(cs)
+    f = 0
+    x = Int[]
+    for (i, c) in enumerate(cs)
+        if c != f
+            push!(x, 0)
+            f = c
+        end
+        x[end] += 1
+    end
+    x
+end
+
+
+# %% ==================== General Purpose ====================
+
+
 function cache(f, file)
     isfile(file) && return deserialize(file)
     result = f()
     serialize(file, result)
     result
 end
-
 
 function mutate(x::T; kws...) where T
     for field in keys(kws)
