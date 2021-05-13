@@ -94,36 +94,9 @@ add_strength = function(multi, filt, strength) {
 
 ```
 
-## Single-cue recall basics
-
-### Accuracy
-```{r}
-simple %>% ggplot(aes(as.factor(round), as.numeric(correct))) +
-    stat_summary(aes(group=wid), fun.data=mean_cl_boot, geom="line", size=0.7) +
-    stat_summary(fun.data=mean_cl_boot, color="red")
-```
-
-```{r, fig.width=7.5, fig.height=3}
-simple %>% ggplot(aes(response_type, y = ..prop.., group=0)) +
-    geom_bar() + facet_wrap(~round, labeller=label_glue("round {round}"))
-
-```
-
-### RT
-```{r}
-simple %>% ggplot(aes(as.factor(round), log(rt))) +
-    stat_summary(aes(group=wid), fun.data=mean_cl_boot, geom="line", size=0.7) +
-    stat_summary(fun.data=mean_cl_boot, color="red")
-```
-
-```{r}
-simple %>% ggplot(aes(response_type, rt)) +
-    geom_violin()
-```
-
 ## Probability of remembering first word
 
-Onto the main event: predicting behavior in the multi-cue trials from 
+First the main results: predicting behavior in the multi-cue trials from 
 behavior in the single-cue trials.
 We'll start by using the same memory strength index as we used for the 2AFC version:
 mean log reaction time, excluding the first round.
@@ -268,3 +241,94 @@ X %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% sum
 Yeah there's nothing here. Note that the results are even worse if we use the plain log RT
 strength index.
 
+
+## Single-cue recall basics
+
+### Accuracy
+```{r}
+simple %>% ggplot(aes(as.factor(round), as.numeric(correct))) +
+    stat_summary(aes(group=wid), fun.data=mean_cl_boot, geom="line", size=0.7) +
+    stat_summary(fun.data=mean_cl_boot, color="red")
+```
+
+```{r, fig.width=7.5, fig.height=3}
+simple %>% ggplot(aes(response_type, y = ..prop.., group=0)) +
+    geom_bar() + facet_wrap(~round, labeller=label_glue("round {round}"))
+
+```
+
+### RT
+```{r}
+simple %>% ggplot(aes(as.factor(round), log(rt))) +
+    stat_summary(aes(group=wid), fun.data=mean_cl_boot, geom="line", size=0.7) +
+    stat_summary(fun.data=mean_cl_boot, color="red")
+```
+
+```{r}
+simple %>% ggplot(aes(response_type, rt)) +
+    geom_violin()
+```
+
+## RT Correlations
+```{r}
+X = simple %>% 
+    mutate(presentation = (trial_num-1) %/% 20 + 1) %>% 
+    mutate(rt_z = scale(rt)) %>% 
+    select(wid, word, rt_z, presentation) %>% 
+    pivot_wider(names_from=presentation, values_from=rt_z, names_prefix="rt_z") %>% 
+    ungroup()
+
+X %>% ggplot(aes(rt_z2, rt_z3)) + geom_point() + geom_smooth() + 
+    labs(x="second presentation RT (zscored)", y="third presentation RT (zscored)")
+
+with(X, cor(X %>% select(3:5), use='comp'))
+```
+
+## Accuracy Correlations
+```{r}
+X = simple %>% 
+    mutate(presentation = (trial_num-1) %/% 20 + 1) %>% 
+    select(wid, word, correct, presentation) %>% 
+    pivot_wider(names_from=presentation, values_from=correct, names_prefix="correct") %>% 
+    ungroup()
+
+X %>% ggplot(aes(correct2, as.numeric(correct3))) + stat_summary(fun.data=mean_cl_boot) + 
+    labs(x="second presentation correct", y="third presentation accuracy")
+
+with(X, cor(X %>% select(3:5), use='comp'))
+
+```
+
+## Joint Correlations
+```{r}
+rt = simple %>% 
+    mutate(presentation = (trial_num-1) %/% 20 + 1) %>% 
+    mutate(rt_z = scale(rt)) %>% 
+    select(wid, word, rt_z, presentation) %>% 
+    pivot_wider(names_from=presentation, values_from=rt_z, names_prefix="rt_z") %>% 
+    ungroup()
+
+choice = simple %>% 
+    mutate(presentation = (trial_num-1) %/% 20 + 1) %>% 
+    select(wid, word, correct, presentation) %>% 
+    pivot_wider(names_from=presentation, values_from=correct, names_prefix="correct") %>% 
+    ungroup()
+
+both = inner_join(rt, choice) 
+
+both %>% ggplot(aes(rt_z2, as.numeric(correct3), color=correct2)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth() +
+    labs(x="second presentation correct", y="third presentation accuracy")
+    
+both %>% ggplot(aes(rt_z2, rt_z3, color=correct2)) + geom_point() + geom_smooth() +
+    labs(x="second presentation RT (zscored)", y="third presentation RT (zscored)")
+# both %>% ggplot(aes(rt_z2, rt_z3, color=interaction(correct2, correct3))) +
+#     geom_smooth() +
+#     labs(x="second presentation RT (zscored)", y="third presentation RT (zscored)"
+
+```
+
+This last one is potentially worth thinking more about. Does this suggest
+that we should be using an interaction between accuracy and RT to measure
+memory strength?
