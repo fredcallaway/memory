@@ -202,7 +202,7 @@ preds = expand.grid(
 preds %>% group_by(wid) %>% summarise(mrr = mean(recall_rt)) %>% filter(mrr < 1000)
 
 preds %>% ggplot(aes(log_afc_rt, log_recall_rt, group=wid)) + 
-    geom_line(size=.5)
+    geom_line(size=.5) + theme_classic()
 
 ```
 

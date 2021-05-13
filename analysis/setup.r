@@ -10,6 +10,7 @@ library(patchwork)
 library(jsonlite)
 library(tidyjson)
 library(ggbeeswarm)
+library(stickylabeller)
 
 options(
     "summ-model.info"=FALSE, 

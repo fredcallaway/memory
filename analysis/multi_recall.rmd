@@ -33,6 +33,7 @@ multi = load_data('multi-recall') %>%
         rt = typing_rt,
         presentation_times = map(presentation_times, fromJSON),
         first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
+        second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
         choose_first = word == first_word,
         n_pres = lengths(presentation_times),
         odd_pres = mod(n_pres, 2) == 1,
@@ -43,6 +44,7 @@ multi = load_data('multi-recall') %>%
         presentation_times_second = map(presentation_times, ~ .x[c(F, T)]),
         total_first = map_dbl(presentation_times_first, ~sum(unlist(.x)), .default=0),
         total_second = replace_na(map_dbl(presentation_times_second, ~sum(unlist(.x)), .default=0), 0),
+        prop_first = (total_first) / (total_first + total_second)
     )
 
 afc = load_data('afc') %>% 
@@ -63,7 +65,7 @@ multi = multi %>%
     left_join(afc_scores, c("wid", "first_word" = "word")) %>% 
     left_join(afc_scores, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
     mutate(
-        relative_strength = strength_first - strength_second,
+        rel_strength = strength_first - strength_second,
         chosen_strength = if_else(choose_first, strength_first, strength_second),
     )
 
@@ -72,6 +74,11 @@ multi = multi  %>%
     mutate(
         typing_rt_z = scale(typing_rt)
     )
+
+
+multi %>% select(-starts_with("presentation_times")) %>% write_csv("human_multi.csv")
+
+
 ```
 
 ## Participants
@@ -107,7 +114,7 @@ multi %>% ggplot(aes(strength_first - strength_second, as.numeric(choose_first))
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
     geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
 
-lmer(choose_first ~ relative_strength + (relative_strength|wid), data=multi) %>% summ
+lmer(choose_first ~ rel_strength + (rel_strength|wid), data=multi) %>% summ
 lmer(choose_first ~ strength_first + strength_second + (strength_first + strength_second |wid), data=multi) %>% summ
 ```
 
@@ -141,14 +148,13 @@ both cues are seen.
 
 ```{r}
 X = multi %>% 
-    filter(n_pres >= 2) %>% 
-    mutate(prop_first = (total_first) / (total_first + total_second)) 
+    filter(n_pres >= 2)
 
 X %>% ggplot(aes(strength_first - strength_second, prop_first)) +
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
     geom_smooth(method='lm')
 
-X %>% lmer(prop_first ~ relative_strength + (relative_strength|wid), data=.) %>% summ
+X %>% lmer(prop_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
 X %>% lmer(prop_first ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
 ```
 
@@ -279,11 +285,11 @@ X %>% lmer(second_pres_time ~ strength_first + (strength_first|wid), data=.) %>%
 ### Relative strength (first - second)
 ```{r}
 
-X %>% ggplot(aes(relative_strength, second_pres_time)) + 
+X %>% ggplot(aes(rel_strength, second_pres_time)) + 
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
     geom_smooth(method='lm')
 
-X %>% lmer(second_pres_time ~ relative_strength + (relative_strength|wid), data=.) %>% summ
+X %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
 ```
 
 We see no effect of the strength of the second-seen item on the duration of

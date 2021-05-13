@@ -1,0 +1,270 @@
+---
+title: Multi-cue recall with single-cue pre-test (v5.0)
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+---
+
+
+```{r setup, include=FALSE}
+source("setup.r")
+
+VERSIONS = c('v5.0')
+
+load_data = function(type) {
+    VERSIONS %>% 
+    map(~ read_csv(glue('../data/{.x}/{type}.csv'))) %>% 
+    bind_rows
+}
+
+participants = load_data('participants')
+
+multi = load_data('multi-recall') %>%
+    filter(!practice) %>%
+    mutate(
+        response_type = factor(response_type, 
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
+        correct = response_type == "correct",
+        rt = typing_rt,
+        presentation_times = map(presentation_times, fromJSON),
+        first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
+        second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
+        choose_first = word == first_word,
+        n_pres = lengths(presentation_times),
+        odd_pres = mod(n_pres, 2) == 1,
+        last_word = if_else(odd_pres, first_word, second_word),
+        chosen_word = if_else(choose_first, first_word, second_word),
+        choose_last_seen = last_word == chosen_word,
+        presentation_times_first = map(presentation_times, ~ .x[c(T, F)]),
+        presentation_times_second = map(presentation_times, ~ .x[c(F, T)]),
+        total_first = map_dbl(presentation_times_first, ~sum(unlist(.x)), .default=0),
+        total_second = replace_na(map_dbl(presentation_times_second, ~sum(unlist(.x)), .default=0), 0),
+        prop_first = (total_first) / (total_first + total_second)
+    )
+
+simple = load_data('simple-recall') %>% 
+    filter(!practice) %>% 
+    group_by(wid) %>% 
+    filter(n() == 59) %>% 
+    mutate(
+        trial_num = seq(2,60),
+        round = if_else(trial_num <= 20, 1, 2),
+        typing_rt_z = scale(typing_rt)
+    ) %>% 
+    mutate(
+        response_type = factor(response_type, 
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
+        word_type = factor(word_type, 
+            levels=c("low", "high"), labels=c("Low", "High")),
+        total_time = rt + type_time,
+        correct = response_type == "correct"
+    ) %>% mutate(
+        base_rt = rt,
+        rt = replace_na(typing_rt, 15000)
+    )
+
+
+add_strength = function(multi, filt, strength) {
+    strengths = simple %>% 
+        filter({{ filt }}) %>% 
+        mutate(raw_strength={{ strength }}) %>% 
+        group_by(wid, word) %>% 
+        summarise(raw_strength = mean(raw_strength)) %>%
+        group_by(wid) %>% 
+        mutate(
+            strength = scale(raw_strength),
+        )
+    multi %>% 
+        select(-contains("strength")) %>% 
+        left_join(strengths, c("wid", "first_word" = "word")) %>% 
+        left_join(strengths, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
+        mutate(
+            rel_strength = strength_first - strength_second,
+            chosen_strength = if_else(choose_first, strength_first, strength_second),
+        )
+}
+
+
+```
+
+## Single-cue recall basics
+
+### Accuracy
+```{r}
+simple %>% ggplot(aes(as.factor(round), as.numeric(correct))) +
+    stat_summary(aes(group=wid), fun.data=mean_cl_boot, geom="line", size=0.7) +
+    stat_summary(fun.data=mean_cl_boot, color="red")
+```
+
+```{r, fig.width=7.5, fig.height=3}
+simple %>% ggplot(aes(response_type, y = ..prop.., group=0)) +
+    geom_bar() + facet_wrap(~round, labeller=label_glue("round {round}"))
+
+```
+
+### RT
+```{r}
+simple %>% ggplot(aes(as.factor(round), log(rt))) +
+    stat_summary(aes(group=wid), fun.data=mean_cl_boot, geom="line", size=0.7) +
+    stat_summary(fun.data=mean_cl_boot, color="red")
+```
+
+```{r}
+simple %>% ggplot(aes(response_type, rt)) +
+    geom_violin()
+```
+
+## Probability of remembering first word
+
+Onto the main event: predicting behavior in the multi-cue trials from 
+behavior in the single-cue trials.
+We'll start by using the same memory strength index as we used for the 2AFC version:
+mean log reaction time, excluding the first round.
+As a sanity check, we first ask if our memory strength index predicts
+participants choices about which image to recall.
+
+```{r}
+X = multi %>% add_strength(round > 1, -log(rt))
+
+X %>% ggplot(aes(strength_first, as.numeric(choose_first))) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
+
+lmer(choose_first ~ strength_first + (strength_first|wid), data=X) %>% summ
+```
+
+It does.
+
+## Proportion presentation time
+
+The simplest test of rational memory: do people spend more time looking at the cue
+that they have a stronger memory of? This plot only considers trials where
+both cues are seen.
+
+```{r}
+X = multi %>% 
+    filter(n_pres >= 2) %>% 
+    add_strength(round > 1, -log(rt))
+
+X %>% ggplot(aes(strength_first - strength_second, prop_first)) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(prop_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+X %>% lmer(prop_first ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
+```
+
+Looks pretty good! The coefficient on `rel_strength` was .041 in the last experiment
+(with strength in a 2AFC task).
+
+## Using accuracy in the score
+
+Giving a correct response is much more informative in cued-recall than in 2AFC.
+Can we improve our prediction by incorporating accuracy into the strength index?
+
+```{r}
+
+X2 = multi %>% 
+    filter(n_pres >= 2) %>% 
+    add_strength(round > 1, 2 * correct -log(rt))
+
+X2 %>% ggplot(aes(strength_first, as.numeric(choose_first))) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
+
+lmer(choose_first ~ strength_first + (strength_first|wid), data=X2) %>% summ
+
+X2 %>% ggplot(aes(strength_first - strength_second, prop_first)) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X2 %>% lmer(prop_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+X2 %>% lmer(prop_first ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
+
+multi = multi %>% add_strength(round > 1, 2 * correct -log(rt))
+```
+
+We sure can, by a substantial amount. Relationship between `rel_strength` and `prop_first` is almost twice as strong!
+
+For the rest of the analyses, we will use this new and improved index.
+
+## First presentation duration
+
+As we saw in my paper on fixations in simple choice, total presentation time
+can be a slightly tricky measure becuase recall cuts off the final
+fixation/presentation. The duration of the first presentation is potentially a
+more reliable cue.
+
+Consider only the trials with more than one presentation.
+Do participants switch away from the first image more quickly when they have
+a worse memory of it?
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 1)
+
+X %>% ggplot(aes(strength_first, first_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+```
+Looks bad. Note that the negative relationship in the plotted fixed effects regression doesn't
+hold up with random effects.
+
+
+## Second presentation duration
+
+We can do a similar analysis for the second presentation duration. In this case,
+however, the duration may depend on the strength of both the first and second cues.
+
+### Second-seen strength
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 2) %>% 
+    mutate(second_pres_time = map_dbl(presentation_times, 2, .default=NaN))
+
+X %>% ggplot(aes(strength_second, second_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(second_pres_time ~ strength_second + (1|wid), data=.) %>% summ
+
+```
+
+Ooof.
+
+### First-seen strength
+```{r}
+
+X %>% ggplot(aes(strength_first, second_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(second_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+
+```
+
+This one is in the right direction at least.
+
+### Relative strength (first - second)
+```{r}
+
+X %>% ggplot(aes(rel_strength, second_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+```
+
+Yeah there's nothing here. Note that the results are even worse if we use the plain log RT
+strength index.
+
