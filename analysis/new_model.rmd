@@ -15,37 +15,40 @@ read_sim = function(name) {
     read_csv(glue("../model/results/sim_{name}.csv")) %>% mutate(name=!!name)
 }
 
-raw_df = bind_rows(read_sim("optimal"), read_sim("random")) 
+raw_df = bind_rows(read_sim("optimal"), read_sim("rand_gamma")) 
 ```
 
-```{r}
-both_models = raw_df %>% mutate(
-    strength_first = scale(scale(strength_first) + rnorm(nrow(raw_df), sd=5)),
-    strength_second = scale(scale(strength_second) + rnorm(nrow(raw_df), sd=5)),
-    correct = outcome != -1,
-    presentation_times = map(presentation_times, fromJSON),
-    rt = duration_first + duration_second,
-    prop_first = duration_first / rt,
-    rel_present = duration_first - duration_second,
-    first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
-    second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
-    choose_first = outcome == 1,
-    n_pres = lengths(presentation_times),
-    odd_pres = mod(n_pres, 2) == 1,
-    rel_strength = strength_first - strength_second,
-    strength_first_bin = cut(strength_first, 5, ordered=T),
-    strength_second_bin = cut(strength_second, 5, ordered=T),
-    rt=rt*250,
-    rel_present=rel_present*250,
-    duration_first=duration_first*250,
-    duration_second=duration_second*250,
-    first_pres_time=first_pres_time*250,
-    second_pres_time=second_pres_time*250,
-)
 
+```{r}
+noise_sd = .01
+both_models = raw_df %>% 
+    group_by(name) %>% 
+    mutate(
+        strength_first = scale(scale(strength_first) + rnorm(n(), sd=noise_sd)),
+        strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
+        correct = outcome != -1,
+        presentation_times = map(presentation_times, fromJSON),
+        rt = duration_first + duration_second,
+        prop_first = duration_first / rt,
+        rel_present = duration_first - duration_second,
+        first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
+        second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
+        choose_first = outcome == 1,
+        n_pres = lengths(presentation_times),
+        odd_pres = mod(n_pres, 2) == 1,
+        rel_strength = strength_first - strength_second,
+        # strength_first_bin = cut(strength_first, 5, ordered=T),
+        # strength_second_bin = cut(strength_second, 5, ordered=T),
+        rt=rt*250,
+        rel_present=rel_present*250,
+        duration_first=duration_first*250,
+        duration_second=duration_second*250,
+        first_pres_time=first_pres_time*250,
+        second_pres_time=second_pres_time*250,
+    )
 
 optimal = filter(both_models, name=="optimal")
-random = filter(both_models, name=="random")
+random = filter(both_models, name=="rand_gamma")
 human = read_csv("human_multi.csv")
 human$name = "human"
 df = bind_rows(both_models, human)
@@ -55,10 +58,30 @@ df = bind_rows(both_models, human)
 ## Fixation proportion by relative memory strength
 ```{r,fig.width=7.5, fig.height=3}
 df %>% 
+    mutate(last_pres = if_else(n_pres %% 2 == 1, "first", "second")) %>% 
     filter(n_pres >= 2) %>% 
-    ggplot(aes(rel_strength, prop_first)) + geom_smooth(se=F) + 
+    ggplot(aes(rel_strength, prop_first, color=last_pres)) + geom_smooth(se=F, method="lm") + 
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) + facet_wrap(~name)
+
+random %>% lm(prop_first ~ rel_strength, data=.) %>% summ
 ```
+
+### Split by number of presentations
+```{r}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    filter(n_pres < 5) %>% 
+    ggplot(aes(rel_strength, prop_first, color=factor(n_pres))) + geom_smooth(se=F) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + facet_wrap(~name) +
+    theme(legend.position="top")
+
+df %>% 
+    filter(n_pres < 8) %>% 
+    ggplot(aes(n_pres, rel_strength)) +
+    stat_summary(fun.data=mean_cl_boot, bins=10) +
+    facet_wrap(~name)
+```
+
 
 ## First fixation duration by first fixated item strength
 ```{r,fig.width=7.5, fig.height=3}

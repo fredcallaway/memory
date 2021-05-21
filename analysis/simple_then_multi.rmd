@@ -67,7 +67,8 @@ simple = load_data('simple-recall') %>%
         correct = response_type == "correct"
     ) %>% mutate(
         base_rt = rt,
-        rt = replace_na(typing_rt, 15000)
+        rt = replace_na(typing_rt, 15000),
+        logrtz = scale(log(rt))
     )
 
 
@@ -126,7 +127,7 @@ X = multi %>%
     filter(n_pres >= 2) %>% 
     add_strength(round > 1, -log(rt))
 
-X %>% ggplot(aes(strength_first - strength_second, prop_first)) +
+X %>% ggplot(aes(rel_strength, prop_first)) +
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
     geom_smooth(method='lm')
 
@@ -137,16 +138,18 @@ X %>% lmer(prop_first ~ strength_first + strength_second + (strength_first + str
 Looks pretty good! The coefficient on `rel_strength` was .041 in the last experiment
 (with strength in a 2AFC task).
 
+
 ## Using accuracy in the score
 
 Giving a correct response is much more informative in cued-recall than in 2AFC.
 Can we improve our prediction by incorporating accuracy into the strength index?
 
 ```{r}
+multi = multi %>%
+    # add_strength(round > 1, 2 * correct -log(rt))
+    add_strength(round > 1, if_else(correct, -logrtz, - 3)) 
 
-X2 = multi %>% 
-    filter(n_pres >= 2) %>% 
-    add_strength(round > 1, 2 * correct -log(rt))
+X2 = multi %>% filter(n_pres >= 2)
 
 X2 %>% ggplot(aes(strength_first, as.numeric(choose_first))) +
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
@@ -154,7 +157,7 @@ X2 %>% ggplot(aes(strength_first, as.numeric(choose_first))) +
 
 lmer(choose_first ~ strength_first + (strength_first|wid), data=X2) %>% summ
 
-X2 %>% ggplot(aes(strength_first - strength_second, prop_first)) +
+X2 %>% ggplot(aes(rel_strength, prop_first)) +
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
     geom_smooth(method='lm')
 
@@ -162,11 +165,42 @@ X2 %>% lmer(prop_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
 X2 %>% lmer(prop_first ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
 
 multi = multi %>% add_strength(round > 1, 2 * correct -log(rt))
+
 ```
 
 We sure can, by a substantial amount. Relationship between `rel_strength` and `prop_first` is almost twice as strong!
 
 For the rest of the analyses, we will use this new and improved index.
+
+## Proportion split by number of presentations
+People remember the thing they look at last `r round(100 * mean(multi$choose_last_seen, na.rm=T))`% of the time.
+Could that be driving the effect on proportion? One way to answer this is to split by number
+of presentation. Ideally we'll see the same positive relationship in each group.
+
+```{r}
+multi %>% 
+    filter(n_pres < 5) %>% 
+    ggplot(aes(rel_strength, prop_first, color=factor(n_pres))) +
+        stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+        geom_smooth(method='lm')
+
+multi %>% 
+    filter(n_pres > 1) %>%
+    lmer(prop_first ~ rel_strength * n_pres + (1 | wid), data=.) %>% summ
+```
+
+We don't see it. However, it's worth noting that the number of presentations depends on 
+the strength. The same pattern holds in the Optimal and Random model (in the latter
+it's maybe weaker but could just be a parameter thing). 
+
+TODO figure out if the random model can produce this pattern.
+
+```{r}
+multi %>% 
+    filter(n_pres < 8) %>% 
+    ggplot(aes(n_pres, rel_strength)) +
+    stat_summary(fun.data=mean_cl_boot, bins=10)
+```
 
 ## First presentation duration
 
@@ -181,13 +215,37 @@ a worse memory of it?
 
 ```{r}
 X = multi %>% 
-    filter(n_pres > 1)
+    group_by(wid) %>% 
+    filter(n_pres > 1) %>% 
+    mutate(fpt_z = scale(first_pres_time))
 
-X %>% ggplot(aes(strength_first, first_pres_time)) + 
+X %>% ggplot(aes(strength_first, fpt_z)) + 
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
     geom_smooth(method='lm')
 
 X %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+
+```
+
+
+Full z-scoring
+
+```{r}
+Y = X %>%
+    group_by(wid) %>% 
+    mutate(
+        first_pres_time = scale(first_pres_time),
+        strength_first = scale(strength_first)
+    ) 
+
+Y %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+
+
+Y %>% 
+    ggplot(aes(strength_first, first_pres_time, group=wid)) + 
+    # stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm', se=F) +
+    geom_smooth(method='lm', se=F, group=0, color="black")
 ```
 Looks bad. Note that the negative relationship in the plotted fixed effects regression doesn't
 hold up with random effects.
@@ -202,10 +260,11 @@ however, the duration may depend on the strength of both the first and second cu
 
 ```{r}
 X = multi %>% 
+    mutate(second_pres_time = map_dbl(presentation_times, 2, .default=NaN)) %>% 
     filter(n_pres > 2) %>% 
-    mutate(second_pres_time = map_dbl(presentation_times, 2, .default=NaN))
+    mutate(spt_z = scale(second_pres_time))
 
-X %>% ggplot(aes(strength_second, second_pres_time)) + 
+X %>% ggplot(aes(strength_second, spt_z)) + 
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
     geom_smooth(method='lm')
 
@@ -241,6 +300,16 @@ X %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% sum
 Yeah there's nothing here. Note that the results are even worse if we use the plain log RT
 strength index.
 
+
+## Fixation time distributions
+
+```{r}
+X %>% 
+    mutate(strength_split = if_else(strength_first > 0, "high strength", "low strength")) %>% 
+    ggplot(aes(first_pres_time)) + 
+    geom_histogram() + 
+    facet_wrap(~strength_split)
+```
 
 ## Single-cue recall basics
 

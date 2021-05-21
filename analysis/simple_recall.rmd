@@ -36,8 +36,7 @@ all_trials = load_data('simple-recall') %>%
         base_rt = rt,
         rt = typing_rt
     )
-
-
+\
 afc = load_data('afc') %>% 
     mutate(
         round = block,
