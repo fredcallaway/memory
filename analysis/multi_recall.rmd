@@ -6,6 +6,9 @@ output:
   rmdformats::robobook:
     code_folding: hide
     self_contained: true
+  output:
+    pdf_document:
+      latex_engine: xelatex
 ---
 
 
@@ -49,6 +52,7 @@ multi = load_data('multi-recall') %>%
         prop_first = (total_first) / (total_first + total_second)
     ) 
 
+
 afc = load_data('afc') %>% 
     group_by(wid) %>% 
     mutate(
@@ -77,13 +81,12 @@ multi = multi %>%
 multi = multi  %>% 
     group_by(wid) %>% 
     mutate(
+        trial_num = row_number(),
         typing_rt_z = scale(typing_rt)
     )
 
 
 multi %>% select(-starts_with("presentation_times")) %>% write_csv("human_multi.csv")
-
-
 ```
 
 # Participants
@@ -153,7 +156,9 @@ multi %>%
     stat_summary(fun.data=mean_cl_boot, bins=10)
 ```
 
-A less obvious effect is that relative strength is higher for those trials.
+Furthermore, relative strength is higher for trials where the last presentation
+is on the first item. This is (presumably) because people tend to remember the 
+cue they look at last and they are also more likely to remember the stronger pair.
 
 ```{r}
 multi %>% 
@@ -299,6 +304,43 @@ A significant positive result!
 to switch *back* to the first item.
 :::
 
+# Third fixation - relative strength
+
+Can we push it further?
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 3) %>% 
+    mutate(third_pres_time = map_dbl(presentation_times, 3, .default=NaN))
+
+X %>% ggplot(aes(rel_strength, third_pres_time=)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(third_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+```
+
+Maybe? Probably not. We only have `nrow(X)` data points with more than three presentations.
+
+# Final fixation - relative strength
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 3) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    )
+X %>% ggplot(aes(last_rel_strength, last_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(last_pres_time ~ last_rel_strength + (last_rel_strength|wid), data=.) %>% summ
+```
+
+Maybe? Probably not. We only have `nrow(X)` data points with more than three presentations.
+
 # Discussion
 
 I think it is likely that people are showing some kind of rational behavior
@@ -390,6 +432,18 @@ Both cues are seen (n_pres ≥ 2) on `r round(mean(multi$n_pres >= 2)*100)`% of 
 predicts which target people remember) and we get enough switching to analyze
 that behavior.
 :::
+
+# Fixation duration by number
+
+```{r}
+multi %>% 
+    filter(between(n_pres, 1, 5)) %>% 
+    unnest_longer(presentation_times, "duration", indices_to="presentation") %>% 
+    mutate(is_final = presentation == n_pres) %>% 
+    ggplot(aes(presentation, duration, color=is_final)) +
+    # geom_violin() +
+    stat_summary(fun.data=mean_cl_boot)
+```
  
 
 # AFC correlations

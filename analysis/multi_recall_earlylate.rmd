@@ -1,0 +1,224 @@
+---
+title: Multi-cue recall (late trials only)
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+  output:
+    pdf_document:
+      latex_engine: xelatex
+---
+
+
+```{r setup, include=FALSE}
+source("setup.r")
+
+VERSIONS = c('v3.4', 'v3.5', 'v3.6')
+
+load_data = function(type) {
+    VERSIONS %>% 
+    map(~ read_csv(glue('../data/{.x}/{type}.csv'))) %>% 
+    bind_rows
+}
+
+participants = load_data('participants')
+
+multi = load_data('multi-recall') %>%
+    filter(!practice) %>%
+    left_join(select(participants, wid, version)) %>% 
+    mutate(
+        dataset = if_else(version == "v3.6", "new", "old"),
+        response_type = factor(response_type, 
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
+        correct = response_type == "correct",
+        rt = typing_rt,
+        presentation_times = map(presentation_times, fromJSON),
+        first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
+        second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
+        choose_first = word == first_word,
+        n_pres = lengths(presentation_times),
+        odd_pres = mod(n_pres, 2) == 1,
+        last_word = if_else(odd_pres, first_word, second_word),
+        chosen_word = if_else(choose_first, first_word, second_word),
+        choose_last_seen = last_word == chosen_word,
+        presentation_times_first = map(presentation_times, ~ .x[c(T, F)]),
+        presentation_times_second = map(presentation_times, ~ .x[c(F, T)]),
+        total_first = map_dbl(presentation_times_first, ~sum(unlist(.x)), .default=0),
+        total_second = replace_na(map_dbl(presentation_times_second, ~sum(unlist(.x)), .default=0), 0),
+        prop_first = (total_first) / (total_first + total_second)
+    ) 
+
+
+afc = load_data('afc') %>% 
+    group_by(wid) %>% 
+    mutate(
+        trial_num = seq(1:n()),
+        log_afc_rt = log(rt),
+        presentation = (trial_num-1) %/% 40 + 1
+    ) %>% 
+    filter(!practice) %>% select(-practice)
+
+afc_scores = afc %>% 
+    group_by(wid, word) %>% 
+    summarise(raw_strength = -mean(log(rt))) %>%
+    group_by(wid) %>% 
+    mutate(
+        strength = scale(raw_strength),
+    )
+
+multi = multi %>% 
+    left_join(afc_scores, c("wid", "first_word" = "word")) %>% 
+    left_join(afc_scores, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
+    mutate(
+        rel_strength = strength_first - strength_second,
+        chosen_strength = if_else(choose_first, strength_first, strength_second),
+    )
+
+late_def = 10
+
+multi = multi  %>% 
+    group_by(wid) %>% 
+    mutate(
+        trial_num = row_number(),
+        typing_rt_z = scale(typing_rt),
+        phase = if_else(trial_num > late_def, "late", "early"),
+        last_pres = if_else(n_pres %% 2 == 1, "first", "second")
+    )
+
+
+multi %>% select(-starts_with("presentation_times")) %>% write_csv("human_multi.csv")
+```
+
+
+::: {.alert .alert-info}
+**Info:** These are all the main analyses split by early/late in the critical round.
+We define "late" as after trial `r late_def`
+:::
+
+
+# Participants
+
+- N = `r nrow(participants)`
+- This combines the previous dataset (N = 40) with one collected on May 20 (N=29).
+
+
+# Proportion presentation time
+
+The simplest test of rational memory: do people spend more time looking at the cue
+that they have a stronger memory of? This analysis only considers trials where
+both cues are seen.
+
+```{r}
+X = multi %>% 
+    filter(n_pres >= 2)
+
+X %>% ggplot(aes(strength_first - strength_second, prop_first, color=phase)) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% filter(phase == "early") %>% lmer(prop_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+X %>% filter(phase == "late") %>% lmer(prop_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+```
+
+Note: here and everywhere else, the first regression table is for early and the second is
+for late.
+
+
+# First presentation duration
+
+Consider only the trials with more than one presentation.
+Do participants switch away from the first image more quickly when they have
+a worse memory of it?
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 1)
+
+X %>% ggplot(aes(strength_first, first_pres_time, color=phase)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% filter(phase == "early") %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+X %>% filter(phase == "late") %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+```
+
+The vanilla regression line is worse, but the mixed effects gives an almost significant result
+in the correct direction (for the late trials).
+
+
+# Second presentation duration
+
+We can do a similar analysis for the second presentation duration. In this case,
+however, the duration may depend on the strength of both the first and second cues.
+
+## Second-seen strength
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 2) %>% 
+    mutate(second_pres_time = map_dbl(presentation_times, 2, .default=NaN))
+
+X %>% ggplot(aes(strength_second, second_pres_time, color=phase)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% filter(phase == "early") %>% lmer(second_pres_time ~ strength_second + (1|wid), data=.) %>% summ
+X %>% filter(phase == "late") %>% lmer(second_pres_time ~ strength_second + (1|wid), data=.) %>% summ
+```
+
+No difference here.
+
+## First-seen strength
+```{r}
+
+X %>% ggplot(aes(strength_first, second_pres_time, color=phase)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% filter(phase == "early") %>% lmer(second_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+X %>% filter(phase == "late") %>% lmer(second_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+```
+
+Again, the mixed effects model shows a much larger and more reliable effect in late trials
+but there isn't a clear difference in the vanilla regression.
+
+## Relative strength (first - second)
+```{r}
+X %>% ggplot(aes(rel_strength, second_pres_time, color=phase)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% filter(phase == "early") %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+X %>% filter(phase == "late") %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+```
+
+Same as above.
+
+# Third fixation - relative strength
+
+Can we push it further?
+
+```{r}
+X = multi %>% 
+    filter(n_pres > 3) %>% 
+    mutate(third_pres_time = map_dbl(presentation_times, 3, .default=NaN))
+
+X %>% ggplot(aes(rel_strength, third_pres_time, color=phase)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% filter(phase == "early") %>% lmer(third_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+X %>% filter(phase == "late") %>% lmer(third_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+```
+
+This one is quite striking!
+
+
+# Discussion
+
+It looks like overall the effects become stronger and more reliable over time.
+

@@ -52,10 +52,36 @@ random = filter(both_models, name=="rand_gamma")
 human = read_csv("human_multi.csv")
 human$name = "human"
 df = bind_rows(both_models, human)
-
+mean(optimal$correct)
 ```
 
 ## Fixation proportion by relative memory strength
+```{r,fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(rel_strength, prop_first)) + geom_smooth(se=F, method="lm") + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + facet_wrap(~name)
+
+random %>% lm(prop_first ~ rel_strength, data=.) %>% summ
+```
+
+### With extra motor time
+```{r,fig.width=7.5, fig.height=3}
+ndt = 1000
+df %>% 
+    mutate(
+        rt = rt + ndt,
+        duration_first = duration_first + if_else(n_pres %% 2 == 1, ndt, 0),
+        prop_first = duration_first / rt,
+    ) %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(rel_strength, prop_first)) + geom_smooth(se=F, method="lm") + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + facet_wrap(~name)
+
+random %>% lm(prop_first ~ rel_strength, data=.) %>% summ
+```
+
+### Split by number of presentations
 ```{r,fig.width=7.5, fig.height=3}
 df %>% 
     mutate(last_pres = if_else(n_pres %% 2 == 1, "first", "second")) %>% 
@@ -66,7 +92,6 @@ df %>%
 random %>% lm(prop_first ~ rel_strength, data=.) %>% summ
 ```
 
-### Split by number of presentations
 ```{r}
 df %>% 
     filter(n_pres >= 2) %>% 
@@ -78,6 +103,12 @@ df %>%
 df %>% 
     filter(n_pres < 8) %>% 
     ggplot(aes(n_pres, rel_strength)) +
+    stat_summary(fun.data=mean_cl_boot, bins=10) +
+    facet_wrap(~name)
+
+df %>% 
+    filter(n_pres < 8) %>% 
+    ggplot(aes(n_pres, prop_first)) +
     stat_summary(fun.data=mean_cl_boot, bins=10) +
     facet_wrap(~name)
 ```
