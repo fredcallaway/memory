@@ -188,6 +188,24 @@ function act(pol::RandomSwitchPolicy, b::Belief)
     end
 end
 
+mutable struct SwitchDistributionPolicy{D<:Distribution} <: Policy 
+    m::MetaMDP
+    dist::D
+    time_to_switch::Int
+end
+
+SwitchDistributionPolicy(m::MetaMDP, d::Distribution) = SwitchDistributionPolicy(m, d, 0)
+
+function act(pol::SwitchDistributionPolicy, b::Belief)
+    if b.n_step == 0 || pol.time_to_switch == 0
+        pol.time_to_switch = ceil(Int, rand(pol.dist)) - 1
+        rand(setdiff(1:n_item(b), b.focused))
+    else
+        pol.time_to_switch -= 1
+        b.focused
+    end
+end
+
 
 struct OptimalPolicy <: Policy
     m::MetaMDP

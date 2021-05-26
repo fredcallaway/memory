@@ -24,8 +24,6 @@ function plot_fix(F; kws...)
     plot!([mean(F .== 1; dims=2) mean(F .== 2; dims=2)], color=[1 2], label=["More memorable" "less memorable"])
 end
 
-
-
 # %% --------
 pol = SoftOptimalPolicy(V; β=.3)
 

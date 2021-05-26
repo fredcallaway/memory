@@ -1,6 +1,5 @@
-using Revise
 using ProgressMeter
-@everywhere using TypedTables
+@everywhere using DataFrames
 using SplitApplyCombine
 using CSV
 
@@ -12,6 +11,10 @@ mkpath("tmp/V")
 mkpath("tmp/sim")
 mkpath("results")
 # %% --------
+
+#=
+THIS IS NOT THE CURRENT VERSION!
+=#
 
 G = grid(step_size=[4], max_step=[60], difficulty=.4:.05:.6, switch_cost=[0, 2, 4], miss_cost=[0, 600])
 
@@ -34,7 +37,7 @@ end
             end
         end
     end
-    Table(sims)
+    sims
 end
 
 function run_sims(make_policy, name, G)
@@ -42,23 +45,36 @@ function run_sims(make_policy, name, G)
     mkpath("tmp/sims/$name/")
     X = @showprogress pmap(G) do g
         m = make_mdp(g)
-        cache("tmp/sims/$name/" * id(m)) do
-            policy = make_policy(m)
-            generate_sims(policy)
-        end
+        # cache("tmp/sims/$name/" * id(m)) do
+        policy = make_policy(m)
+        generate_sims(policy)
+        # end
     end
-    flat = mapmany(G, X.data) do prm, sim
+    
+    df = mapmany(G, X.data) do prm, sim
         map(sim) do t
             rt = length(t.cs)
             fix_prop = counts(t.cs, 1:2)[2] / rt
             (;prm..., t.outcome, t.v0, t.vd, fix_prop, rt,
              first_fix=t.cs[1], last_fix=t.cs[end])
         end
-    end
-    flat |> Vector{typeof(flat[1])} |> Table |> CSV.write("results/sim_$name.csv")
+    end |> DataFrame 
+    df |> CSV.write("results/sim_$name.csv")
+    println("Wrote results/sim_$name.csv")
+    df
 end
 
-run_sims(RandomPolicy, "random", G(switch_cost=0, miss_cost=0))
+# %% --------
+m = make_mdp(first(G))
+generate_sims(RandomPolicy(m))
+
+# %% --------
+
+df = run_sims("random", G(switch_cost=0, miss_cost=0)) do m
+    RandomPolicy(m, 0.1)
+end
+
+# %% --------
 
 run_sims("optimal", G) do m
     V = cache("tmp/V/" * id(m)) do
