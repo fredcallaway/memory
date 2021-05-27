@@ -12,10 +12,35 @@ output:
 source("setup.r")
 
 read_sim = function(name) {
-    read_csv(glue("../model/results/sim_{name}.csv")) %>% mutate(name=!!name)
+    read_csv(glue("../model/results/sim_{name}.csv")) %>%  mutate(
+        name = !!name,
+        strength_first = scale(scale(strength_first) + rnorm(n(), sd=noise_sd)),
+        strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
+        correct = outcome != -1,
+        presentation_times = map(presentation_times, fromJSON),
+        rt = duration_first + duration_second,
+        prop_first = duration_first / rt,
+        rel_present = duration_first - duration_second,
+        first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
+        second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
+        choose_first = outcome == 1,
+        n_pres = lengths(presentation_times),
+        odd_pres = mod(n_pres, 2) == 1,
+        rel_strength = strength_first - strength_second,
+        # strength_first_bin = cut(strength_first, 5, ordered=T),
+        # strength_second_bin = cut(strength_second, 5, ordered=T),
+        rt=rt*250,
+        rel_present=rel_present*250,
+        duration_first=duration_first*250,
+        duration_second=duration_second*250,
+        first_pres_time=first_pres_time*250,
+        second_pres_time=second_pres_time*250,
+    )
+
 }
 
 raw_df = bind_rows(read_sim("optimal"), read_sim("rand_gamma")) 
+
 ```
 
 
