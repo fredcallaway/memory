@@ -11,6 +11,7 @@ using StatsFuns
     miss_cost::Float64 = 0.
     step_size::Int = 10
     max_step::Int = 100
+    allow_stop::Bool = false
 end
 MetaMDP(;kws...) = MetaMDP{2}(;kws...)
 getfields(x) = (getfield(x, f) for f in fieldnames(typeof(x)))
@@ -24,6 +25,8 @@ struct Belief{N}
     focused::Int
     counts::NTuple{N, Tuple{Int, Int}}
 end
+
+actions(m::MetaMDP, b::Belief) = m.allow_stop ? (0:n_item(b)) : (1:n_item(b))
 
 
 initial_belief(m::MetaMDP) = Belief(0, 1, Tuple((1,1) for i in 1:n_item(m)))  # note assume focus first item first
@@ -53,6 +56,10 @@ results(m::MetaMDP{N}, b::Belief{N}, s::Nothing, c::Int) where N = results(m, b,
 function _results(get_p::Function, m::MetaMDP{N}, b::Belief{N}, c::Int) where N
     @assert !is_terminal(b)
     @assert b.n_step < m.max_step
+    if c == 0  # give up
+        @assert m.allow_stop
+        return [(1., Belief(-1, -1, b.counts), -m.miss_cost)]
+    end
 
     cost = c != b.focused ? m.sample_cost + m.switch_cost : m.sample_cost
     map(0:m.step_size) do heads
@@ -81,6 +88,10 @@ struct ValueFunction{F}
     cache::Dict{UInt64, Float64}
 end
 
+function default_hash(b::Belief{1})
+    hash(b)
+end
+
 function default_hash(b::Belief{2})
     not_focused = b.focused == 1 ? 2 : 1
     hash(b.counts[b.focused], hash(b.counts[not_focused]))
@@ -94,7 +105,7 @@ function Q(V::ValueFunction, b::Belief, c)::Float64
     sum(p * (r + V(b1)) for (p, b1, r) in results(V.m, b, c))
 end
 
-Q(V::ValueFunction, b::Belief) = [Q(V,b,c) for c in 1:n_item(b)]
+Q(V::ValueFunction, b::Belief) = [Q(V,b,c) for c in actions(V.m, b)]
 
 
 function (V::ValueFunction)(b::Belief)::Float64
@@ -113,7 +124,7 @@ function (V::ValueFunction)(b::Belief)::Float64
 end
 
 function step_V(V::ValueFunction, b::Belief)
-    maximum(Q(V, b, c) for c in 1:n_item(b))
+    maximum(Q(V, b, c) for c in actions(V.m, b))
 end
 
 # function step_V(V::ValueFunction, b)::Float64
@@ -162,7 +173,7 @@ end
 function argmaxes(f, x)
     fx = f.(x)
     mfx = maximum(fx)
-    findall(isequal(mfx), fx)    
+    x[findall(isequal(mfx), fx)]
 end
 
 abstract type Policy end
@@ -216,7 +227,7 @@ OptimalPolicy(m::MetaMDP) = OptimalPolicy(m, ValueFunction(m))
 OptimalPolicy(V::ValueFunction) = OptimalPolicy(V.m, V)
 
 function act(pol::OptimalPolicy, b::Belief)
-    rand(argmaxes(c -> Q(pol.V, b, c), 1:n_item(b)))
+    rand(argmaxes(c -> Q(pol.V, b, c), actions(pol.m, b)))
 end
 
 
@@ -230,8 +241,8 @@ SoftOptimalPolicy(m::MetaMDP; β::Real) = SoftOptimalPolicy(m, ValueFunction(m),
 SoftOptimalPolicy(V::ValueFunction; β::Real) = SoftOptimalPolicy(V.m, V, float(β))
 
 function act(pol::SoftOptimalPolicy, b::Belief)
-    p = softmax!(map(c-> pol.β * Q(pol.V, b, c), 1:n_item(b)))
-    sample(Weights(p))
+    p = softmax!(map(c-> pol.β * Q(pol.V, b, c), actions(pol.m, b)))
+    sample(actions(pol.m, b), Weights(p))
 end
 
 
