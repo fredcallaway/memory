@@ -1,4 +1,216 @@
 
+
+make_fixations = function(df) {
+    df %>% 
+        filter(n_pres >= 1) %>% 
+        ungroup() %>% 
+        mutate(
+            strength_diff = cut(abs(rel_strength), 
+                                quantile(abs(rel_strength), c(0, 0.2, 0.6, 1),  na.rm = T),
+                                labels=c("small", "moderate", "large"),
+                                ordered=T)
+        ) %>% 
+        mutate(trial = row_number()) %>% 
+        unnest_longer(presentation_times, "duration", indices_to="presentation") %>% 
+        mutate(
+            fix_first = presentation %% 2,
+            fix_stronger = as.numeric(fix_first == (rel_strength > 0)),
+        )
+}
+
+normalized_timestep = function(long) {
+    long %>% 
+        group_by(trial) %>%
+        mutate(prop_duration = duration / sum(duration)) %>% 
+        ungroup() %>% 
+        mutate(n_step=round(prop_duration * 100)) %>% 
+        uncount(n_step) %>% 
+        group_by(trial) %>% 
+        mutate(normalized_timestep = row_number())
+}
+
+timestep = function(long) {
+    long %>% 
+        mutate(n_step=round(duration / 100)) %>% 
+        uncount(n_step) %>% 
+        group_by(trial) %>% 
+        mutate(timestep = row_number())
+}
+
+
+# %% --------
+
+long = multi %>% make_fixations
+long %>% 
+    timestep %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(timestep, fix_stronger)) +
+    geom_smooth() + ylim(0, 1) +
+    facet_wrap(~phase)
+    ggtitle("Human")
+
+fig(w=8)
+# %% --------
+long %>% 
+    normalized_timestep %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep, fix_stronger)) +
+    geom_smooth() + ylim(0, 1) +
+    facet_wrap(~phase)
+    ggtitle("Human")
+    # theme(legend.position="top")
+    
+fig(w=8)
+# %% --------
+
+optimal %>% 
+    ggplot(aes(rt/250)) + geom_histogram()
+fig()
+
+# %% --------
+
+long = optimal %>% 
+    make_fixations
+
+# %% --------
+long %>% 
+    mutate(duration = duration * 100) %>% 
+    timestep %>%
+    drop_na(strength_diff) %>% 
+    ggplot(aes(timestep, fix_stronger, group = strength_diff, color=strength_diff)) +
+    geom_smooth() +
+    ggtitle("Optimal")
+
+fig(w=6)
+
+# %% --------
+
+long %>% 
+    normalized_timestep %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep, fix_stronger, group = strength_diff, color=strength_diff)) +
+    geom_smooth() + ylim(0, 1) +
+    ggtitle("Optimal")
+    # theme(legend.position="top")
+    
+fig(w=6)
+
+# %% --------
+
+
+random %>% 
+    make_fixations %>% 
+    ggplot(aes(presentation, fix_stronger, color=strength_diff)) + 
+    stat_summary(fun.data=mean_cl_boot) + xlim(0, 10)
+fig()
+
+
+
+
+# %% ==================== Badness ====================
+
+
+long %>% 
+    filter(presentation == 1) %>% 
+    ggplot(aes(abs(rel_strength), fix_stronger)) +
+    geom_smooth() + stat_summary_bin(fun.data=mean_cl_boot, bins=5)
+fig()
+# %% --------
+
+long %>% 
+    # filter(strength_diff == "small") %>% 
+    ggplot(aes(presentation, fix_stronger, color=strength_diff)) + 
+    stat_summary(fun.data=mean_cl_boot)
+fig()
+# %% --------
+long = multi %>% 
+    ungroup() %>% 
+    mutate(bin_rel_strength = cut(rel_strength, c(-5, -1, 1, 5))) %>% 
+    filter(between(n_pres, 1, 5)) %>% 
+    select(bin_rel_strength, presentation_times) %>% 
+    mutate(trial = row_number()) %>% 
+    unnest_longer(presentation_times, "duration", indices_to="presentation") %>% 
+    mutate(fix_first = presentation %% 2)
+
+# %% --------
+long %>%
+    uncount(floor(duration / 100), .id="timestep") %>% 
+    select(-duration) %>%
+    ggplot(aes(timestep, fix_first, group = bin_rel_strength, color=bin_rel_strength)) +
+    geom_smooth()
+fig()
+
+# %% ====================  ====================
+
+long %>% 
+    group_by(trial) %>%
+    mutate(prop_duration = duration / sum(duration)) %>% 
+    ungroup() %>% 
+    mutate(n_step=round(prop_duration * 100)) %>% 
+    uncount(n_step) %>% 
+    group_by(trial) %>% 
+    mutate(normalized_timestep = row_number()) -> X
+
+X %>% select(normalized_timestep, fix_stronger, strength_diff)
+# %% --------
+X %>%
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep, fix_stronger, group = strength_diff, color=strength_diff)) +
+    geom_smooth(method=) +
+    ggtitle("Human") + 
+    theme(legend.position="top")
+fig()
+
+# %% --------
+long = random %>% 
+    ungroup() %>% 
+    mutate(bin_rel_strength = cut(rel_strength, c(-5, -1, 1, 5))) %>% 
+    filter(between(n_pres, 1, 5)) %>% 
+    select(bin_rel_strength, presentation_times) %>% 
+    mutate(trial = row_number()) %>% 
+    unnest_longer(presentation_times, "duration", indices_to="presentation") %>% 
+    mutate(fix_first = presentation %% 2)
+
+long %>% 
+    uncount(duration) %>% 
+    group_by(trial) %>% 
+    mutate(timestep = row_number()) %>% 
+    ggplot(aes(timestep, fix_first, group = bin_rel_strength, color=bin_rel_strength)) +
+    geom_smooth() +
+    theme(legend.position="top")
+fig()
+# %% --------
+random = read_sim("rand_gamma")
+random %>% 
+    filter(n_pres > 2) %>% 
+    ggplot(aes(strength_first, duration_second)) +
+    geom_smooth()
+fig()
+
+
+# %% -------- random
+long %>% 
+    mutate(n_step=duration) %>% 
+    uncount(n_step) %>% 
+    group_by(trial) %>% 
+    mutate(timestep = row_number()) %>% 
+    ggplot(aes(timestep, fix_first, group = bin_rel_strength, color=bin_rel_strength)) +
+    geom_smooth() +
+    theme(legend.position="top")
+fig()
+
+
+
+
+
+# %% --------
+long %>%
+    uncount(floor(duration / 100), .id="timestep") %>% 
+    select(-duration) %>%
+    ggplot(aes(timestep, fix_first, group = bin_rel_strength, color=bin_rel_strength)) +
+    geom_smooth()
+fig()
+
 # %% ==================== First presentation individual slopes ====================
 
 
@@ -89,6 +301,20 @@ X2 %>% lmer(second_pres_time ~ strength_first + (strength_first|wid), data=.) %>
 
 
 # %% ==================== Giving up ====================
+
+trials %>% 
+    filter(response_type == "empty") %>% 
+    group_by(wid) %>% 
+    mutate(
+        centered_log_recall_rt = log_recall_rt - mean(log_recall_rt),
+        centered_log_afc_rt = log_afc_rt - mean(log_afc_rt),
+    ) %>% 
+    ungroup() %>% 
+    ggplot(aes(centered_log_afc_rt, centered_log_recall_rt, group=wid)) + 
+        geom_smooth(method=lm, se=F)
+
+fig()
+# %% --------
 
 trials %>% filter(response_type == "other") %>% with(response)
 
