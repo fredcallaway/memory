@@ -398,8 +398,9 @@ to the optimal model, suggesting that people might have some kind of "metacognit
 # A confession
 
 All the human plots above only include the second half of the trials. When we analyze
-the full dataset, things are a lot messier [see here](TODO). Most of the effects are
-non-significant (sometimes even entirely absent). See 
+the full dataset, things are a lot messier 
+[see here](www.fredcallaway.com/reports/memory/report4ken-alltrials-21-06-01.html).
+Most of the effects are non-significant (sometimes even entirely absent). See
 [here](www.fredcallaway.com/reports/memory/multi_recall_earlylate-21-06-01.html)
 for a direct comparison of early vs late trials.
 
@@ -409,15 +410,14 @@ much like real-world memory problems. One important question, however, is whethe
 necesity for learning implies that the task is not actually studying a skill people
 use in the real world.
 
-See
-analysis [here](www.fredcallaway.com/reports/memory/multi_recall_earlylate-21-06-01.html).
 
-# Discussion points
+# Discussion questions
 
-- Is the paradigm convincing?
-- 
-
-
+- Is the motivation compelling? How should we connect to existing work in memory?
+- Is it problematic that the model assumes evidence never drops (Bernoulli vs. Gaussian sampling)
+- Is it reasonable to only analyze later trials?
+- Are there other experiments we should run? Preliminary results in an optimal stopping version
+  are not very promising.
 
 
 <!-- In value-based decision making tasks, we simply ask participants for liking ratings. -->
