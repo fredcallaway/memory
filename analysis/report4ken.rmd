@@ -379,6 +379,16 @@ nts %>%
 
 ```
 
+Note that the spike in the Random model is the last-fixation effect. The model always
+recall on last-fixated cue, and it's more likely to recall the target with higher strength.
+
+This plot gives me hope. People are certainly not as reliable as the optimal model, but we also
+have a very noisy strength measure which will make all the effects look weaker. They key thing here
+is that 
+
+
+# Discussion
+
 
 <!-- In value-based decision making tasks, we simply ask participants for liking ratings. -->
 
