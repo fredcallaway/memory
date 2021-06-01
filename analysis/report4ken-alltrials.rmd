@@ -1,5 +1,5 @@
 ---
-title: Rational metacognition in memory
+title: Rational metacognition in memory (all trials)
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
@@ -11,90 +11,6 @@ output:
       latex_engine: xelatex
 ---
 
-# Summary
-
-Memory recall is often modeled as a process of evidence accumulation. Existing
-models typically assume that this accumulation process is passive, and not
-subject to top-down control. In contrast, recent work in perceptual and
-value-based decision making has suggested that similar kinds of evidence
-accumulation processes are guided by attention, such that evidence for
-attended items is accumulated faster than for non-attended items. Furthermore,
-attention may be adaptively allocated to different items in order to optimize
-a tradeoff between decision quality and the computational cost of evidence
-accumulation. In this project, we ask whether similar forces are at play in
-the context of memory recall.
-
-Such a model predicts that, when multiple memories are relevant, people will
-focus their efforts on recalling the target which is more strongly represented
-in memory, because it can be recalled with less effort. Here we present a
-simple form of such a model, and test this key prediction in a cued-recall
-experiment in which participants can select which of two possible targets to
-remember. We find tentative support for a model in which memory search is
-guided by partial recall progress in order to minimize the time spent recalling.
-
-# Model
-
-We model memory recall as a process of evidence accumulation. As in the DDM or
-LCA, we assume that evidence is sampled at each time step and that recall
-occurs when the total evidence hits a threshold. To make the model solvable
-(by dynamic programming) we assume that the evidence for each target
-follows a Bernoulli distribution
-$$
-x_t \sim \text{Bernoulli}(p),
-$$
-where $p$ corresponds to the strength of the memory. This image shows several possible
-traces of evidence accumulation for a single item:
-
-```{r}
-knitr::include_graphics("figs/accumulation.png")
-```
-
-When multiple memories are relevant, each one has a separate accumulator.
-Critically, we do not assume that evidence is sampled for each item in
-parallel. Instead, at each time step, a policy selects one of the targets and
-accumulates evidence for only that target. Solving the resulting Markov
-decision process, we find that the optimal policy generally converges on the
-target with maximal memory strength (highest $p$) and only draws samples for
-that target until it is recalled. This is illustrated in the following plot:
-
-```{r}
-knitr::include_graphics("../model/figs/simple_fixation.png")
-```
-
-# Experiment
-
-To test the model's predictions, we developed a modified cued-recall experiment in which
-participants were presented with two cues (images) on each trial and could recall the target
-(word) associated with either one. To create an observable behavioral correlate of targeted
-memory search, only one cue is visible at a time and participants use the keyboard to display
-each in turn. This is basically a cheap alternative to eye-tracking. The assumption is that
-people will look at the image they are currently trying to remember the word for.
-See a demo [here](http://memorygame29.herokuapp.com/?test_type=multi-recall&skip=6).
-
-
-```{r}
-knitr::include_graphics("figs/task.png")
-```
-
-The model predicts that people will spend more time looking at the cue for
-which the memory of the corresponding target is stronger. To test this
-prediction, we need a way to measure memory strength. Early attempts to
-manipulate memorability using established norms were not successful. Thus,
-we instead take the approach of measuring the strength of each cue-target
-pair in an earlier phase of the experiment. We've tried two strategies.
-
-1. Standard cued recall task: operationalize memory strength
-of each pair as the average log reaction time for trials in which the
-participant recalled the target (with a fixed penalty for failure trials).
-2. Reverse 2AFC task: operationalize memory strength as the average
-log reaction time to choose the correct image out of two options, when
-presented with the word. Note that we have reversed the role of cue and target
-here in order to reduce the likelihood that people develop metacognitive
-awareness of which images they know well in this pretest phase.
-
-Overall, the results are stronger using the second approach, so I'll focus
-on those. Results with approach 1 can be found
-[here](http://fredcallaway.com/reports/memory/simple_then_multi-21-05-13.html).
 
 # Results
 
@@ -104,7 +20,7 @@ source("load_data.r")
 
 optimal = read_sim("optimal")
 random = read_sim("rand_gamma")
-human = filter(human, trial_num > 10)
+# human = filter(human, trial_num > 10)
 
 df = bind_rows(optimal, human, random) %>% 
     mutate(name = fct_inorder(fct_recode(name, 
@@ -139,8 +55,8 @@ df %>%
     facet_wrap(~name) +
     labs(x="First Cue Memory Strength", y="Prob Select First Cue")
 
-human %>% 
-    lmer(choose_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+X = df %>% filter(name == "Human")
+lmer(choose_first ~ rel_strength + (rel_strength|wid), data=X) %>% summ
 # lmer(choose_first ~ strength_first + strength_second + (strength_first + strength_second |wid), data=X) %>% summ
 ```
 
@@ -167,8 +83,9 @@ X = df %>% filter(n_pres >= 2 & name == "Human")
 lmer(choose_first ~ rel_strength + (rel_strength|wid), data=X) %>% summ
 ```
 
-They do! 🎉 But hold on, there's a small but significant effect in the random model.
-What's going on there?
+They do! 🎉
+
+But hold on, what's going on with the random model...
 
 ### Last fixation effect
 
@@ -193,12 +110,9 @@ X = df %>% filter(n_pres > 1 & name == "Human")
 lmer(prop_first ~ rel_strength * last_pres + (rel_strength * last_pres | wid), data=X) %>% summ
 ```
 
-The effect of relative memory strength on fixation proportion is a lot weaker when
-we control for the effect of the last fixation, but it remains significant.
-
-Read on for an explanation, but you can safely **[skip to the next section](#first-fix)**.
-
-### Explanation
+Indeed, the effect of relative memory strength on fixation proportion (nearly?) disappears when
+we control for the effect of the last fixation. Read on for an explanation, but **feel free to 
+skip to the next section**.
 
 What's going on here? Basically it is due to the last fixation being
 correlated with both fixation proportion and relative strength. The first item
@@ -259,7 +173,7 @@ df %>%
 ```
 
 
-## First fixation duration {#first-fix}
+## First fixation duration
 
 Given the complications with the total fixation duration, 
 the duration of the first fixation is potentially a more reliable cue.
@@ -284,8 +198,7 @@ human %>%
     lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
 ```
 
-The fixed effect is in the opposite of the predicted direction, but the mixed
-effects gives an almost significant result in the correct direction. Weird.
+No sign of an effect here.
 
 
 ## Second fixation duration
@@ -311,8 +224,7 @@ X %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% sum
 # X %>% lmer(second_pres_time ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
 ```
 
-Looks good! People more quickly switch back to the first-seen cue when they have a
-stronger memory for that cue compared to the second-seen cue.
+Look at that, a significant effect!
 
 
 ## Third fixation duration
@@ -323,7 +235,7 @@ Same thing for the third fixation.
 df %>% 
     filter(n_pres >= 4) %>% 
     ggplot(aes(rel_strength, third_pres_time)) +
-    geom_smooth(method="lm") + 
+    geom_smooth() + 
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
     facet_wrap(~name) +
     labs(x="Relative Memory Strength", y="Third Fixation Time")
@@ -333,7 +245,7 @@ human %>%
     lmer(third_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
 ```
 
-This is a suspiciously strong effect. Might be some selection effects here.
+Nice.
 
 ## Time course
 
@@ -385,40 +297,6 @@ nts %>%
     theme(legend.position="top")
 
 ```
-
-Note that the spike in the Random model is the last-fixation effect. The model always
-recall on last-fixated cue, and it's more likely to recall the target with higher strength.
-
-For the trials where one cue has a substantially stronger memory, we see a
-pretty reliable increase in probability of fixating the stronger cue over the
-course of the trial. It does look like people are slower on the uptake compared
-to the optimal model, suggesting that people might have some kind of "metacognitive lag".
-
-
-# A confession
-
-All the human plots above only include the second half of the trials. When we analyze
-the full dataset, things are a lot messier [see here](TODO). Most of the effects are
-non-significant (sometimes even entirely absent). See 
-[here](www.fredcallaway.com/reports/memory/multi_recall_earlylate-21-06-01.html)
-for a direct comparison of early vs late trials.
-
-This suggests that people need to learn how to efficiently allocate their
-attention in our experiment. But this is not entirely unsurprising. The task is not very
-much like real-world memory problems. One important question, however, is whether the 
-necesity for learning implies that the task is not actually studying a skill people
-use in the real world.
-
-See
-analysis [here](www.fredcallaway.com/reports/memory/multi_recall_earlylate-21-06-01.html).
-
-# Discussion points
-
-- Is the paradigm convincing?
-- 
-
-
-
 
 <!-- In value-based decision making tasks, we simply ask participants for liking ratings. -->
 
