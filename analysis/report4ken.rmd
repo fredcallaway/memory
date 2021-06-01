@@ -198,66 +198,6 @@ we control for the effect of the last fixation, but it remains significant.
 
 Read on for an explanation, but you can safely **[skip to the next section](#first-fix)**.
 
-### Explanation
-
-What's going on here? Basically it is due to the last fixation being
-correlated with both fixation proportion and relative strength. The first item
-is fixated longer on trials where the first cue is seen last (because it has
-one more fixation than the other cue).
-
-```{r, last-fix2, fig.width=7.5, fig.height=3}
-df %>%
-    filter(n_pres < 8) %>% 
-    ggplot(aes(n_pres, prop_first, color=last_pres)) +
-    facet_wrap(~name) +
-    labs(x='Number of Fixations', y='Proportion Fixate First Cue') +
-    stat_summary(fun.data=mean_cl_boot)
-```
-
-Furthermore, relative strength is higher for trials where the last fixation
-is on the first item. This is (presumably) because people tend to remember the 
-cue they look at last and they are also more likely to remember the stronger pair.
-
-```{r, last-fix3, fig.width=7.5, fig.height=3}
-df %>% 
-    filter(n_pres < 8) %>% 
-    ggplot(aes(n_pres, rel_strength, color=last_pres)) +
-    facet_wrap(~name) +
-    labs(x="Number of Fixations", y="Relative Memory Strength") +
-    stat_summary(fun.data=mean_cl_boot)
-```
-
-Putting the last two effects together, we get a correlation between strength and 
-fixation proportion based only on the target of the last fixation. 
-
-```{r, last-fix4, fig.width=7.5, fig.height=3.5}
-df %>% 
-    ggplot(aes(rel_strength, prop_first, color=last_pres)) +
-    # geom_point() + 
-    # geom_errorbar(aes(ymin=prop_first_mean - prop_first_sd, ymax=prop_first_mean + prop_first_sd)) +
-    # geom_errorbarh(aes(xmin=rel_strength_mean - rel_strength_sd, xmax=rel_strength_mean + rel_strength_sd)) +
-    geom_density_2d() +
-    facet_wrap(~name) +
-    theme(legend.position="top") +
-    labs(x="Relative Memory Strength", y="Proportion Fixate First Cue", color="Last Fixation")
-```
-
-It might be easier to see if we group the data by number of fixations:
-
-```{r, last-fix5, fig.width=7.5, fig.height=3.5}
-df %>% 
-    filter(between(n_pres, 1, 6)) %>% 
-    group_by(name, last_pres, n_pres) %>% 
-    summarise(across(c(rel_strength, prop_first), list(mean=mean, sd=~ sd(.x) / sqrt(length(.x))))) %>%
-    ggplot(aes(rel_strength_mean, prop_first_mean, color=last_pres, label=n_pres)) +
-    geom_errorbar(aes(ymin=prop_first_mean - prop_first_sd, ymax=prop_first_mean + prop_first_sd)) +
-    geom_errorbarh(aes(xmin=rel_strength_mean - rel_strength_sd, xmax=rel_strength_mean + rel_strength_sd)) +
-    facet_wrap(~name) +
-    theme(legend.position="top") +
-    labs(x="Relative Memory Strength", y="Proportion Fixate First Cue", color="Last Fixation") +
-    geom_label()
-```
-
 
 ## First fixation duration {#first-fix}
 
