@@ -10,180 +10,256 @@ output:
 
 ```{r setup, include=FALSE}
 source("setup.r")
+source("load_data.r")
 
-read_sim = function(name) {
-    read_csv(glue("../model/results/sim_{name}.csv")) %>%  mutate(
-        name = !!name,
-        strength_first = scale(scale(strength_first) + rnorm(n(), sd=noise_sd)),
-        strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
-        correct = outcome != -1,
-        presentation_times = map(presentation_times, fromJSON),
-        rt = duration_first + duration_second,
-        prop_first = duration_first / rt,
-        rel_present = duration_first - duration_second,
-        first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
-        second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
-        choose_first = outcome == 1,
-        n_pres = lengths(presentation_times),
-        odd_pres = mod(n_pres, 2) == 1,
-        rel_strength = strength_first - strength_second,
-        # strength_first_bin = cut(strength_first, 5, ordered=T),
-        # strength_second_bin = cut(strength_second, 5, ordered=T),
-        rt=rt*250,
-        rel_present=rel_present*250,
-        duration_first=duration_first*250,
-        duration_second=duration_second*250,
-        first_pres_time=first_pres_time*250,
-        second_pres_time=second_pres_time*250,
-    )
-
-}
-
-raw_df = bind_rows(read_sim("optimal"), read_sim("rand_gamma")) 
+optimal = read_sim("optimal")
+random = read_sim("rand_gamma")
+df = bind_rows(optimal, human, random) %>% 
+    mutate(name = fct_inorder(fct_recode(name, 
+        "Optimal" = "optimal",
+        "Human" = "human",
+        "Random" = "rand_gamma"
+    ))) %>% 
+    mutate(last_pres = if_else(n_pres %% 2 == 1, "first", "second"))
 
 ```
 
+## Probability of remembering first word
 
-```{r}
-noise_sd = .01
-both_models = raw_df %>% 
-    group_by(name) %>% 
-    mutate(
-        strength_first = scale(scale(strength_first) + rnorm(n(), sd=noise_sd)),
-        strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
-        correct = outcome != -1,
-        presentation_times = map(presentation_times, fromJSON),
-        rt = duration_first + duration_second,
-        prop_first = duration_first / rt,
-        rel_present = duration_first - duration_second,
-        first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
-        second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
-        choose_first = outcome == 1,
-        n_pres = lengths(presentation_times),
-        odd_pres = mod(n_pres, 2) == 1,
-        rel_strength = strength_first - strength_second,
-        # strength_first_bin = cut(strength_first, 5, ordered=T),
-        # strength_second_bin = cut(strength_second, 5, ordered=T),
-        rt=rt*250,
-        rel_present=rel_present*250,
-        duration_first=duration_first*250,
-        duration_second=duration_second*250,
-        first_pres_time=first_pres_time*250,
-        second_pres_time=second_pres_time*250,
-    )
+As a sanity check, we first ask if our memory strength index predicts
+participants choices about which image to recall. We operationalize memory
+strength as the within-participant Z-scored, mean log 2AFC RT (that's a mouthful!)
+If this index tracks memory strength, we should see that the probability that a
+target is chosen for recollection should depend on the difference in "strength" between
+the two cues.
 
-optimal = filter(both_models, name=="optimal")
-random = filter(both_models, name=="rand_gamma")
-human = read_csv("human_multi.csv")
-human$name = "human"
-df = bind_rows(both_models, human)
-mean(optimal$correct)
+
+```{r,remember-first, fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres > 1) %>% 
+    ggplot(aes(rel_strength, as.numeric(choose_first))) + 
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name) +
+    labs(x="First Cue Memory Strength", y="Prob Select First Cue")
+
+X = df %>% filter(n_pres > 1 & name == "Human")
+lmer(choose_first ~ rel_strength + (rel_strength|wid), data=X) %>% summ
+lmer(choose_first ~ strength_first + strength_second + (strength_first + strength_second |wid), data=X) %>% summ
 ```
+
+Note: unless otherwise stated, all regression tables are maximal linear mixed effects models
+(random slopes and intercepts) applied to the human data. 
+Plotted regression lines are fixed effects only.
 
 ## Fixation proportion by relative memory strength
-```{r,fig.width=7.5, fig.height=3}
+
+The simplest test of rational memory: do people spend more time looking at the cue
+that they have a stronger memory of? This analysis only considers trials where
+both cues are seen.
+
+```{r, fig.width=7.5, fig.height=3}
 df %>% 
     filter(n_pres >= 2) %>% 
-    ggplot(aes(rel_strength, prop_first)) + geom_smooth(se=F, method="lm") + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + facet_wrap(~name)
+    ggplot(aes(rel_strength, prop_first)) + 
+    geom_smooth(method = "lm", formula="y~x") +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name) +
+    labs(x="Relative Memory Strength", y="Proportion Fixate First")
 
-random %>% lm(prop_first ~ rel_strength, data=.) %>% summ
 ```
 
-### With extra motor time
-```{r,fig.width=7.5, fig.height=3}
-ndt = 1000
-df %>% 
-    mutate(
-        rt = rt + ndt,
-        duration_first = duration_first + if_else(n_pres %% 2 == 1, ndt, 0),
-        prop_first = duration_first / rt,
-    ) %>% 
-    filter(n_pres >= 2) %>% 
-    ggplot(aes(rel_strength, prop_first)) + geom_smooth(se=F, method="lm") + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + facet_wrap(~name)
+### Split by last fixation
 
-random %>% lm(prop_first ~ rel_strength, data=.) %>% summ
+People remember the thing they look at last
+`r round(100 * mean(multi$choose_last_seen, na.rm=T))`%
+of the time. In value-based decision making, it has been suggested that
+this last-fixation effect could explain away what looks to be evidence for
+adaptive attention allocation. This claim did not hold up there, but it could
+nevertheless be affecting our results.
+
+```{r, fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(rel_strength, prop_first, color=last_pres)) + 
+    geom_smooth(method="lm") + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name) +
+    theme(legend.position="top") +
+    labs(x="Relative Memory Strength", y="Proportion Fixate First Cue", color="Last Fixation")
+
+X = df %>% filter(n_pres > 1 & name == "Human")
+lmer(prop_first ~ rel_strength * last_pres + (rel_strength * last_pres | wid), data=X) %>% summ
 ```
 
-### Split by number of presentations
-```{r,fig.width=7.5, fig.height=3}
-df %>% 
-    mutate(last_pres = if_else(n_pres %% 2 == 1, "first", "second")) %>% 
-    filter(n_pres >= 2) %>% 
-    ggplot(aes(rel_strength, prop_first, color=last_pres)) + geom_smooth(se=F, method="lm") + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + facet_wrap(~name)
+Indeed, the effect of relative memory strength on fixation proportion (nearly?) disappears when
+we control for the effect of the last fixation. Read on for an explanation, or skip ahead.
 
-random %>% lm(prop_first ~ rel_strength, data=.) %>% summ
+What's going on here? Well, an obvious effect is that prop_first is higher
+on trials where the first cue is seen last (it has one more fixation
+than the other cue).
+
+```{r, last-fix2, fig.width=7.5, fig.height=3}
+df %>%
+    filter(n_pres < 8) %>% 
+    ggplot(aes(n_pres, prop_first, color=last_pres)) +
+    facet_wrap(~name) +
+    labs(x='Number of Fixations', y='Proportion Fixate First Cue')
+    stat_summary(fun.data=mean_cl_boot, bins=10)
 ```
 
-```{r}
-df %>% 
-    filter(n_pres >= 2) %>% 
-    filter(n_pres < 5) %>% 
-    ggplot(aes(rel_strength, prop_first, color=factor(n_pres))) + geom_smooth(se=F) + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + facet_wrap(~name) +
-    theme(legend.position="top")
+Furthermore, relative strength is higher for trials where the last fixation
+is on the first item. This is (presumably) because people tend to remember the 
+cue they look at last and they are also more likely to remember the stronger pair.
 
+```{r, last-fix3, fig.width=7.5, fig.height=3}
 df %>% 
     filter(n_pres < 8) %>% 
-    ggplot(aes(n_pres, rel_strength)) +
-    stat_summary(fun.data=mean_cl_boot, bins=10) +
-    facet_wrap(~name)
-
-df %>% 
-    filter(n_pres < 8) %>% 
-    ggplot(aes(n_pres, prop_first)) +
-    stat_summary(fun.data=mean_cl_boot, bins=10) +
-    facet_wrap(~name)
+    ggplot(aes(n_pres, rel_strength, color=last_pres)) +
+    facet_wrap(~name) +
+    labs(x="Number of Fixations", y="Relative Memory Strength") +
+    stat_summary(fun.data=mean_cl_boot, bins=10)
 ```
 
+Putting the last two effects together, we get a correlation between rel_strength and 
+prop_first based only on the target of the last fixation. Error bars are SEM.
+Trials are grouped by the number of fixations.
 
-## First fixation duration by first fixated item strength
+```{r, last-fix4, fig.width=7.5, fig.height=3}
+df %>% 
+    filter(between(n_pres, 1, 6)) %>% 
+    group_by(name, last_pres, n_pres) %>% 
+    summarise(across(c(rel_strength, prop_first), list(mean=mean, sd=~ sd(.x) / sqrt(length(.x))))) %>%
+    ggplot(aes(rel_strength_mean, prop_first_mean, color=last_pres, label=n_pres)) +
+    geom_errorbar(aes(ymin=prop_first_mean - prop_first_sd, ymax=prop_first_mean + prop_first_sd)) +
+    geom_errorbarh(aes(xmin=rel_strength_mean - rel_strength_sd, xmax=rel_strength_mean + rel_strength_sd)) +
+    facet_wrap(~name) +
+    labs(x="Relative Memory Strength", y="Proportion Fixate First Cue") +
+    geom_label()
+```
+
+## First fixation duration
+
+Given the complications with the total fixation duration, 
+the duration of the first fixation is potentially a more reliable cue.
+The model makes a strong prediction here, and it probably isn't confounded
+by the last fixation effect.
+
+Consider only the trials with more than one fixation.
+Do participants switch away from the first image more quickly when they have
+a worse memory of it?
+
 ```{r,fig.width=7.5, fig.height=3}
 df %>% 
     filter(n_pres >= 2) %>% 
-    ggplot(aes(strength_first, first_pres_time)) + geom_smooth(se=F) + facet_wrap(~name)
+    ggplot(aes(strength_first, first_pres_time)) +
+    geom_smooth(method="lm") + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name) +
+    labs(x="First Cue Memory Strength", y="First Fixation Time")
+
+human %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
 ```
+
+No sign of an effect here.
 
 
 ## Second fixation duration
+
+We can do a similar analysis for the second fixation duration. In this case,
+however, the duration may depend on the strength of both the first and second cues.
+As before, we exclude final fixations in this plot (i.e. excluding trials less than
+three fixations).
+
 ```{r,fig.width=7.5, fig.height=3}
 df %>% 
-    filter(n_pres > 2) %>% 
-    ggplot(aes(strength_second, second_pres_time)) + geom_smooth(se=F) + facet_wrap(~name)
+    filter(n_pres >= 3) %>% 
+    ggplot(aes(rel_strength, second_pres_time)) +
+    geom_smooth(method="lm") + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name) +
+    labs(x="Relative Memory Strength", y="Second Fixation Time")
 
+X = human %>% 
+     filter(n_pres >= 3) 
+
+X %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+X %>% lmer(second_pres_time ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
+```
+
+## Third fixation duration
+
+Same thing for the third fixation.
+```{r}
 df %>% 
-    filter(n_pres > 2) %>% 
-    ggplot(aes(strength_first, second_pres_time)) + geom_smooth(se=F) + facet_wrap(~name)
+    filter(n_pres >= 4) %>% 
+    ggplot(aes(rel_strength, third_pres_time)) +
+    geom_smooth() + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name) +
+    labs(x="Relative Memory Strength", y="Third Fixation Time")
 
-```
 
-### Split by which target is remembered
+X = human %>% 
+     filter(n_pres >= 4)
 
-```{r,fig.width=7.5, fig.height=3}
-ggplot(df, aes(strength_first, first_pres_time, color=choose_first)) + 
-    geom_smooth() + facet_wrap(~name)
-```
-
-```{r,fig.width=7.5, fig.height=3}
-df %>% ggplot(aes(rel_strength, prop_first, color=factor(outcome), group=factor(outcome))) + 
-    geom_smooth() + facet_wrap(~name)
+X %>% lmer(third_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
 ```
 
 
-## Choice probability
 
-Conditioning on remembering a target, how likely is the first seen one to be remembered?
 
-```{r,fig.width=7.5, fig.height=3}
-df %>% filter(correct) %>% mutate(
-    strength_first_bin = cut(strength_first, 5, ordered=T)
-) %>% ggplot(aes(rel_strength, as.numeric(choose_first), color=strength_first_bin)) +
-    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x, se=F) + facet_wrap(~name) +
-    ylab("p(remember first seen)")
+## Time course
+
+Finally, we can make a plot similar to the initial model prediction.
+How does the probability of fixating the more-memorable option change
+over the course of the trial?
+
+```{r, time-course}
+make_fixations = function(df) {
+    df %>% 
+        filter(n_pres >= 1) %>% 
+        ungroup() %>% 
+        mutate(
+            strength_diff = cut(abs(rel_strength), 
+                                quantile(abs(rel_strength), c(0, 0.2, 0.6, 1),  na.rm = T),
+                                labels=c("small", "moderate", "large"),
+                                ordered=T)
+        ) %>% 
+        mutate(trial = row_number()) %>% 
+        unnest_longer(presentation_times, "duration", indices_to="presentation") %>% 
+        mutate(
+            fix_first = presentation %% 2,
+            fix_stronger = as.numeric(fix_first == (rel_strength > 0)),
+        )
+}
+
+normalized_timestep = function(long) {
+    long %>% 
+        group_by(trial) %>%
+        mutate(prop_duration = duration / sum(duration)) %>% 
+        ungroup() %>% 
+        mutate(n_step=round(prop_duration * 100)) %>% 
+        uncount(n_step) %>% 
+        group_by(trial) %>% 
+        mutate(normalized_timestep = row_number())
+}
+
+long = df %>% make_fixations
+nts = long %>% normalized_timestep
+nts %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_stronger, group = strength_diff, color=strength_diff)) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_wrap(~name) +
+    labs(x="Normalized Time", y="Probability Fixate Stronger Cue", color="Strength Difference") +
+    geom_hline(yintercept=0.5) +
+    theme(legend.position="top")
+
 ```
-
 
 
 

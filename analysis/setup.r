@@ -1,4 +1,6 @@
-knitr::opts_chunk$set(warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center")
+knitr::opts_chunk$set(
+    warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
+)
 
 library("tidyverse")
 library("lme4")

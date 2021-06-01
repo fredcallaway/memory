@@ -14,79 +14,8 @@ output:
 
 ```{r setup, include=FALSE}
 source("setup.r")
-
-VERSIONS = c('v3.4', 'v3.5', 'v3.6')
-
-load_data = function(type) {
-    VERSIONS %>% 
-    map(~ read_csv(glue('../data/{.x}/{type}.csv'))) %>% 
-    bind_rows
-}
-
-participants = load_data('participants')
-
-multi = load_data('multi-recall') %>%
-    filter(!practice) %>%
-    left_join(select(participants, wid, version)) %>% 
-    mutate(
-        dataset = if_else(version == "v3.6", "new", "old"),
-        response_type = factor(response_type, 
-            levels=c("correct", "intrusion", "other", "timeout", "empty"),
-            # labels=c("Correct", "Intrusion", "Other")
-        ),
-        correct = response_type == "correct",
-        rt = typing_rt,
-        presentation_times = map(presentation_times, fromJSON),
-        first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
-        second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
-        choose_first = word == first_word,
-        n_pres = lengths(presentation_times),
-        odd_pres = mod(n_pres, 2) == 1,
-        last_word = if_else(odd_pres, first_word, second_word),
-        chosen_word = if_else(choose_first, first_word, second_word),
-        choose_last_seen = last_word == chosen_word,
-        presentation_times_first = map(presentation_times, ~ .x[c(T, F)]),
-        presentation_times_second = map(presentation_times, ~ .x[c(F, T)]),
-        total_first = map_dbl(presentation_times_first, ~sum(unlist(.x)), .default=0),
-        total_second = replace_na(map_dbl(presentation_times_second, ~sum(unlist(.x)), .default=0), 0),
-        prop_first = (total_first) / (total_first + total_second)
-    ) 
-
-
-afc = load_data('afc') %>% 
-    group_by(wid) %>% 
-    mutate(
-        trial_num = seq(1:n()),
-        log_afc_rt = log(rt),
-        presentation = (trial_num-1) %/% 40 + 1
-    ) %>% 
-    filter(!practice) %>% select(-practice)
-
-afc_scores = afc %>% 
-    group_by(wid, word) %>% 
-    summarise(raw_strength = -mean(log(rt))) %>%
-    group_by(wid) %>% 
-    mutate(
-        strength = scale(raw_strength),
-    )
-
-multi = multi %>% 
-    left_join(afc_scores, c("wid", "first_word" = "word")) %>% 
-    left_join(afc_scores, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
-    mutate(
-        rel_strength = strength_first - strength_second,
-        chosen_strength = if_else(choose_first, strength_first, strength_second),
-    )
-
-multi = multi  %>% 
-    group_by(wid) %>% 
-    mutate(
-        trial_num = row_number(),
-        typing_rt_z = scale(typing_rt)
-    )
-
-
-multi %>% select(-starts_with("presentation_times")) %>% write_csv("human_multi.csv")
+knitr::opts_chunk$set(fig.path="figs/multi")
+source("load_data.r")
 ```
 
 # Participants
@@ -94,7 +23,31 @@ multi %>% select(-starts_with("presentation_times")) %>% write_csv("human_multi.
 - N = `r nrow(participants)`
 - This combines the previous dataset (N = 40) with one collected on May 20 (N=29).
 
-Note: Sanity checks moved to end.
+
+# Probability of remembering first word
+
+As a sanity check, we first ask if our memory strength index predicts
+participants choices about which image to recall. We operationalize memory
+strength as the within-participant Z-scored, mean log 2AFC RT (that's a mouthful!)
+If this index tracks memory strength, we should see that the probability that a
+target is chosen for recollection should depend on the difference in "strength" between
+the two cues.
+
+```{r, remember-first}
+X = multi %>% 
+    filter(n_pres >= 2)
+
+X %>% ggplot(aes(strength_first - strength_second, as.numeric(choose_first))) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
+
+lmer(choose_first ~ rel_strength + (rel_strength|wid), data=X) %>% summ
+lmer(choose_first ~ strength_first + strength_second + (strength_first + strength_second |wid), data=X) %>% summ
+```
+
+Note: unless otherwise stated, all regression tables are maximal linear mixed effects models
+(i.e. random slopes and intercepts). Plotted regression lines are plain old OLS.
+
 
 # Proportion presentation time
 
@@ -102,11 +55,11 @@ The simplest test of rational memory: do people spend more time looking at the c
 that they have a stronger memory of? This analysis only considers trials where
 both cues are seen.
 
-```{r}
+```{r, prop-pres}
 X = multi %>% 
     filter(n_pres >= 2)
 
-X %>% ggplot(aes(strength_first - strength_second, prop_first)) +
+X %>% ggplot(aes(rel_strength, prop_first)) +
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
     geom_smooth(method='lm')
 
@@ -123,33 +76,33 @@ have a stronger memory for. But this result might not hold up to scrutiny....
 
 People remember the thing they look at last
 `r round(100 * mean(multi$choose_last_seen, na.rm=T))`%
-of the time. Could that be driving the effect of relative strength on
-proportion presentation time?
+of the time. In value-based decision making, it has been suggested that
+this last-fixation effect could explain away what looks to be evidence for
+adaptive attention allocation. This claim did not hold up there, but it could
+nevertheless be affecting our results.
 
-
-```{r}
-multi = multi %>% 
-    mutate(last_pres = if_else(n_pres %% 2 == 1, "first", "second")) 
-
+```{r, last-fix}
 multi %>% 
-    filter(n_pres <= 4) %>% 
+    filter(n_pres >= 2) %>% 
     ggplot(aes(rel_strength, prop_first, color=last_pres)) +
         stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
         geom_smooth(method='lm')
 
 multi %>% 
-    filter(between(n_pres, 1, 4)) %>%
-    lmer(prop_first ~ rel_strength * last_pres + (1 | wid), data=.) %>% summ
+    filter(n_pres >= 2) %>%
+    lmer(prop_first ~ rel_strength * last_pres + (rel_strength * last_pres | wid), data=.) %>% summ
 ```
 
 When we control for which cue was presented last, the effect vanishes. Notably,
 this doesn't occur in the optimal model simulations.
 
+Note: the remainder of this section can be safely skipped.
+
 What's going on here? Well, an obvious effect is that prop_first is higher
 on trials where the first cue is seen last (it has one more presentation
 than the other cue).
 
-```{r}
+```{r, last-fix2}
 multi %>%
     filter(n_pres < 8) %>% 
     ggplot(aes(n_pres, prop_first, color=last_pres)) +
@@ -160,7 +113,7 @@ Furthermore, relative strength is higher for trials where the last presentation
 is on the first item. This is (presumably) because people tend to remember the 
 cue they look at last and they are also more likely to remember the stronger pair.
 
-```{r}
+```{r, last-fix3}
 multi %>% 
     filter(n_pres < 8) %>% 
     ggplot(aes(n_pres, rel_strength, color=last_pres)) +
@@ -171,7 +124,7 @@ Putting the last two effects together, we get a correlation between rel_strength
 prop_first based only on the target of the last presentation. Error bars are SEM.
 Trials are grouped by the number of presentations.
 
-```{r}
+```{r, last-fix4}
 multi %>% 
     filter(between(n_pres, 1, 6)) %>% 
     group_by(last_pres, n_pres) %>% 
@@ -225,76 +178,18 @@ X %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
 
 No sign of an effect here.
 
-
-## Least memorable
-
-Previously we saw some evidence of an effect for the least memorable cues.
-Does that hold in the new dataset? The linear model is for the new dataset
-only, for which this prediction is "pre-registered".
-
-```{r}
-X = multi %>% 
-    filter(n_pres > 1) %>% 
-    filter(strength_first < -1)
-
-X %>% ggplot(aes(strength_first, first_pres_time, color=dataset)) + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
-    geom_smooth(method='lm')
-
-X %>% 
-    filter(dataset == "new") %>% 
-    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
-    # lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
-```
-No, it doesn't. It appears that the previously found effect was spurious.
-
-::: {.alert .alert-danger}
-**Conclusion:** There is no sign of an effect on the first presentation duration.
-:::
-
-
 # Second presentation duration
 
 We can do a similar analysis for the second presentation duration. In this case,
 however, the duration may depend on the strength of both the first and second cues.
 
-## Second-seen strength
-
-```{r}
-X = multi %>% 
-    filter(n_pres > 2) %>% 
-    mutate(second_pres_time = map_dbl(presentation_times, 2, .default=NaN))
-
-X %>% ggplot(aes(strength_second, second_pres_time)) + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
-    geom_smooth(method='lm')
-
-X %>% lmer(second_pres_time ~ strength_second + (1|wid), data=.) %>% summ
-
-```
-
-There might be something here, but it's very noisy.
-
-## First-seen strength
-```{r}
-
-X %>% ggplot(aes(strength_first, second_pres_time)) + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
-    geom_smooth(method='lm')
-
-X %>% lmer(second_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
-```
-
-Again, this is in the right direction, but it's noisy, and not significant when we take into
-account random effects.
-
-## Relative strength (first - second)
 ```{r}
 X %>% ggplot(aes(rel_strength, second_pres_time)) + 
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
     geom_smooth(method='lm')
 
 X %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+X %>% lmer(second_pres_time ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
 ```
 
 A significant positive result!
@@ -313,7 +208,7 @@ X = multi %>%
     filter(n_pres > 3) %>% 
     mutate(third_pres_time = map_dbl(presentation_times, 3, .default=NaN))
 
-X %>% ggplot(aes(rel_strength, third_pres_time=)) + 
+X %>% ggplot(aes(rel_strength, third_pres_time)) + 
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
     geom_smooth(method='lm')
 
@@ -378,41 +273,7 @@ the alternative strategy actually produced the target, but I can't think of a wa
 to do this that wouldn't give participants an opportunity for additional learning.
 
 
-# Sanity and data-quality checks
-
-## Probability of remembering first word
-
-As a sanity check, we first ask if our memory strength index predicts
-participants choices about which image to recall. We operationalize memory
-strength as the within-participant Z-scored, mean-log 2AFC RT (that's a mouthful!)
-
-```{r}
-
-multi %>% ggplot(aes(strength_first, as.numeric(choose_first))) +
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
-    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
-
-lmer(choose_first ~ strength_first + (strength_first|wid), data=multi) %>% summ
-```
-
-Note: unless otherwise stated, all regression tables are maximal linear mixed effects models
-(i.e. random slopes and intercepts). Plotted regression lines are plain old OLS.
-
-We can also look at the difference between first and second, and how each strength
-contributed independently. Here, we only look at trials with at least two presentations
-(so that there is a second-seen cue).
-
-```{r}
-X = multi %>% 
-    filter(n_pres >= 2)
-
-X %>% ggplot(aes(strength_first - strength_second, as.numeric(choose_first))) + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
-    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x)
-
-lmer(choose_first ~ rel_strength + (rel_strength|wid), data=X) %>% summ
-lmer(choose_first ~ strength_first + strength_second + (strength_first + strength_second |wid), data=X) %>% summ
-```
+# Extra stuff
 
 ## Number of presentations
 
@@ -433,7 +294,7 @@ predicts which target people remember) and we get enough switching to analyze
 that behavior.
 :::
 
-# Fixation duration by number
+## Fixation duration by number
 
 ```{r}
 multi %>% 
@@ -446,7 +307,7 @@ multi %>%
 ```
  
 
-# AFC correlations
+## AFC correlations
 
 How reliable are the AFC measures?
 

@@ -12,7 +12,8 @@ output:
 ```{r setup, include=FALSE}
 source("setup.r")
 
-VERSIONS = c('v4.0')
+VERSIONS = c('v6.0')
+# VERSIONS = c('v4.0')
 # VERSIONS = c('v2.0', 'v2.0B')
 
 load_data = function(type) {
@@ -36,7 +37,7 @@ all_trials = load_data('simple-recall') %>%
         base_rt = rt,
         rt = typing_rt
     )
-\
+
 afc = load_data('afc') %>% 
     mutate(
         round = block,
@@ -67,9 +68,8 @@ all_trials = inner_join(all_trials, inner_join(x1, x2))
 ### Exclusions
 
 ```{r}
-
 trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.25)
-trials = trials %>% filter(rt > 50) %>% filter(n() >= 37)
+trials = trials %>% filter(rt > 50) %>% filter(n() >= 35)
 
 n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
 N = length(unique(trials$wid))
@@ -86,7 +86,7 @@ trials %<>% mutate(
     log_recall_rt = log(rt)
 )
 
-trials %>% select(wid, rt, correct, afc_rt, afc_accuracy) %>% write_csv("../model/tofit/simple.csv")
+# trials %>% select(wid, rt, correct, afc_rt, afc_accuracy) %>% write_csv("../model/tofit/simple.csv")
 ```
 
 - Excluding `r n_exclude` participants who gave orrect resonses on fewer than 25% of recall trials or responded in under 50ms on more than one trial (indicating a recording error), leaving `r N` participants in the analysis.
@@ -111,10 +111,19 @@ In this experiment, we wanted to verify that this approach might work by asking 
 Is the reaction time on 2AFC trials for a given word predictive of reaction time for the same word in the recall task? Critically, we need to see the effect within individuals, so we plot linear fits for each participant and run a mixed effects model with random intercepts.
 
 ```{r}
-ggplot(trials, aes(log_afc_rt, log_recall_rt, group=wid)) + 
+
+ggplot(trials, aes(afc_rt, recall_rt, group=wid)) + 
     geom_point(alpha=0.2) +
     geom_smooth(method=lm, se=F)
 trials %>% with(lmer(log_recall_rt ~ log_afc_rt + (1|wid))) %>% summ
+```
+
+```{r}
+ggplot(trials, aes(afc_rt/1000, recall_rt/1000, group=wid)) + 
+    geom_point(alpha=0.2) +
+    geom_smooth(method=lm, se=F) +
+    xlim(0, 5) + ylim(0, 5) + 
+    labs(x="2AFC RT (s)", y="Cued Recall RT (s)")
 ```
 
 Looks like we have a consistent effect and reasonably sized effect!
@@ -291,6 +300,26 @@ try_strategy(TRUE, log(rt)) # plot
 try_strategy(round > 1, 1000*(1-correct) + log(rt)) # plot
 ```
 
+
+## Plot best measure
+
+```{r}
+X = afc %>%
+    filter(round > 1) %>% 
+    mutate(score=log(rt)) %>% 
+    group_by(wid, word) %>% 
+    summarise(score=mean(score)) %>% 
+    group_by(wid) %>% 
+    right_join(select(trials, wid, word, recall_rt=rt)) %>% 
+    drop_na
+
+stopifnot(nrow(X) == nrow(trials))
+
+X %>% ggplot(aes(score, log(recall_rt), group=wid)) + 
+    geom_point(alpha=0.2) +
+    geom_smooth(method=lm, se=F) + 
+    labs(x="2AFC Log RT", y="Cued Recall Log RT")
+```
 
 ## Check response coding
 

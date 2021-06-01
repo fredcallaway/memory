@@ -179,14 +179,14 @@ of presentation. Ideally we'll see the same positive relationship in each group.
 
 ```{r}
 multi %>% 
-    filter(n_pres < 5) %>% 
-    ggplot(aes(rel_strength, prop_first, color=factor(n_pres))) +
+    filter(n_pres >= 2) %>%
+    ggplot(aes(rel_strength, prop_first, color=odd_pres)) +
         stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
         geom_smooth(method='lm')
 
 multi %>% 
     filter(n_pres > 1) %>%
-    lmer(prop_first ~ rel_strength * n_pres + (1 | wid), data=.) %>% summ
+    lmer(prop_first ~ rel_strength * odd_pres + (1 | wid), data=.) %>% summ
 ```
 
 We don't see it. However, it's worth noting that the number of presentations depends on 
@@ -269,7 +269,6 @@ X %>% ggplot(aes(strength_second, spt_z)) +
     geom_smooth(method='lm')
 
 X %>% lmer(second_pres_time ~ strength_second + (1|wid), data=.) %>% summ
-
 ```
 
 Ooof.
