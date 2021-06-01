@@ -51,7 +51,7 @@ afc = load_data('afc') %>%
     filter(!practice) %>% select(-practice)
 
 afc_scores = afc %>% 
-    # filter(block > 1) %>% 
+    # filter(block > 1) %>%  ## CRITICAL DECISION
     group_by(wid, word) %>% 
     summarise(raw_strength = -mean(log(rt))) %>%
     group_by(wid) %>% 
@@ -84,6 +84,8 @@ read_sim = function(name, noise_sd=0) {
         name = !!name,
         strength_first = scale(scale(strength_first) + rnorm(n(), sd=noise_sd)),
         strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
+        # strength_first = scale(scale(strength_first) + rnorm(n(), sd=noise_sd)),
+        # strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
         correct = outcome != -1,
         presentation_times = map(presentation_times, fromJSON),
         rt = duration_first + duration_second,
