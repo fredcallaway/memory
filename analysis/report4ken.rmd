@@ -176,8 +176,11 @@ People remember the thing they look at last
 `r round(100 * mean(multi$choose_last_seen, na.rm=T))`%
 of the time. In value-based decision making, it has been suggested that
 this last-fixation effect could explain away what looks to be evidence for
-adaptive attention allocation. This claim did not hold up there, but it could
-nevertheless be affecting our results.
+adaptive attention allocation. Briefly, the last fixation is
+correlated with both fixation proportion and relative strength, and this
+could be entirely driving the correlation between strength and fixation proportion.
+See [here](last-fixation-21-06-01.html) for a 
+more thorough explanation.
 
 ```{r, last-fix, fig.width=7.5, fig.height=3.5}
 df %>% 
@@ -195,8 +198,6 @@ lmer(prop_first ~ rel_strength * last_pres + (rel_strength * last_pres | wid), d
 
 The effect of relative memory strength on fixation proportion is a lot weaker when
 we control for the effect of the last fixation, but it remains significant.
-
-Read on for an explanation, but you can safely **[skip to the next section](#first-fix)**.
 
 
 ## First fixation duration {#first-fix}
@@ -339,9 +340,9 @@ to the optimal model, suggesting that people might have some kind of "metacognit
 
 All the human plots above only include the second half of the trials. When we analyze
 the full dataset, things are a lot messier 
-[see here](www.fredcallaway.com/reports/memory/report4ken-alltrials-21-06-01.html).
+[see here](report4ken-alltrials-21-06-01.html).
 Most of the effects are non-significant (sometimes even entirely absent). See
-[here](www.fredcallaway.com/reports/memory/multi_recall_earlylate-21-06-01.html)
+[here](multi_recall_earlylate-21-06-01.html)
 for a direct comparison of early vs late trials.
 
 This suggests that people need to learn how to efficiently allocate their
