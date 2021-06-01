@@ -48,6 +48,34 @@ lmer(choose_first ~ strength_first + strength_second + (strength_first + strengt
 Note: unless otherwise stated, all regression tables are maximal linear mixed effects models
 (i.e. random slopes and intercepts). Plotted regression lines are plain old OLS.
 
+# Easy vs hard
+
+```{r}
+
+multi %>% 
+    group_by(wid) %>% 
+    left_join(
+        afc_scores %>% summarise(med_str = median(strength))
+    ) %>% 
+    mutate(
+        first_strong = strength_first > med_str,
+        second_strong = strength_second > med_str,
+        test = first_strong + second_strong
+    ) %>% select(test)
+```
+
+```{r}
+multi %>% 
+    filter(wid == "w2f1698c") %>% 
+    select(trial_num, strength_first, strength_second)  %>% 
+    mutate(
+        strength_high = pmax(strength_first, strength_second),
+        strength_low = pmin(strength_first, strength_second),
+    ) %>% 
+    pivot_longer(c(strength_high, strength_low), names_to="cue", names_prefix="strength_", values_to="strength") %>%
+    ggplot(aes(trial_num, strength, color=cue)) + geom_point()
+
+```
 
 # Proportion presentation time
 

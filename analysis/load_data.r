@@ -51,7 +51,7 @@ afc = load_data('afc') %>%
     filter(!practice) %>% select(-practice)
 
 afc_scores = afc %>% 
-    # filter(block > 1) %>%  ## CRITICAL DECISION
+    filter(block > 1) %>%  ## CRITICAL DECISION
     group_by(wid, word) %>% 
     summarise(raw_strength = -mean(log(rt))) %>%
     group_by(wid) %>% 
