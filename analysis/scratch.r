@@ -1,3 +1,30 @@
+# %% ==================== Optimal only ====================
+
+
+```{r}
+optimal %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(strength_first, first_pres_time)) +
+    geom_smooth() + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    labs(x="First Cue Memory Strength", y="First Fixation Time")
+
+optimal %>% 
+    filter(n_pres >= 3) %>% 
+    ggplot(aes(rel_strength, second_pres_time)) +
+    geom_smooth() + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    labs(x="Relative Memory Strength", y="Second Fixation Time")
+
+optimal %>% 
+    filter(n_pres >= 4) %>% 
+    ggplot(aes(rel_strength, third_pres_time)) +
+    geom_smooth() + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    labs(x="Relative Memory Strength", y="Third Fixation Time")
+```
+
+# %% --------
 
 
 make_fixations = function(df) {

@@ -59,7 +59,7 @@ multi = CSV.read("../data/$version/multi-recall.csv", DataFrame)
 using JSON
 multi.presentation_times = Vector{Vector{Float64}}(map(JSON.parse, multi.presentation_times))
 
-max_step = 120
+max_step = 60
 ms_per_sample = 1000 * (15 / max_step)
 x = reduce(vcat, multi.presentation_times) ./ 250
 empirical_fix_dist = fit(Gamma, x)

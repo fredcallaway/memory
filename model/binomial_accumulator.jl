@@ -64,11 +64,13 @@ function _results(get_p::Function, m::MetaMDP{N}, b::Belief{N}, c::Int) where N
     cost = c != b.focused ? m.sample_cost + m.switch_cost : m.sample_cost
     map(0:m.step_size) do heads
         α, β = b.counts[c]
+        #@show α β
         p = get_p(heads)
         update = (α + heads, β + m.step_size - heads)
         new_counts = Base.setindex(b.counts, update, c)
 
-        if α + heads >= m.threshold
+        if α + heads >= (m.threshold+1)  # +1 accounts for the prior
+            #@show α heads
             return (p, Belief(-1, c, new_counts), -cost)
         elseif b.n_step == m.max_step - 1
             return (p, Belief(-1, -1, new_counts), -(cost + m.miss_cost))
