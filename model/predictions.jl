@@ -34,10 +34,17 @@ include("figure.jl")
 end
 
 # %% --------
-
+m = MetaMDP(step_size=4, max_step=60, threshold=100, sample_cost=1, switch_cost=4, miss_cost=0)
 V = ValueFunction(m)
 @time V(initial_belief(m))
 make_sims(SoftOptimalPolicy(V; β=0.3)) |> CSV.write("results/sim_optimal.csv")
+
+# %% --------
+
+m = MetaMDP(step_size=4, max_step=60, threshold=100, sample_cost=1, switch_cost=4, miss_cost=0, prior=(1,6))
+V = ValueFunction(m)
+@time V(initial_belief(m))
+make_sims(SoftOptimalPolicy(V; β=0.3)) |> CSV.write("results/sim_optimal_prior.csv")
 
 
 # %% ==================== Fit random policy ====================

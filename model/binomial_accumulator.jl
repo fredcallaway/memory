@@ -12,13 +12,16 @@ using StatsFuns
     step_size::Int = 10
     max_step::Int = 100
     allow_stop::Bool = false
+    prior::Tuple{Int, Int} = (1, 1)
 end
 MetaMDP(;kws...) = MetaMDP{2}(;kws...)
 getfields(x) = (getfield(x, f) for f in fieldnames(typeof(x)))
 id(m::MetaMDP) = join(getfields(m), "-")
 
 State{N} = NTuple{N, Float64}
-sample_state(m::MetaMDP) = Tuple(rand(n_item(m)))
+function sample_state(m::MetaMDP{N})::State{N} where N
+    Tuple(rand(Beta(m.prior...), N))
+end
 
 struct Belief{N}
     n_step::Int
@@ -28,8 +31,9 @@ end
 
 actions(m::MetaMDP, b::Belief) = m.allow_stop ? (0:n_item(b)) : (1:n_item(b))
 
-
-initial_belief(m::MetaMDP) = Belief(0, 1, Tuple((1,1) for i in 1:n_item(m)))  # note assume focus first item first
+function initial_belief(m::MetaMDP{N})::Belief{N} where N
+    Belief(0, 1, Tuple(m.prior for i in 1:N))  # note assume focus first item first
+end
 # terminal_belief(m::MetaMDP, c::Int=-1) = Belief(-1, c, Tuple((-1, -1) for i in 1:n_item(m)))
 is_terminal(b) = b.n_step == -1
 # max_cost(m::MetaMDP) = m.miss_cost
@@ -37,23 +41,24 @@ is_terminal(b) = b.n_step == -1
 n_item(m::MetaMDP{N}) where N = N
 n_item(b::Belief{N}) where N = N
 
+# Two versions of the dynamics. First one marginalizes over state. Second
+# conditions on the true state (which is unknown to the model). Only difference
+# is the distribution the number of heads is drawn from, so we separate out
+# the constant parts to _results
 function results(m::MetaMDP{N}, b::Belief{N}, c::Int) where N
-    _results(m, b, c) do heads
-        α, β = b.counts[c]
-        pdf(BetaBinomial(m.step_size, α, β), heads)
-    end
+    α, β = b.counts[c]
+    head_dist = BetaBinomial(m.step_size, α, β)
+    _results(head_dist, m, b, c)
 end
 
 function results(m::MetaMDP{N}, b::Belief{N}, s::State{N}, c::Int) where N
-    _results(m, b, c) do heads
-        pdf(Binomial(m.step_size, s[c]), heads)
-    end
+    head_dist = Binomial(m.step_size, s[c])
+    _results(head_dist, m, b, c)
 end
 
 results(m::MetaMDP{N}, b::Belief{N}, s::Nothing, c::Int) where N = results(m, b, c)
 
-
-function _results(get_p::Function, m::MetaMDP{N}, b::Belief{N}, c::Int) where N
+function _results(head_dist::Distribution, m::MetaMDP{N}, b::Belief{N}, c::Int) where N
     @assert !is_terminal(b)
     @assert b.n_step < m.max_step
     if c == 0  # give up
@@ -64,17 +69,15 @@ function _results(get_p::Function, m::MetaMDP{N}, b::Belief{N}, c::Int) where N
     cost = c != b.focused ? m.sample_cost + m.switch_cost : m.sample_cost
     map(0:m.step_size) do heads
         α, β = b.counts[c]
-        #@show α β
-        p = get_p(heads)
+        p = pdf(head_dist, heads)
         update = (α + heads, β + m.step_size - heads)
         new_counts = Base.setindex(b.counts, update, c)
 
-        if α + heads >= (m.threshold+1)  # +1 accounts for the prior
-            #@show α heads
+        if α + heads >= (m.threshold + m.prior[1])  # hit threshold
             return (p, Belief(-1, c, new_counts), -cost)
-        elseif b.n_step == m.max_step - 1
+        elseif b.n_step == m.max_step - 1  # time out
             return (p, Belief(-1, -1, new_counts), -(cost + m.miss_cost))
-        else
+        else  # regular old update
             update = (α + heads, β + m.step_size - heads)
             new_counts = Base.setindex(b.counts, update, c)
             return (p, Belief(b.n_step + 1, c, new_counts), -cost)
