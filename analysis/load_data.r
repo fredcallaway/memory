@@ -74,8 +74,8 @@ multi = multi  %>%
         typing_rt_z = scale(typing_rt)
     )
 
-human = multi
-human$name = "human"
+# human = multi
+# human$name = "human"
 
 # %% ==================== Model ====================
 
@@ -86,6 +86,10 @@ read_sim = function(name, noise_sd=0) {
         strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
         # strength_first = scale(scale(strength_first) + rnorm(n(), sd=noise_sd)),
         # strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
+        response_type = factor(if_else(outcome == -1, "timeout", "correctm"),
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
         correct = outcome != -1,
         presentation_times = map(presentation_times, fromJSON),
         rt = duration_first + duration_second,

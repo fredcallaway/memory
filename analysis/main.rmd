@@ -16,15 +16,24 @@ output:
 ```{r setup, include=FALSE}
 source("setup.r")
 source("load_data.r")
+raw_df = bind_rows(
+    read_sim("optimal_prior"), 
+    read_sim("rand_gamma"),
+    multi %>% 
+        mutate(name = "human") %>% 
+        filter(trial_num > 10)
+)
 
-
-df = bind_rows(read_sim("optimal"), filter(human, trial_num > 10), read_sim("rand_gamma")) %>% 
-    mutate(name = fct_inorder(fct_recode(name, 
-        "Optimal" = "optimal",
-        "Human" = "human",
-        "Random" = "rand_gamma"
-    ))) %>% 
-    mutate(last_pres = if_else(n_pres %% 2 == 1, "first", "second"))
+df = raw_df %>% 
+    mutate(
+        name = recode_factor(name, .ordered=T,
+            # "Optimal" = "optimal",
+            "optimal_prior" = "Optimal",
+            "human" = "Human",
+            "rand_gamma" = "Random",
+        ),
+        last_pres = if_else(n_pres %% 2 == 1, "first", "second")
+    )
 
 optimal = filter(df, name == "Optimal")
 random = filter(df, name == "Random")
@@ -194,9 +203,9 @@ human %>%
 This is a suspiciously strong effect. Might be some selection effects here.
 
 
-## Fixation duration over time
+## Fixation durations by position
 
-```{r}
+```{r, fix-by-final, fig.width=7.5, fig.height=3}
 make_fixations = function(df) {
     df %>% 
         ungroup() %>% 
@@ -219,22 +228,65 @@ make_fixations = function(df) {
         )
 }
 
+long %>% 
+    group_by(name, last_fix) %>% 
+    summarise(mean(duration))
+
 long = df %>% 
     group_by(name) %>%
     slice_sample(n=2000) %>% 
     make_fixations
-
 ```
 
-```{r,fig.width=7.5, fig.height=3}
+### Final vs non-final
+
+```{r, fix-by-final, fig.width=7.5, fig.height=3}
 long %>% 
-    filter(presentation <= 5) %>% 
+    # filter(name == "Human") %>% 
+    ggplot(aes(last_fix==1, duration)) + 
+    stat_summary(fun.data=mean_cl_boot, geom="bar", fill="white", color="black") +
+    stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=0.2) +
+    facet_wrap(~name) + 
+    scale_x_discrete(name="Fixation Type", labels=c("Non-final", "Final"))
+```
+
+### First, second, middle, final
+
+```{r, fix-by-type, fig.width=7.5, fig.height=3}
+long %>% 
+    mutate(fixation_type = case_when(
+        presentation == n_pres ~ "final",
+        presentation == 1 ~ "first",
+        presentation == 2 ~ "second",
+        presentation > 2 ~ "middle",
+    ) %>% fct_relevel("first", "second", "middle", "final")) %>% 
+    ggplot(aes(fixation_type, duration)) + 
+    stat_summary(fun.data=mean_cl_boot, geom="bar", fill="white", color="black") +
+    stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=0.2) +
+    facet_wrap(~name)
+    # scale_x_discrete(name="Fixation Type", labels=c("Non-final", "Final"))
+```
+
+### Number and finality
+```{r, fix-by-number, fig.width=7.5, fig.height=3.3}
+long %>% 
+    filter(presentation <= 6) %>% 
+    ggplot(aes(presentation, duration, color=factor(last_fix))) +
+    stat_summary(fun.data=mean_cl_boot) +
+    facet_wrap(~name) +
+    theme(legend.position="top")
+```
+
+### Just number and finality
+```{r, fix-by-number, fig.width=7.5, fig.height=3.3}
+long %>% 
+    filter(presentation <= 6) %>% 
     ggplot(aes(presentation, duration)) +
     stat_summary(fun.data=mean_cl_boot) +
-    facet_wrap(~name)
+    facet_wrap(~name) +
+    theme(legend.position="top")
 ```
 
-<!-- 
 ## Time course
 
 Finally, we can make a plot similar to the initial model prediction.
@@ -270,37 +322,13 @@ nts %>%
 ```
 
 Note that the spike in the Random model is the last-fixation effect. The model always
-recall on last-fixated cue, and it's more likely to recall the target with higher strength.
+recalls the last-fixated cue, and it's more likely to recall the target with higher strength.
 
 For the trials where one cue has a substantially stronger memory, we see a
 pretty reliable increase in probability of fixating the stronger cue over the
 course of the trial. It does look like people are slower on the uptake compared
 to the optimal model, suggesting that people might have some kind of "metacognitive lag".
- -->
 
-# A confession
-
-All the human plots above only include the second half of the trials. When we analyze
-the full dataset, things are a lot messier 
-[see here](report4ken-alltrials-21-06-01.html).
-Most of the effects are non-significant (sometimes even entirely absent). See
-[here](multi_recall_earlylate-21-06-01.html)
-for a direct comparison of early vs late trials.
-
-This suggests that people need to learn how to efficiently allocate their
-attention in our experiment. But this is not entirely unsurprising. The task is not very
-much like real-world memory problems. One important question, however, is whether the 
-necesity for learning implies that the task is not actually studying a skill people
-use in the real world.
-
-
-# Discussion questions
-
-- Is the motivation compelling? How should we connect to existing work in memory?
-- Is it problematic that the model assumes evidence never drops (Bernoulli vs. Gaussian sampling)
-- Is it reasonable to only analyze later trials?
-- Are there other experiments we should run? Preliminary results in an optimal stopping version
-  are not very promising.
 
 
 <!-- In value-based decision making tasks, we simply ask participants for liking ratings. -->
