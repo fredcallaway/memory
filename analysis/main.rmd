@@ -205,7 +205,7 @@ This is a suspiciously strong effect. Might be some selection effects here.
 
 ## Fixation durations by position
 
-```{r, fix-by-final, fig.width=7.5, fig.height=3}
+```{r, fig.width=7.5, fig.height=3}
 make_fixations = function(df) {
     df %>% 
         ungroup() %>% 
@@ -227,10 +227,6 @@ make_fixations = function(df) {
             duration = if_else(name == "Human", as.integer(duration), as.integer(duration * 250)),
         )
 }
-
-long %>% 
-    group_by(name, last_fix) %>% 
-    summarise(mean(duration))
 
 long = df %>% 
     group_by(name) %>%
@@ -268,7 +264,7 @@ long %>%
 ```
 
 ### Number and finality
-```{r, fix-by-number, fig.width=7.5, fig.height=3.3}
+```{r, fix-by-number-finality, fig.width=7.5, fig.height=3.3}
 long %>% 
     filter(presentation <= 6) %>% 
     ggplot(aes(presentation, duration, color=factor(last_fix))) +
@@ -277,7 +273,7 @@ long %>%
     theme(legend.position="top")
 ```
 
-### Just number and finality
+### Just number
 ```{r, fix-by-number, fig.width=7.5, fig.height=3.3}
 long %>% 
     filter(presentation <= 6) %>% 
@@ -285,6 +281,21 @@ long %>%
     stat_summary(fun.data=mean_cl_boot) +
     facet_wrap(~name) +
     theme(legend.position="top")
+```
+
+### Distributions
+```{r,fig.width=7.5, fig.height=3}
+long %>%
+    ggplot(aes(duration/1000, color=factor(last_fix))) +
+    xlim(0, 5) +
+    facet_wrap(~name) +
+    geom_density()
+
+long %>%
+    ggplot(aes(duration/1000)) +
+    xlim(0, 5) +
+    facet_wrap(~name) +
+    geom_density()
 ```
 
 ## Time course
