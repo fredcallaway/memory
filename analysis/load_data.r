@@ -51,7 +51,7 @@ afc = load_data('afc') %>%
     filter(!practice) %>% select(-practice)
 
 afc_scores = afc %>% 
-    filter(block > 1) %>%  ## CRITICAL DECISION
+    # filter(block > 1) %>%  ## CRITICAL DECISION
     group_by(wid, word) %>% 
     summarise(raw_strength = -mean(log(rt))) %>%
     group_by(wid) %>% 
@@ -65,17 +65,12 @@ multi = multi %>%
     mutate(
         rel_strength = strength_first - strength_second,
         chosen_strength = if_else(choose_first, strength_first, strength_second),
-    )
-
-multi = multi  %>% 
+    ) %>% 
     group_by(wid) %>% 
     mutate(
         trial_num = row_number(),
         typing_rt_z = scale(typing_rt)
     )
-
-# human = multi
-# human$name = "human"
 
 # %% ==================== Model ====================
 

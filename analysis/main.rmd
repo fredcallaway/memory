@@ -11,6 +11,11 @@ output:
       latex_engine: xelatex
 ---
 
+::: {.alert .alert-info}
+Unlike the last "main" report, we are _not_ excluding the first round
+of 2AFC trials when computing memory strength.
+:::
+
 # Results
 
 ```{r setup, include=FALSE}
@@ -358,11 +363,5 @@ For the trials where one cue has a substantially stronger memory, we see a
 pretty reliable increase in probability of fixating the stronger cue over the
 course of the trial. It does look like people are slower on the uptake compared
 to the optimal model, suggesting that people might have some kind of "metacognitive lag".
-
-
-
-<!-- In value-based decision making tasks, we simply ask participants for liking ratings. -->
-
-
 
 
