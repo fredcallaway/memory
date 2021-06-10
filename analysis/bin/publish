@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 filename="${1%.*}"
-# R -e "rmarkdown::render('$filename.rmd', encoding = 'UTF-8')"
-# if [ $? -ne 0 ]; then
-#    echo "Error compiling $filename.rmd"
-#    exit
-# fi
+R -e "rmarkdown::render('$filename.rmd', encoding = 'UTF-8')"
+if [ $? -ne 0 ]; then
+   echo "Error compiling $filename.rmd"
+   exit
+fi
 
-# open -a 'Google Chrome' "$filename.html"
-# echo -n "Confirm publish [y/n]"
-# read confirm
-# if [ $confirm == "y" ]; then
-#     echo good to go
-# else
-#     echo canceling publish
-#     exit 1
-# fi
+open -a 'Google Chrome' "$filename.html"
+echo -n "Confirm publish [y/n]"
+read confirm
+if [ $confirm == "y" ]; then
+    echo good to go
+else
+    echo canceling publish
+    exit 1
+fi
 
 newname=$filename-`date +"%y-%m-%d"`.html
 newpath=reports/$newname

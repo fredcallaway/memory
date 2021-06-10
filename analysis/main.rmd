@@ -296,6 +296,25 @@ long %>%
     xlim(0, 5) +
     facet_wrap(~name) +
     geom_density()
+
+```
+
+# Final fixation - relative strength
+
+```{r}
+X = df %>% 
+    filter(n_pres > 3) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    )
+
+X %>% ggplot(aes(last_rel_strength, last_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    geom_smooth(method='lm')
+
+X %>% lmer(last_pres_time ~ last_rel_strength + (last_rel_strength|wid), data=.) %>% summ
 ```
 
 ## Time course
