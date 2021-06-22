@@ -12,8 +12,8 @@ output:
 ```{r setup, include=FALSE}
 source("setup.r")
 
-VERSIONS = c('v6.0')
-# VERSIONS = c('v4.0')
+# VERSIONS = c('v6.0')
+VERSIONS = c('v4.0')
 # VERSIONS = c('v2.0', 'v2.0B')
 
 load_data = function(type) {
@@ -109,9 +109,8 @@ In this experiment, we wanted to verify that this approach might work by asking 
 ## Does 2-AFC RT predict cue-recall RT?
 
 Is the reaction time on 2AFC trials for a given word predictive of reaction time for the same word in the recall task? Critically, we need to see the effect within individuals, so we plot linear fits for each participant and run a mixed effects model with random intercepts.
-
+s
 ```{r}
-
 ggplot(trials, aes(afc_rt, recall_rt, group=wid)) + 
     geom_point(alpha=0.2) +
     geom_smooth(method=lm, se=F)
@@ -190,13 +189,13 @@ p1 | p2
 
 ```{r}
 library(mgcv)
-# trials$wid = factor(trials$wid)
+trials$wid = factor(trials$wid)
 m = gam(log_recall_rt ~ s(log_afc_rt, bs = "cs", k = 10) +
                         s(wid, log_afc_rt, bs='re'),
         data=trials, method="REML")
 
 # bounds = trials %>% summarise(lo=quantile(afc_rt, .05), hi=quantile(afc_rt, .95))
-bounds = trials %>% summarise(lo=min(afc_rt), hi=max(afc_rt))
+bounds = trials %>% group_by(wid) %>% summarise(lo=min(afc_rt), hi=max(afc_rt))
 
 preds = expand.grid(
     wid = unique(trials$wid), 
@@ -210,7 +209,10 @@ preds = expand.grid(
 preds %>% group_by(wid) %>% summarise(mrr = mean(recall_rt)) %>% filter(mrr < 1000)
 
 preds %>% ggplot(aes(log_afc_rt, log_recall_rt, group=wid)) + 
-    geom_line(size=.5) + theme_classic()
+    geom_abline(slope=1, color="gray") +
+    geom_line(size=.5) +
+    theme_classic() +
+    coord_fixed(xlim=c(6,9), ylim=c(6,9))
 
 ```
 

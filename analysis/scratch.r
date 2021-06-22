@@ -1,3 +1,15 @@
+# %% ==================== Strength ====================
+
+
+# RT = θ / p
+# p = θ / RT
+# log(p) = log(θ) - log(rt)
+# p = exp(log(θ) - log(rt))
+
+
+
+
+
 # %% ==================== Optimal only ====================
 
 
@@ -25,7 +37,6 @@ optimal %>%
 ```
 
 # %% --------
-
 
 make_fixations = function(df) {
     df %>% 
@@ -407,23 +418,25 @@ multi %>%
     geom_smooth(method="lm")
 ```
 
-```{r}
-# multi %>% filter(wid == first(participants$wid)) %>% 
-#     select(strength_first, strength_second, abs(first_advantage)) %>% 
-#     arrange(`abs(first_advantage)`) %>% 
-#     pivot_longer(c(strength_first, strength_second)) %>% 
-#     ggplot()
-# Check javascript score computation
-# check_score <- participants %>%
-#     select(wid, afc_scores) %>%
-#     json_to_columns(afc_scores) %>% 
-#     pivot_longer(-wid, names_to="word") %>% 
-#     mutate(js_strength = -value) %>% 
-#     inner_join(afc_scores)
+# %% --------
+multi %>% filter(wid == first(participants$wid)) %>% 
+    select(strength_first, strength_second, abs(first_advantage)) %>% 
+    arrange(`abs(first_advantage)`) %>% 
+    pivot_longer(c(strength_first, strength_second)) %>% 
+    ggplot()
 
-# # max(check_score$js_score - check_score$score)
-# stopifnot(mean(check_score$js_strength - check_score$strength) < .1)
-```
+# Check javascript score computation
+    
+check_score <- participants %>%
+    select(wid, afc_scores) %>%
+    json_to_columns(afc_scores) %>% 
+    pivot_longer(-wid, names_to="word") %>% 
+    mutate(js_strength = -value) %>% 
+    inner_join(afc_scores)
+
+# max(check_score$js_score - check_score$score)
+stopifnot(mean(check_score$js_strength - check_score$strength) < .1)
+
 
 
     

@@ -22,27 +22,30 @@ of 2AFC trials when computing memory strength.
 source("setup.r")
 source("load_data.r")
 raw_df = bind_rows(
-    read_sim("optimal_prior"), 
-    read_sim("rand_gamma"),
+    read_sim("optimal_prior", noise_sd=3),
+    read_sim("empirical", noise_sd=3),
+    # read_sim("rand_gamma"),
     multi %>% 
         mutate(name = "human") %>% 
         filter(trial_num > 10)
 )
 
 df = raw_df %>% 
+    filter(response_type %in% c("correct", "timeout")) %>%
     mutate(
         name = recode_factor(name, .ordered=T,
             # "Optimal" = "optimal",
             "optimal_prior" = "Optimal",
             "human" = "Human",
-            "rand_gamma" = "Random",
+            "empirical" = "Random",
+            # "rand_gamma" = "Random",
         ),
         last_pres = if_else(n_pres %% 2 == 1, "first", "second")
     )
 
 optimal = filter(df, name == "Optimal")
 random = filter(df, name == "Random")
-human =filter(df, name == "Human")
+human = filter(df, name == "Human")
 ```
 
 ## Probability of remembering first word
@@ -61,7 +64,7 @@ it's enough to get a sense of qualitative model predictions.
 
 
 ```{r,remember-first, fig.width=7.5, fig.height=3}
-df %>% 
+df %>%
     ggplot(aes(rel_strength, as.numeric(choose_first))) + 
     geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x) +
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
@@ -76,6 +79,7 @@ human %>%
 Note: unless otherwise stated, all regression tables are maximal linear mixed effects models
 (random slopes and intercepts) applied to the human data. 
 Plotted regression lines are fixed effects only.
+
 
 ## Fixation proportion by relative memory strength
 
@@ -153,7 +157,6 @@ df %>%
 human %>% 
     filter(n_pres >= 2) %>% 
     lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
-
 ```
 
 The fixed effect is in the opposite of the predicted direction, but the mixed
@@ -229,7 +232,7 @@ make_fixations = function(df) {
             last_fix = as.numeric(presentation == n_pres),
             fix_first = presentation %% 2,
             fix_stronger = as.numeric(fix_first == (rel_strength > 0)),
-            duration = if_else(name == "Human", as.integer(duration), as.integer(duration * 250)),
+            # duration = if_else(name == "Human", as.integer(duration), as.integer(duration * 250)),
         )
 }
 
@@ -254,6 +257,7 @@ long %>%
 ### First, second, middle, final
 
 ```{r, fix-by-type, fig.width=7.5, fig.height=3}
+
 long %>% 
     mutate(fixation_type = case_when(
         presentation == n_pres ~ "final",
@@ -315,8 +319,9 @@ X = df %>%
         last_strength = if_else(last_pres == "first", strength_first, strength_second)
     )
 
-X %>% ggplot(aes(last_rel_strength, last_pres_time)) + 
+X %>% ggplot(aes(last_strength, last_pres_time)) + 
     stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    facet_wrap(~name) +
     geom_smooth(method='lm')
 
 X %>% lmer(last_pres_time ~ last_rel_strength + (last_rel_strength|wid), data=.) %>% summ
@@ -342,6 +347,8 @@ normalized_timestep = function(long) {
         mutate(normalized_timestep = row_number())
 }
 
+optimal %>% with(table(response_type))
+
 long = make_fixations(df)
 nts = normalized_timestep(long)
 nts %>% 
@@ -363,5 +370,76 @@ For the trials where one cue has a substantially stronger memory, we see a
 pretty reliable increase in probability of fixating the stronger cue over the
 course of the trial. It does look like people are slower on the uptake compared
 to the optimal model, suggesting that people might have some kind of "metacognitive lag".
+
+
+# Validations
+
+
+## Reaction Time
+
+```{r, fig.width=7.5, fig.height=3}
+df %>% 
+    ggplot(aes(chosen_strength, rt)) +
+    geom_smooth() +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name) +
+    labs(x="Strength of Selected Cue", y="Reaction Time")
+
+lmer(rt ~ chosen_strength + (chosen_strength|wid), data=human) %>% summ
+```
+
+## Last fixation
+
+```{r, fig.width=7.5, fig.height=3}
+X = df %>% 
+    filter(n_pres > 0) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    )
+
+X %>% 
+    ggplot(aes(last_strength, last_pres_time)) +
+    geom_smooth() +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name) +
+    labs()
+
+X %>% filter(name == "Human") %>% lmer(last_pres_time ~ last_strength + (last_strength|wid), data=.) %>% summ
+```
+
+## Final first fixation
+
+```{r, fig.width=7.5, fig.height=3}
+X = df %>% 
+    filter(n_pres == 1)
+
+X %>% 
+    ggplot(aes(strength_first, first_pres_time)) +
+    geom_smooth() +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name)
+
+X %>% filter(name == "Human") %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+
+```
+
+## Final last fixation
+
+```{r, fig.width=7.5, fig.height=3}
+X = df %>% 
+    filter(n_pres == 2) 
+
+X %>% 
+    ggplot(aes(strength_second, second_pres_time)) +
+    geom_smooth() +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_wrap(~name)
+
+X %>% filter(name == "Human") %>% lmer(second_pres_time ~ strength_second + (strength_second|wid), data=.) %>% summ
+
+```
+
 
 

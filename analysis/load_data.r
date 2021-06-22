@@ -59,6 +59,17 @@ afc_scores = afc %>%
         strength = scale(raw_strength),
     )
 
+# print("USING JS SCORES")
+# afc_scores = participants %>%
+#     select(wid, afc_scores) %>%
+#     json_to_columns(afc_scores) %>% 
+#     pivot_longer(-wid, names_to="word") %>% 
+#     group_by(wid) %>%
+#     mutate(
+#         raw_strength = -value,
+#         strength = scale(raw_strength)
+#     ) %>% select(-value)
+
 multi = multi %>% 
     left_join(afc_scores, c("wid", "first_word" = "word")) %>% 
     left_join(afc_scores, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
@@ -77,11 +88,11 @@ multi = multi %>%
 read_sim = function(name, noise_sd=0) {
     read_csv(glue("../model/results/sim_{name}.csv")) %>%  mutate(
         name = !!name,
-        strength_first = scale(scale(strength_first) + rnorm(n(), sd=noise_sd)),
-        strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
-        # strength_first = scale(scale(strength_first) + rnorm(n(), sd=noise_sd)),
-        # strength_second = scale(scale(strength_second) + rnorm(n(), sd=noise_sd)),
-        response_type = factor(if_else(outcome == -1, "timeout", "correctm"),
+        # raw_strength_first = strength_first,
+        # raw_strength_second = strength_second,
+        strength_first = scale(scale(log(strength_first)) + rnorm(n(), sd=noise_sd)),
+        strength_second = scale(scale(log(strength_second)) + rnorm(n(), sd=noise_sd)),
+        response_type = factor(if_else(outcome == -1, "timeout", "correct"),
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
             # labels=c("Correct", "Intrusion", "Other")
         ),
@@ -97,15 +108,19 @@ read_sim = function(name, noise_sd=0) {
         n_pres = lengths(presentation_times),
         odd_pres = mod(n_pres, 2) == 1,
         rel_strength = strength_first - strength_second,
+        chosen_strength = if_else(choose_first, strength_first, strength_second),
         # strength_first_bin = cut(strength_first, 5, ordered=T),
         # strength_second_bin = cut(strength_second, 5, ordered=T),
-        rt=rt*250,
-        rel_present=rel_present*250,
-        duration_first=duration_first*250,
-        duration_second=duration_second*250,
-        first_pres_time=first_pres_time*250,
-        second_pres_time=second_pres_time*250,
-        third_pres_time=third_pres_time*250,
+        # rt=rt*250,
+        # rel_present=rel_present*250,
+        # duration_first=duration_first*250,
+        # duration_second=duration_second*250,
+        # first_pres_time=first_pres_time*250,
+        # second_pres_time=second_pres_time*250,
+        # third_pres_time=third_pres_time*250,
+        # log_strength_first = scale(scale(log(raw_strength_first)) + rnorm(n(), sd=noise_sd)),
+        # log_strength_second = scale(scale(log(raw_strength_second)) + rnorm(n(), sd=noise_sd)),
+        # log_rel_strength = log_strength_first - log_strength_second,
     )
 }
 
