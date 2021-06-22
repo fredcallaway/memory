@@ -24,12 +24,6 @@ function empirical_policy(m)
     SwitchDistributionPolicy(m, d)
 end
 
-@everywhere begin
-    max_step = $max_step
-    empirical_fix_dist = $empirical_fix_dist
-end
-
-
 function get_last_other(df)
     last_ = Int[]; other = Int[]
     for pt in df.presentation_times
@@ -40,5 +34,3 @@ function get_last_other(df)
     end
     mean(last_), mean(other)
 end
-
-#get_last_other(df)

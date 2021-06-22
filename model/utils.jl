@@ -6,7 +6,7 @@ import Base.Iterators: product
 # %% ==================== Project-specific ====================
 
 # length of each presentation
-function parse_presentations(cs)
+function parse_presentations(cs, ms_per_sample)
     f = 0
     x = Int[]
     for (i, c) in enumerate(cs)
@@ -14,7 +14,7 @@ function parse_presentations(cs)
             push!(x, 0)
             f = c
         end
-        x[end] += 1
+        x[end] += ms_per_sample
     end
     x
 end
