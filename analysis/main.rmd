@@ -13,11 +13,15 @@ output:
 
 # Changes
 
-- In the model, strength is now proportional to $log(p)$ (previously just $p$).
+- In the human data, error trials (which the model never predicts) are excluded.
+- In the model, strength is now proportional to $\log(p)$---previously it was just $p$.
   The motivation for this is that reaction time in a single cue recall task 
-  is proportional to $1 / p$, which implies $log(p) = log(C) - log(t)$ for some
-  unknown constant $C$. Because our human strength measure is in units of $log(t)$,
-  it makes sense for the model strength to be proportional $log(p)$.
+  is proportional to $1 / p$, which implies $\log(p) = C - \log(t)$ for some
+  unknown constant $C$. Because our human strength measure is in units of $\log(t)$,
+  it makes sense for the model strength to be proportional $\log(p)$.
+- We also add Gaussian noise to the model strength to account for the fact
+  that the human strength measure is very noisy. Ideally we would have a more
+  principled way to do this (based on a generative model).
 - New random model: At the beginning of the trial, the "Random commitment"
   model samples the maximum number of fixations from the empirical
   distribution. Each fixation duration is drawn from the empirical
@@ -67,9 +71,11 @@ target is chosen for recollection should depend on the difference in "strength" 
 the two cues.
 
 Note: For the model, strength corresponds to the $p$ parameter. Here, we
-simply Z-score $p$ to put it in roughly the same units. The assumption that
-$p$ is linearly related to log reaction time is almost certainly wrong, but
-it's enough to get a sense of qualitative model predictions.
+Z-score $\log(p)$ to put it in roughly the same units. The motivation for this
+is that reaction time in a single cue recall task is proportional to $1 / p$,
+which implies $\log(p) = C - \log(t)$ for some unknown constant $C$. Because
+our human strength measure is in units of $\log(t)$, it makes sense for the
+model strength to be proportional $\log(p)$.
 
 
 ```{r,remember-first, fig.width=7.5, fig.height=3}
@@ -136,18 +142,20 @@ df %>%
 
 X = df %>% filter(n_pres > 1 & name == "Human")
 lmer(prop_first ~ rel_strength * last_pres + (rel_strength * last_pres | wid), data=X) %>% summ
+
 ```
 
 The effect of relative memory strength on fixation proportion is a lot weaker when
-we control for the effect of the last fixation, but it remains significant.
+we control for the effect of the last fixation, but it remains significant. However,
+it's _not_ significant in the optimal model (regression not shown).
 
 
 ## First fixation duration {#first-fix}
 
 Given the complications with the total fixation duration, 
 the duration of the first fixation is potentially a more reliable cue.
-The model makes a strong prediction here, and it probably isn't confounded
-by the last fixation effect.
+Previously the model made a strong prediction here, but with the new
+parameters, this is no longer the case.
 
 Consider only the trials with more than one fixation.
 Do participants switch away from the first image more quickly when they have
@@ -168,8 +176,7 @@ human %>%
     lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
 ```
 
-The fixed effect is in the opposite of the predicted direction, but the mixed
-effects gives an almost significant result in the correct direction. Weird.
+Not a lot of information here. 
 
 
 ## Second fixation duration
@@ -195,9 +202,15 @@ X %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% sum
 # X %>% lmer(second_pres_time ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
 ```
 
+The model makes a strong prediction here, and I don't think it is confounded
+by anything. Previously, we had a significant effect here in the human data.
+But excluding the incorrect trials pushed the p up a bit. It does seem
+plausible that the effect is there though.
+
+<!-- 
 Looks good! People more quickly switch back to the first-seen cue when they have a
 stronger memory for that cue compared to the second-seen cue.
-
+ -->
 
 ## Third fixation duration
 
@@ -217,7 +230,10 @@ human %>%
     lmer(third_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
 ```
 
-This is a suspiciously strong effect. Might be some selection effects here.
+I previously thought this could be due to selection effects, but I'm not exactly sure
+what those would be. I think we can interpret this result as evidence as long as we 
+get a null result in a convincing random model.
+
 
 ```{r, fig.width=7.5, fig.height=3}
 make_fixations = function(df) {
@@ -304,8 +320,6 @@ normalized_timestep = function(long) {
         mutate(normalized_timestep = row_number())
 }
 
-optimal %>% with(table(response_type))
-
 long = make_fixations(df)
 nts = normalized_timestep(long)
 nts %>% 
@@ -320,13 +334,16 @@ nts %>%
 
 ```
 
-Note that the spike in the Random model is the last-fixation effect. The model always
-recalls the last-fixated cue, and it's more likely to recall the target with higher strength.
-
 For the trials where one cue has a substantially stronger memory, we see a
 pretty reliable increase in probability of fixating the stronger cue over the
 course of the trial. It does look like people are slower on the uptake compared
 to the optimal model, suggesting that people might have some kind of "metacognitive lag".
+
+The optimal model prediction is a lot weaker than before because noise is added to the strength.
+
+We no longer see a spike at the end in the Random model. I think this must be due to the 
+commitment mechanism, but I have a hard time reconciling the null effect here with the 
+substantial effect of cue strength on cue selection probability ([Probability of remembering first word])
 
 # Sanity checks for evidence accumulation
 
@@ -429,7 +446,7 @@ df %>%
 
 ## Final fixation - relative strength
 
-```{r}
+```{r, fig.width=7.5, fig.height=3}
 X = df %>% 
     filter(n_pres > 3) %>% 
     mutate(
