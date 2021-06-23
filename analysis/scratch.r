@@ -1,9 +1,15 @@
+# %% ==================== N fixations ====================
+
+human %>% ggplot(aes(n_pres, ..prop..)) + geom_bar()
+fig()
+
+
 # %% ==================== Strength ====================
 
 
-# RT = θ / p
-# p = θ / RT
-# log(p) = log(θ) - log(rt)
+# RT = xθ / p
+# p = xθ / RT
+# log(p) = log(xθ) - log(rt)
 # p = exp(log(θ) - log(rt))
 
 

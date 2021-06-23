@@ -55,3 +55,10 @@ df = make_sims(empirical_policy(m))
 countmap(df.outcome)
 @show mean(length.(df.presentation_times))
 CSV.write("results/sim_empirical.csv", df)
+
+# %% --------
+
+df = make_sims(empirical_commitment_policy2(m))
+countmap(df.outcome)
+@show mean(length.(df.presentation_times))
+CSV.write("results/sim_empirical_commitment.csv", df)

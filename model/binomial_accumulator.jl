@@ -183,7 +183,6 @@ end
 
 abstract type Policy end
 
-
 struct RandomPolicy <: Policy
     m::MetaMDP
 end

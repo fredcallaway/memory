@@ -1,5 +1,5 @@
 ---
-title: Rational metacognition in memory
+title: Random commitment model qualitative comparison
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
@@ -11,19 +11,28 @@ output:
       latex_engine: xelatex
 ---
 
-::: {.alert .alert-info}
-Unlike the last "main" report, we are _not_ excluding the first round
-of 2AFC trials when computing memory strength.
-:::
+# Changes
 
-# Results
+- In the model, strength is now proportional to $log(p)$ (previously just $p$).
+  The motivation for this is that reaction time in a single cue recall task 
+  is proportional to $1 / p$, which implies $log(p) = log(C) - log(t)$ for some
+  unknown constant $C$. Because our human strength measure is in units of $log(t)$,
+  it makes sense for the model strength to be proportional $log(p)$.
+- New random model: At the beginning of the trial, the "Random commitment"
+  model samples the maximum number of fixations from the empirical
+  distribution. Each fixation duration is drawn from the empirical
+  distribution of non-final fixations. When the maximum number of fixations
+  has been reached, the model stays on the currently fixated cue until the
+  target is recalled or the trial time limit is reached (15 seconds).
+
+# Main Results
 
 ```{r setup, include=FALSE}
 source("setup.r")
 source("load_data.r")
 raw_df = bind_rows(
     read_sim("optimal_prior", noise_sd=3),
-    read_sim("empirical", noise_sd=3),
+    read_sim("empirical_commitment", noise_sd=3),
     # read_sim("rand_gamma"),
     multi %>% 
         mutate(name = "human") %>% 
@@ -37,7 +46,7 @@ df = raw_df %>%
             # "Optimal" = "optimal",
             "optimal_prior" = "Optimal",
             "human" = "Human",
-            "empirical" = "Random",
+            "empirical_commitment" = "Random",
             # "rand_gamma" = "Random",
         ),
         last_pres = if_else(n_pres %% 2 == 1, "first", "second")
@@ -210,9 +219,6 @@ human %>%
 
 This is a suspiciously strong effect. Might be some selection effects here.
 
-
-## Fixation durations by position
-
 ```{r, fig.width=7.5, fig.height=3}
 make_fixations = function(df) {
     df %>% 
@@ -242,7 +248,15 @@ long = df %>%
     make_fixations
 ```
 
-### Final vs non-final
+## Final vs non-final duration
+
+Longer final fixations suggest that people commit to a cue at some point. This
+is a cool finding because we see the opposite (shorter final fixations) in
+value-based and perceptual decisions, typically explained as the result of
+crossing a threshold cutting off the final fixations. The reason we see this
+in the optimal model is that the accumulation is not just to identify
+which target is more memorable and also to actually remembering it (perceptual
+and value-based decisions only have the former).
 
 ```{r, fix-by-final, fig.width=7.5, fig.height=3}
 long %>% 
@@ -254,78 +268,21 @@ long %>%
     scale_x_discrete(name="Fixation Type", labels=c("Non-final", "Final"))
 ```
 
-### First, second, middle, final
+The random model result is interesting. The intention of the random
+commmitment model was to capture this exact phenomenon. But it seems to have
+way *over*-captured it. The reason this happens is (probably) that humans
+don't actually randomly commit to a cue, but instead only commit when they are
+reasonably sure they will remember it. Also, any such commitment is probably
+not really a firm commitment. Anyway, what happens to this random model is
+that it commits too early or on a bad cue, and then it takes forever to
+remember it.
 
-```{r, fix-by-type, fig.width=7.5, fig.height=3}
-
-long %>% 
-    mutate(fixation_type = case_when(
-        presentation == n_pres ~ "final",
-        presentation == 1 ~ "first",
-        presentation == 2 ~ "second",
-        presentation > 2 ~ "middle",
-    ) %>% fct_relevel("first", "second", "middle", "final")) %>% 
-    ggplot(aes(fixation_type, duration)) + 
-    stat_summary(fun.data=mean_cl_boot, geom="bar", fill="white", color="black") +
-    stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=0.2) +
-    facet_wrap(~name)
-    # scale_x_discrete(name="Fixation Type", labels=c("Non-final", "Final"))
-```
-
-### Number and finality
-```{r, fix-by-number-finality, fig.width=7.5, fig.height=3.3}
-long %>% 
-    filter(presentation <= 6) %>% 
-    ggplot(aes(presentation, duration, color=factor(last_fix))) +
-    stat_summary(fun.data=mean_cl_boot) +
-    facet_wrap(~name) +
-    theme(legend.position="top")
-```
-
-### Just number
-```{r, fix-by-number, fig.width=7.5, fig.height=3.3}
-long %>% 
-    filter(presentation <= 6) %>% 
-    ggplot(aes(presentation, duration)) +
-    stat_summary(fun.data=mean_cl_boot) +
-    facet_wrap(~name) +
-    theme(legend.position="top")
-```
-
-### Distributions
-```{r,fig.width=7.5, fig.height=3}
-long %>%
-    ggplot(aes(duration/1000, color=factor(last_fix))) +
-    xlim(0, 5) +
-    facet_wrap(~name) +
-    geom_density()
-
-long %>%
-    ggplot(aes(duration/1000)) +
-    xlim(0, 5) +
-    facet_wrap(~name) +
-    geom_density()
-
-```
-
-# Final fixation - relative strength
-
-```{r}
-X = df %>% 
-    filter(n_pres > 3) %>% 
-    mutate(
-        last_pres_time = map_dbl(presentation_times, last),
-        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
-        last_strength = if_else(last_pres == "first", strength_first, strength_second)
-    )
-
-X %>% ggplot(aes(last_strength, last_pres_time)) + 
-    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
-    facet_wrap(~name) +
-    geom_smooth(method='lm')
-
-X %>% lmer(last_pres_time ~ last_rel_strength + (last_rel_strength|wid), data=.) %>% summ
-```
+This might draw into question my decision to sample the commitment decision
+based on the empirical number-of-fixations distribution. The only alternative
+I can think of is to sample from a parametric distribution with some free 
+parameter. Previously we discussed a probability of commiting on each fixation
+which is equivalent to an Exponential distribution. But we don't have a good 
+way to fit parameters...
 
 ## Time course
 
@@ -371,24 +328,28 @@ pretty reliable increase in probability of fixating the stronger cue over the
 course of the trial. It does look like people are slower on the uptake compared
 to the optimal model, suggesting that people might have some kind of "metacognitive lag".
 
+# Sanity checks for evidence accumulation
 
-# Validations
+All these plots are testing really basic predictions of the evidence
+accumulation model, that is, effects that come out in the random model. They
+are all much weaker in humans than the model and some aren't even significant.
+This suggests that we might need to make some adjustments to the base
+accumulation model, especially if we wanted to do any real model fitting.
 
 
-## Reaction Time
+## Reaction time by chosen strength
 
 ```{r, fig.width=7.5, fig.height=3}
 df %>% 
     ggplot(aes(chosen_strength, rt)) +
     geom_smooth() +
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
-    facet_wrap(~name) +
-    labs(x="Strength of Selected Cue", y="Reaction Time")
+    facet_wrap(~name)
 
 lmer(rt ~ chosen_strength + (chosen_strength|wid), data=human) %>% summ
 ```
 
-## Last fixation
+## Last fixation duration by strength
 
 ```{r, fig.width=7.5, fig.height=3}
 X = df %>% 
@@ -400,45 +361,89 @@ X = df %>%
     )
 
 X %>% 
-    ggplot(aes(last_strength, last_pres_time)) +
+    ggplot(aes(last_strength, last_pres_time,)) +
     geom_smooth() +
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
     facet_wrap(~name) +
     labs()
 
-X %>% filter(name == "Human") %>% lmer(last_pres_time ~ last_strength + (last_strength|wid), data=.) %>% summ
+X %>% filter(name == "Human") %>% 
+    lmer(last_pres_time ~ last_strength + (last_strength|wid), data=.) %>% summ
 ```
 
-## Final first fixation
+## Last fixation duration by strength and presentation
 
 ```{r, fig.width=7.5, fig.height=3}
 X = df %>% 
-    filter(n_pres == 1)
+    filter(between(n_pres, 1, 4)) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    )
 
 X %>% 
-    ggplot(aes(strength_first, first_pres_time)) +
+    ggplot(aes(last_strength, last_pres_time, group=n_pres, color=n_pres)) +
     geom_smooth() +
     stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
-    facet_wrap(~name)
+    facet_wrap(~name) +
+    labs()
 
-X %>% filter(name == "Human") %>% lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+X %>% filter(name == "Human") %>% 
+    lmer(last_pres_time ~ last_strength * n_pres + (1|wid), data=.) %>% summ
+```
+
+
+
+# Random stuff
+
+## Timeout rate
+
+```{r, fig.width=7.5, fig.height=3}
+df %>% 
+    ggplot(aes(response_type == "timeout", ..prop..)) +
+    geom_bar(group=0) +
+    facet_wrap(~name)
 
 ```
 
-## Final last fixation
+## Reaction time
 
 ```{r, fig.width=7.5, fig.height=3}
-X = df %>% 
-    filter(n_pres == 2) 
-
-X %>% 
-    ggplot(aes(strength_second, second_pres_time)) +
-    geom_smooth() +
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+df %>% 
+    ggplot(aes(rt)) +
+    geom_density() +
     facet_wrap(~name)
 
-X %>% filter(name == "Human") %>% lmer(second_pres_time ~ strength_second + (strength_second|wid), data=.) %>% summ
+```
+## Number of fixations
 
+```{r, fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres < 10) %>% 
+    ggplot(aes(n_pres, ..prop..)) +
+    geom_bar() +
+    facet_wrap(~name)
+
+```
+
+## Final fixation - relative strength
+
+```{r}
+X = df %>% 
+    filter(n_pres > 3) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    )
+
+X %>% ggplot(aes(last_strength, last_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    facet_wrap(~name) +
+    geom_smooth(method='lm')
+
+X %>% lmer(last_pres_time ~ last_rel_strength + (last_rel_strength|wid), data=.) %>% summ
 ```
 
 
