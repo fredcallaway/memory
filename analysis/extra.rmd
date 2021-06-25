@@ -1,0 +1,76 @@
+
+
+# Sanity checks for evidence accumulation
+
+All these plots are testing really basic predictions of the evidence
+accumulation model, that is, effects that come out in the random model. 
+They are all significant in the human data, but the RT ones are a lot
+weaker. This suggests that we might need to make some adjustments to the base
+accumulation model, especially if we wanted to do any real model fitting.
+
+All these plots exclude timeout trials.
+
+## Probability of remembering first word
+
+```{r,remember-first, fig.width=WIDTH, fig.height=HEIGHT}
+df %>%
+    filter(response_type == "correct") %>% 
+    mutate(choose_first = as.numeric(choose_first)) %>% 
+    regress(rel_strength, choose_first) +
+    ylab("Prob Select First Cue")
+```
+
+## Reaction time by chosen strength
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(response_type == "correct") %>% 
+    regress(chosen_strength, rt)
+```
+
+## Last fixation duration by strength
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(response_type == "correct") %>% 
+    filter(n_pres > 0) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    ) %>% 
+    regress(last_strength, last_pres_time)
+```
+
+# Miscellaneous
+
+## Timeout rate
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    group_by(name) %>% 
+    summarise(timeout_rate = mean(response_type == "timeout")) %>% 
+    kable(digits=2)
+```
+
+## Reaction time
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    ggplot(aes(rt)) +
+    geom_density() +
+    facet_grid(~name) +
+    labs(x="Reaction Time", y="Density")
+```
+
+## Number of fixations
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres < 10) %>% 
+    ggplot(aes(n_pres, ..prop..)) +
+    geom_bar() +
+    facet_grid(~name) +
+    labs(x="Number of Fixations", y="Proportion of Trials")
+
+```

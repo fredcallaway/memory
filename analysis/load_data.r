@@ -56,7 +56,7 @@ afc_scores = afc %>%
     summarise(raw_strength = -mean(log(rt))) %>%
     group_by(wid) %>% 
     mutate(
-        strength = scale(raw_strength),
+        strength = zscore(raw_strength),
     )
 
 # print("USING JS SCORES")
@@ -67,7 +67,7 @@ afc_scores = afc %>%
 #     group_by(wid) %>%
 #     mutate(
 #         raw_strength = -value,
-#         strength = scale(raw_strength)
+#         strength = zscore(raw_strength)
 #     ) %>% select(-value)
 
 multi = multi %>% 
@@ -80,7 +80,7 @@ multi = multi %>%
     group_by(wid) %>% 
     mutate(
         trial_num = row_number(),
-        typing_rt_z = scale(typing_rt)
+        typing_rt_z = zscore(typing_rt)
     )
 
 # %% ==================== Model ====================
@@ -90,8 +90,8 @@ read_sim = function(name, noise_sd=0) {
         name = !!name,
         # raw_strength_first = strength_first,
         # raw_strength_second = strength_second,
-        strength_first = scale(scale(log(strength_first)) + rnorm(n(), sd=noise_sd)),
-        strength_second = scale(scale(log(strength_second)) + rnorm(n(), sd=noise_sd)),
+        strength_first = zscore(zscore(log(strength_first)) + rnorm(n(), sd=noise_sd)),
+        strength_second = zscore(zscore(log(strength_second)) + rnorm(n(), sd=noise_sd)),
         response_type = factor(if_else(outcome == -1, "timeout", "correct"),
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
             # labels=c("Correct", "Intrusion", "Other")
@@ -118,11 +118,32 @@ read_sim = function(name, noise_sd=0) {
         # first_pres_time=first_pres_time*250,
         # second_pres_time=second_pres_time*250,
         # third_pres_time=third_pres_time*250,
-        # log_strength_first = scale(scale(log(raw_strength_first)) + rnorm(n(), sd=noise_sd)),
-        # log_strength_second = scale(scale(log(raw_strength_second)) + rnorm(n(), sd=noise_sd)),
+        # log_strength_first = zscore(zscore(log(raw_strength_first)) + rnorm(n(), sd=noise_sd)),
+        # log_strength_second = zscore(zscore(log(raw_strength_second)) + rnorm(n(), sd=noise_sd)),
         # log_rel_strength = log_strength_first - log_strength_second,
     )
 }
 
+make_fixations = function(df) {
+    df %>% 
+        ungroup() %>% 
+        filter(n_pres >= 1) %>% 
+        select(name, rel_strength, presentation_times, n_pres) %>% 
+        mutate(
+            trial = row_number(),
+            strength_diff = cut(abs(rel_strength), 
+                                c(0, 0.35, 1.25, 10),
+                                # quantile(abs(rel_strength), c(0, 0.2, 1.),  na.rm = T),
+                                labels=c("small", "moderate", "large"),
+                                ordered=T)
+        ) %>% 
+        unnest_longer(presentation_times, "duration", indices_to="presentation") %>% 
+        mutate(
+            last_fix = as.numeric(presentation == n_pres),
+            fix_first = presentation %% 2,
+            fix_stronger = as.numeric(fix_first == (rel_strength > 0)),
+            # duration = if_else(name == "Human", as.integer(duration), as.integer(duration * 250)),
+        )
+}
 
 

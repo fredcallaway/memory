@@ -1,0 +1,451 @@
+---
+title: Random commitment model qualitative comparison
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+  output:
+    pdf_document:
+      latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+source("setup.r")
+source("load_data.r")
+raw_df = bind_rows(
+    read_sim("optimal_prior", noise_sd=3),
+    read_sim("optimal_prior_high", noise_sd=3),
+    read_sim("optimal", noise_sd=3),
+)
+
+df = raw_df %>% 
+    filter(
+        response_type %in% c("correct", "timeout") &
+        abs(rel_strength) < 4.24 &
+        abs(strength_first) < 3 &
+        abs(strength_second) < 3
+    ) %>%
+    mutate(
+        # name = recode_factor(name, .ordered=T,
+        #     # "Optimal" = "optimal",
+        #     "optimal_prior" = "Optimal",
+        #     "human" = "Human",
+        #     "empirical" = "Random",
+        #     "empirical_commitment" = "Random Commitment",
+        #     # "rand_gamma" = "Random",
+        # ),
+        last_pres = if_else(n_pres %% 2 == 1, "first", "second")
+    )
+
+```
+
+```{r, fig.width=7.5, fig.height=3, include=FALSE}
+make_fixations = function(df) {
+    df %>% 
+        ungroup() %>% 
+        filter(n_pres >= 1) %>% 
+        select(name, rel_strength, presentation_times, n_pres) %>% 
+        mutate(
+            trial = row_number(),
+            strength_diff = cut(abs(rel_strength), 
+                                c(0, 0.35, 1.25, 10),
+                                # quantile(abs(rel_strength), c(0, 0.2, 1.),  na.rm = T),
+                                labels=c("small", "moderate", "large"),
+                                ordered=T)
+        ) %>% 
+        unnest_longer(presentation_times, "duration", indices_to="presentation") %>% 
+        mutate(
+            last_fix = as.numeric(presentation == n_pres),
+            fix_first = presentation %% 2,
+            fix_stronger = as.numeric(fix_first == (rel_strength > 0)),
+            # duration = if_else(name == "Human", as.integer(duration), as.integer(duration * 250)),
+        )
+}
+
+long = df %>% 
+    group_by(name) %>%
+    slice_sample(n=10000) %>% 
+    make_fixations
+```
+
+# Main Results
+
+Note: unless otherwise stated, all regression tables are maximal linear mixed effects models
+(random slopes and intercepts) applied to the human data. 
+Plotted regression lines are fixed effects only.
+
+## Attentional time course
+
+The key model prediction is that the probability of looking at the cue
+with greater memory strength increases over time.
+
+```{r, time-course, fig.width=7.5, fig.height=3.5}
+
+normalized_timestep = function(long) {
+    long %>% 
+        group_by(trial) %>%
+        mutate(prop_duration = duration / sum(duration)) %>% 
+        ungroup() %>% 
+        mutate(n_step=round(prop_duration * 100)) %>% 
+        uncount(n_step) %>% 
+        group_by(trial) %>% 
+        mutate(normalized_timestep = row_number())
+}
+
+nts = normalized_timestep(long)
+nts %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_stronger, group = strength_diff, color=strength_diff)) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_grid(~name) +
+    labs(x="Normalized Time", y="Probability Fixate Stronger Cue", color="Strength Difference") +
+    geom_hline(yintercept=0.5) +
+    theme(legend.position="top")
+```
+
+In both the optimal model simulations and the human data, the probability of fixating
+the stronger cue steadily increases over the course of the trial, and this increase
+is more pronounced when there is a larger difference in strength.
+
+In the random model, we only see a slight spike at the end of the trial. This
+spike is due to the fact that the the model always remembers the item it looks
+at last, and it is also more likely to remember the item with a stronger
+memory.
+
+The random commitment model does not show this effect, because the item it
+remembers (and fixates on last) is primarly driven by the random decision to
+commit to one of the items.
+
+## Individual fixation durations
+
+Although the random models we designed did not demonstrate the smoothly
+increasing probability shown by both humans and the optimal model, it is
+possible that the aforementioned last-fixation phenomenon could be partially
+driving that result. We can avoid this confound by looking at the duration of
+individual fixations, conditioning on the fact that each is not the final
+fixation. The model predicts that fixations should be longer for stronger
+cues, and (for non-initial fixations) when the competing cue is weaker.
+
+In all these plots and analyses, final fixations are excluded.
+
+### First fixation
+
+```{r, first-fix, fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(strength_first, first_pres_time)) +
+    # geom_smooth(method="lm") + 
+    geom_smooth() + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_grid(~name) +
+    labs(x="First Cue Memory Strength", y="First Fixation Time")
+
+human %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% summ
+```
+
+The optimal model predicts a weak but robust effect, while humans do not show any effect.
+
+*NEW*: Previously, the model predicted a strong effect here.
+The difference is primarly due to changing the distribution from which $p$
+is drawn. When the distribution over $p$ is uniform (as before), each sample provides a lot
+of information about which cue is stronger, and thus the model adapts very 
+quickly. By using a prior that is skewed in one direction
+
+By using a sharper prior, each sample provides less information,
+and thus the model is not as sensitive to memory strength on the first fixation.
+
+
+### Second fixation
+
+```{r, second-fix, fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres >= 3) %>% 
+    ggplot(aes(rel_strength, second_pres_time)) +
+    geom_smooth(method="lm") + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_grid(~name) +
+    labs(x="Relative Memory Strength", y="Second Fixation Time")
+
+X = human %>% 
+     filter(n_pres >= 3) 
+
+X %>% lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+# X %>% lmer(second_pres_time ~ strength_first + strength_second + (strength_first + strength_second|wid), data=.) %>% summ
+```
+
+The model makes a strong prediction here, and I don't think it is confounded
+by anything. Previously, we had a significant effect here in the human data.
+But excluding the incorrect trials pushed the p up a bit. It does seem
+plausible that the effect is there though.
+
+### Third fixation
+
+```{r, third-fix, fig.width=7.5, fig.height=3}
+random %>% filter(
+    response_type == "correct",
+    choose_first != (last_pres == "first")
+)
+
+df %>% 
+    filter(n_pres >= 4) %>% 
+    ggplot(aes(rel_strength, third_pres_time)) +
+    geom_smooth(method="lm") + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_grid(~name) +
+    labs(x="Relative Memory Strength", y="Third Fixation Time")
+
+human %>% 
+    filter(n_pres >= 4) %>% 
+    lmer(third_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+```
+
+I previously thought this could be due to selection effects, but given that
+we aren't seeing anything in the random model, I think this result might be solid.
+
+
+
+## Fixation proportion by relative memory strength
+
+The simplest test of rational memory: do people spend more time looking at the cue
+that they have a stronger memory of? This analysis only considers trials where
+both cues are seen.
+
+```{r, fix-prop, fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(rel_strength, prop_first)) + 
+    geom_smooth(method = "lm", formula="y~x") +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_grid(~name) +
+    labs(x="Relative Memory Strength", y="Proportion Fixate First")
+
+X = df %>% filter(n_pres >= 2 & name == "Human")
+lmer(choose_first ~ rel_strength + (rel_strength|wid), data=X) %>% summ
+```
+
+```{r, fix-prop, fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(rel_strength, as.numeric(last_pres == "first"))) + 
+    geom_smooth(method = "lm", formula="y~x") +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_grid(~name)
+
+# X = df %>% filter(n_pres >= 2 & name == "Human")
+# lmer(choose_first ~ rel_strength + (rel_strength|wid), data=X) %>% summ
+```
+
+They do! 🎉 But hold on, there's a small but significant effect in the random model.
+What's going on there?
+
+### Last fixation effect
+
+People remember the thing they look at last
+`r round(100 * mean(multi$choose_last_seen, na.rm=T))`%
+of the time. In value-based decision making, it has been suggested that
+this last-fixation effect could explain away what looks to be evidence for
+adaptive attention allocation. Briefly, the last fixation is
+correlated with both fixation proportion and relative strength, and this
+could be entirely driving the correlation between strength and fixation proportion.
+See [here](last-fixation-21-06-01.html) for a 
+more thorough explanation.
+
+```{r, last-fix, fig.width=7.5, fig.height=3.5}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(rel_strength, prop_first, color=last_pres)) + 
+    geom_smooth(method="lm") + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_grid(~name) +
+    theme(legend.position="top") +
+    labs(x="Relative Memory Strength", y="Proportion Fixate First Cue", color="Last Fixation")
+
+X = df %>% filter(n_pres > 1 & name == "Human")
+lmer(prop_first ~ rel_strength * last_pres + (rel_strength * last_pres | wid), data=X) %>% summ
+
+```
+
+The effect of relative memory strength on fixation proportion is a lot weaker when
+we control for the effect of the last fixation, but it remains significant. However,
+it's _not_ significant in the optimal model (regression not shown).
+
+
+## Final vs non-final duration
+
+Longer final fixations suggest that people commit to a cue at some point. This
+is a cool finding because we see the opposite (shorter final fixations) in
+value-based and perceptual decisions, typically explained as the result of
+crossing a threshold cutting off the final fixations. The reason we see this
+in the optimal model is that the accumulation is not just to identify
+which target is more memorable and also to actually remembering it (perceptual
+and value-based decisions only have the former).
+
+```{r, fix-by-final, fig.width=7.5, fig.height=3}
+long %>% 
+    # filter(name == "Human") %>% 
+    ggplot(aes(last_fix==1, duration)) + 
+    stat_summary(fun.data=mean_cl_boot, geom="bar", fill="white", color="black") +
+    stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=0.2) +
+    facet_grid(~name) + 
+    scale_x_discrete(name="Fixation Type", labels=c("Non-final", "Final"))
+```
+
+The random model result is interesting. The intention of the random
+commmitment model was to capture this exact phenomenon. But it seems to have
+way *over*-captured it. The reason this happens is (probably) that humans
+don't actually randomly commit to a cue, but instead only commit when they are
+reasonably sure they will remember it. Also, any such commitment is probably
+not really a firm commitment. Anyway, what happens to this random model is
+that it commits too early or on a bad cue, and then it takes forever to
+remember it.
+
+This might draw into question my decision to sample the commitment decision
+based on the empirical number-of-fixations distribution. The only alternative
+I can think of is to sample from a parametric distribution with some free 
+parameter. Previously we discussed a probability of commiting on each fixation
+which is equivalent to an Exponential distribution. But we don't have a good 
+way to fit parameters...
+
+
+# Sanity checks for evidence accumulation
+
+All these plots are testing really basic predictions of the evidence
+accumulation model, that is, effects that come out in the random model. They
+are all much weaker in humans than the model and some aren't even significant.
+This suggests that we might need to make some adjustments to the base
+accumulation model, especially if we wanted to do any real model fitting.
+
+## Probability of remembering first word
+
+```{r,remember-first}
+min(df$rel_strength, na.rm=T)
+max(df$rel_strength, na.rm=T)
+df %>%
+    filter(response_type == "correct") %>% 
+    ggplot(aes(rel_strength, as.numeric(choose_first))) + 
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), formula=y~x) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    labs(x="Relative Memory Strength", y="Prob Select First Cue") +
+    facet_wrap(~name)
+
+human %>% 
+    lmer(choose_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+# lmer(choose_first ~ strength_first + strength_second + (strength_first + strength_second |wid), data=X) %>% summ
+```
+
+## Reaction time by chosen strength
+
+```{r, fig.width=7.5, fig.height=3}
+df %>% 
+    ggplot(aes(chosen_strength, rt)) +
+    geom_smooth() +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_grid(~name)
+
+lmer(rt ~ chosen_strength + (chosen_strength|wid), data=human) %>% summ
+```
+
+## Last fixation duration by strength
+
+```{r, fig.width=7.5, fig.height=3}
+X = df %>% 
+    filter(n_pres > 0) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    )
+
+X %>% 
+    ggplot(aes(last_strength, last_pres_time,)) +
+    geom_smooth() +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_grid(~name) +
+    labs()
+
+X %>% filter(name == "Human") %>% 
+    lmer(last_pres_time ~ last_strength + (last_strength|wid), data=.) %>% summ
+```
+
+## Last fixation duration by strength and presentation
+
+```{r, fig.width=7.5, fig.height=3}
+X = df %>% 
+    filter(between(n_pres, 1, 4)) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    )
+
+X %>% 
+    ggplot(aes(last_strength, last_pres_time, group=n_pres, color=n_pres)) +
+    geom_smooth() +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) + 
+    facet_grid(~name) +
+    labs()
+
+X %>% filter(name == "Human") %>% 
+    lmer(last_pres_time ~ last_strength * n_pres + (1|wid), data=.) %>% summ
+```
+
+
+
+# Random stuff
+
+## Timeout rate
+
+```{r, fig.width=7.5, fig.height=3}
+df %>% 
+    ggplot(aes(response_type == "timeout", ..prop..)) +
+    geom_bar(group=0) +
+    facet_grid(~name)
+
+```
+
+## Reaction time
+
+```{r, fig.width=7.5, fig.height=3}
+df %>% 
+    ggplot(aes(rt)) +
+    geom_density() +
+    facet_grid(~name)
+```
+## Number of fixations
+
+```{r, fig.width=7.5, fig.height=3}
+df %>% 
+    filter(n_pres < 10) %>% 
+    ggplot(aes(n_pres, ..prop..)) +
+    geom_bar() +
+    facet_grid(~name)
+
+```
+
+## Final fixation - relative strength
+
+```{r, fig.width=7.5, fig.height=3}
+X = df %>% 
+    filter(n_pres > 3) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    )
+
+X %>% ggplot(aes(last_strength, last_pres_time)) + 
+    stat_summary_bin(fun.data=mean_cl_boot, bins=10) +
+    facet_grid(~name) +
+    geom_smooth(method='lm')
+
+X %>% lmer(last_pres_time ~ last_rel_strength + (last_rel_strength|wid), data=.) %>% summ
+```
+
+
+
+

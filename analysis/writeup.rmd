@@ -1,0 +1,110 @@
+# Summary
+
+Memory recall is often modeled as a process of evidence accumulation. Existing
+models typically assume that this accumulation process is passive, and not
+subject to top-down control. In contrast, recent work in perceptual and
+value-based decision making has suggested that similar kinds of evidence
+accumulation processes are guided by attention, such that evidence for
+attended items is accumulated faster than for non-attended items. Furthermore,
+attention may be adaptively allocated to different items in order to optimize
+a tradeoff between decision quality and the computational cost of evidence
+accumulation. In this project, we ask whether similar forces are at play in
+the context of memory recall.
+
+Such a model predicts that, when multiple memories are relevant, people will
+focus their efforts on recalling the target which is more strongly represented
+in memory, because it can be recalled with less effort. Here we present a
+simple form of such a model, and test this key prediction in a cued-recall
+experiment in which participants can select which of two possible targets to
+remember. We find tentative support for a model in which memory search is
+guided by partial recall progress in order to minimize the time spent recalling.
+
+# Model
+
+We model memory recall as a process of evidence accumulation. As in the DDM or
+LCA, we assume that evidence is sampled at each time step and that recall
+occurs when the total evidence hits a threshold. To make the model solvable
+(by dynamic programming) we assume that the evidence for each target
+follows a Bernoulli distribution
+$$
+x_t \sim \text{Bernoulli}(p),
+$$
+where $p$ corresponds to the strength of the memory. This image shows several possible
+traces of evidence accumulation for a single item:
+
+```{r}
+knitr::include_graphics("figs/accumulation.png")
+```
+
+When multiple memories are relevant, each one has a separate accumulator.
+Critically, we do not assume that evidence is sampled for each item in
+parallel. Instead, at each time step, the agent must select one of the targets and
+accumulates evidence for only that target. This induces a metalevel control problem:
+which target should the agent focus on at each moment, given only the current state 
+of the accumulators?
+
+This problem can be formalized as a Markov decision process in which the
+states correspond to the total evidence accumulated and time spent for each
+item (thus, the state is 4 dimensional). Because we use a discrete
+accumulation process, we can solve it exactly by dynamic programming. We find
+that the optimal policy generally converges on the target with maximal memory
+strength (highest $p$) and only draws samples for that target until it is
+recalled. This is illustrated in the following plot:
+
+```{r}
+knitr::include_graphics("../model/figs/simple_fixation.png")
+```
+
+## Alternative models *NEW*
+
+In order to discern which model predictions are specific to a rational
+meta-memory model, we show predictions of two alternative models. The "Random"
+model randomly samples fixation durations from the empirical distribution. We
+also A more sophisticated "Random Commitment" model was developed to account
+for the empirical fact that last fixations are considerably longer than all
+other fixations. This model samples the total number of fixations on each
+trial from the empirical distribution and then samples the duration of each
+from the empirical distribution of *non-final* fixations. If a target is not
+recalled before reaching the final fixation, the model continues to fixate on
+the current cue until the target is recalled or the 15 second time limit is
+reached.
+
+# Experiment
+
+To test the model's predictions, we developed a modified cued-recall experiment in which
+participants were presented with two cues (images) on each trial and could recall the target
+(word) associated with either one. To create an observable behavioral correlate of targeted
+memory search, only one cue is visible at a time and participants use the keyboard to display
+each in turn. This is basically a cheap alternative to eye-tracking. The assumption is that
+people will look at the image they are currently trying to remember the word for.
+See a demo [here](http://memorygame29.herokuapp.com/?test_type=multi-recall&skip=6).
+
+
+```{r}
+knitr::include_graphics("figs/task.png")
+```
+
+## Measuring memory strength *NEW*
+
+The model predicts that people will spend more time looking at the cue for
+which the memory of the corresponding target is stronger, that is the cue for
+which $p$ is higher. Unfortunately, we cannot measure $p$. However, we *can*
+collect a noisy signal of this parameter using an auxiliary task. Concretely,
+we use reaction time in a 2-AFC task in which participants are presented with
+a word and must select the matching image.
+
+To map this measure onto the model's $p$ parameter, we take advantage of the
+fact that the expected time to reach threshold in the model is $E[t] = \theta / p$
+which implies that $\log E[t] = \log(\theta) - \log(p)$. This suggests
+that, in broad strokes, the $p$ parameter should be log-linearly related to
+response times. The exact nature of this relationship is unclear, however,
+given that the 2-AFC task is quite different from a cued recall task. Thus, we
+simply normalize (Z-score) the $\log(p)$ parameter and the 2AFC-RT measure
+(the latter within subject) to put them on roughtly the same scale. Finally,
+to account for the fact that the 2AFC measure is very noisy, we corrupt $\log(p)$
+with $\sigma=3$ Gaussian noise.
+
+In the simulations, we sample the parameter $p$ from a $\text{Beta}(2, 6)$
+distribution, which was chosen because it makes some of the plots look better.
+This corresponds to an assumption about the range of accumulation rates
+(memory strengths) that are likely.

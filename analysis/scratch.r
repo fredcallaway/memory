@@ -1,3 +1,93 @@
+# %% ==================== GAM / LMER plotting ====================
+
+
+```{r}
+
+library(mgcv)
+library(ggeffects)
+
+X = human %>%
+    filter(n_pres >= 2) %>% 
+    mutate(log_first_pres_time = log(first_pres_time))
+
+gam_model = gam(first_pres_time ~ s(strength_first, bs = "cs", k = 10) +
+                        s(wid, strength_first, bs='re'),
+        data=X, method="REML")
+
+# plot1.lin <- ggpredict(m1, terms = c("RPE_mean_abs.s"))
+gam_pred <- ggpredict(gam_model, terms = c("strength_first"),
+                       condition = c(wid = "new")
+                   )
+plot(gam_pred)
+```
+
+```{r}
+
+lm_model = lm(first_pres_time ~ as.vector(strength_first), data=X)
+lm_pred <- ggpredict(lm_model, terms = c("strength_first"), )
+
+lmer_model = lmer(first_pres_time ~ strength_first + (strength_first|wid), data=X)
+lmer_pred <- ggpredict(lmer_model, terms = c("strength_first"),
+                       condition = c(wid = "new")
+                   )
+```
+
+```{r}
+X %>% ggplot(aes(strength_first)) + 
+    geom_line(aes(x, predicted, color="lm"), lm_pred) +
+    geom_ribbon(aes(x, ymin=conf.low, ymax=conf.high, fill="lm"), alpha=0.1, lm_pred) +
+    geom_line(aes(x, predicted, color="lmer"), lmer_pred) +
+    geom_ribbon(aes(x, ymin=conf.low, ymax=conf.high, fill="lmer"), alpha=0.1, lmer_pred) +
+    geom_line(aes(x, predicted, color="gam"), gam_pred) +
+    geom_ribbon(aes(x, ymin=conf.low, ymax=conf.high, fill="gam"), alpha=0.1, gam_pred)
+
+```
+
+```{r}
+p1 <- ggplot() + 
+  geom_line(data = plot1.gam, aes(x = x, y = predicted), color = "blue", 
+            linetype = "dotted") + 
+  geom_ribbon(data = plot1.gam, aes(x = x, ymin = conf.low, 
+                                    ymax = conf.high), alpha = 0.1, fill = "blue") +
+  geom_line(data = plot1.lin, aes(x = x, y = predicted), color = "black") + 
+  geom_ribbon(data = plot1.lin, aes(x = x, ymin = conf.low, 
+                                    ymax = conf.high), alpha = 0.2, fill = "black") +
+  theme_classic(base_size = 10) + ggtitle("") + xlab("uRPE\n")+ ylab("Curiosity") +  
+  stat_summary_bin(data = DataY, aes(x = RPE_mean_abs.s, y = Curiosity_z), 
+                   fun.data = "mean_cl_normal", bins = 8, fatten = 0.5) 
+p1
+```
+
+```{r}
+library(mgcv)
+
+X = human %>%
+    filter(n_pres >= 2)
+
+m = gam(first_pres_time ~ s(strength_first, bs = "cs", k = 10) +
+                        s(wid, strength_first, bs='re'),
+        data=X, method="REML")
+
+# bounds = trials %>% summarise(lo=quantile(afc_rt, .05), hi=quantile(afc_rt, .95))
+bounds = X %>% group_by(wid) %>% summarise(lo=min(strength_first), hi=max(strength_first))
+
+preds = expand.grid(
+    wid = unique(X$wid), 
+    strength_first = seq(min(bounds$lo, na.rm=T), max(bounds$hi, na.rm=T), length.out=100)
+) %>% mutate(
+    first_pres_time=predict(m, newdata=.),
+) %>% left_join(bounds) %>% filter(strength_first > lo & strength_first < hi)
+
+preds %>% ggplot(aes(strength_first, first_pres_time, group=wid)) + 
+    geom_line(size=.5) +
+    theme_classic() +
+    coord_fixed(xlim=c(6,9), ylim=c(6,9))
+
+
+```
+
+
+
 # %% ==================== N fixations ====================
 
 human %>% ggplot(aes(n_pres, ..prop..)) + geom_bar()
