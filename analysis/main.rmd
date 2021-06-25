@@ -127,14 +127,18 @@ df %>%
     regress(strength_first, first_pres_time) # plot
 ```
 
-The optimal model predicts a weak positive effect, while humans almost show a
-negative effect. Previously, the model predicted a stronger effect here. The difference
+The optimal model predicts a weak positive effect, while humans show no
+effect. Note: the raw data shows a negative effect, but this doesn't occur within
+participant. The random effects model accounts for the between-participant
+variance that produces the negative effect (c.f. Simpons's paradox).
+
+Previously, the model predicted a stronger effect here. The difference
 is primarily due to changing the distribution from which $p$ is drawn. When $p$
 is low, progress signals are sparse, and thus the model cannot detect the
 memory strength as rapidly (and is thus less sensitive to memory strength on
-the first fixation). I'm not sure if this is a reasonable thing to do.
-Essentially, we are qualitatively "fitting" the evidence accumulation rate to 
-match the trends in the data.
+the first fixation). I'm not sure that this is a reasonable thing to do.
+But really, it's not that much different from fitting a scaling constant on a
+drift rate.
 
 
 ### Second fixation
@@ -145,7 +149,7 @@ df %>%
     regress(rel_strength, second_pres_time) # plot
 ```
 
-Previously, we had a significant effect in the human data. But excluding the
+Previously, we had a significant effect in the human data. Excluding the
 incorrect trials pushed the p up a bit. It does seem plausible that the effect
 is there though.
 
@@ -166,9 +170,9 @@ simulation suggests that this might be a fluke.
 
 ## Overall fixation proportion
 
-The simplest test of rational memory: do people spend more time looking at the cue
-that they have a stronger memory of? This analysis only considers trials where
-both cues are seen.
+A simple (although perahps naïve) test of rational memory: Do people spend
+more time looking at the cue that they have a stronger memory of? This
+analysis only considers trials where both cues are seen.
 
 ```{r, fix-prop, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
@@ -196,16 +200,15 @@ df %>%
     regress_interaction(rel_strength, last_pres, prop_first)
 ```
 
-The effect of relative memory strength on fixation proportion mostly disappears
-when we control for the effect of the last fixation. In the optimal model (with
-these parameters), it disappears completely!
+The effect of relative memory strength on fixation proportion mostly
+disappears when we control for the effect of the last fixation. In the optimal
+model (with these parameters), it disappears completely! But, we still need to
+explain why we see the overall proportion effect in both the human data and
+optimal simulations, but *not* either of the random models. It seems likely
+that something rational is at play here.
 
-However, we still need to explain why we see the overall proportion effect
-in both the human data and optimal simulations, but *not* either of the
-random models. It seems likely that something rational is at play here.
-
-It turns out, the overall proportion effect is primarily driven (we think) by
-the interaction between two other effects:
+It turns out, the overall proportion effect is driven (we think) by
+an interaction of two other effects:
 
 ### Strength predicts last fixation 
 
@@ -215,9 +218,9 @@ df %>%
     regress(rel_strength, last_pres_first)
 ```
 
-This effect occurs mechanistically because
+This effect occurs mechanistically (i.e., in the random model) because
 (1) the currently fixated cue is almost always the one remembered,
-(2) remembering the cue terminates the trial, making this fixation the final one, and
+(2) remembering the cue terminates the trial, making the current fixation the final one, and
 (3) the stronger cue is more likely to be remembered.
 
 However, this effect *doesn't* occur in the random commitment model because
@@ -235,8 +238,12 @@ long %>%
     facet_grid(~name) + 
     scale_x_discrete(name="Fixation Type", labels=c("Non-final", "Final")) +
     ylab("Duration")
-```
 
+last_diff = long %>% 
+    filter(name == "Human") %>% 
+    with(tapply(duration, last_fix, mean)) %>% 
+    diff
+```
 
 This is itself a cool finding because we see the opposite (shorter final
 fixations) in value-based and perceptual decisions, typically explained as the
