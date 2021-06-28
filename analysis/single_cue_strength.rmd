@@ -1,0 +1,282 @@
+---
+title: Rational metacognition in memory w/ cued recall strength
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+source("setup.r")
+source("load_data_simple.r")
+raw_df = bind_rows(
+    read_sim("optimal_prior", noise_sd=3),
+    read_sim("empirical_commitment", noise_sd=3),
+    read_sim("empirical", noise_sd=3),
+    multi %>% 
+        mutate(name = "human", wid = factor(wid)) %>% 
+        # filter(trial_num > 10) %>% # DROP FIRST HALF OF TRIALS
+        identity
+)
+
+df = raw_df %>% 
+    filter(
+        response_type %in% c("correct", "timeout"),
+        # abs(rel_strength) < 4.24,
+        # abs(strength_first) < 3,
+        # abs(strength_second) < 3,
+    ) %>%
+    mutate(
+        name = recode_factor(name, .ordered=T,
+            # "Optimal" = "optimal",
+            "optimal_prior" = "Optimal",
+            "human" = "Human",
+            "empirical" = "Random",
+            "empirical_commitment" = "Random Commitment",
+            # "rand_gamma" = "Random",
+        ),
+        last_pres = if_else(n_pres %% 2 == 1, "first", "second")
+    )
+
+optimal = filter(df, name == "Optimal")
+random = filter(df, name == "Random")
+human = filter(df, name == "Human")
+WIDTH = 7.5; HEIGHT = 2.5
+
+```
+
+```{r, include=FALSE}
+long = df %>% 
+    group_by(name) %>%
+    slice_sample(n=10000) %>% 
+    make_fixations
+```
+
+
+::: {.alert .alert-info}
+These are results where memory strength is measured in a single cue recall task
+rather than the 2-AFC task.
+:::
+
+# Main Results
+
+## Fixation time course
+
+The key model prediction is that the probability of looking at the cue
+with greater memory strength increases over time.
+
+```{r, time-course, fig.width=WIDTH, fig.height=3}
+
+normalized_timestep = function(long) {
+    long %>% 
+        group_by(trial) %>%
+        mutate(prop_duration = duration / sum(duration)) %>% 
+        ungroup() %>% 
+        mutate(n_step=round(prop_duration * 100)) %>% 
+        uncount(n_step) %>% 
+        group_by(trial) %>% 
+        mutate(normalized_timestep = row_number())
+}
+
+long %>% 
+    normalized_timestep %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_stronger, group = strength_diff, color=strength_diff)) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_grid(~name) +
+    labs(x="Normalized Time", y="Probability Fixate\nStronger Cue", color="Strength Difference") +
+    geom_hline(yintercept=0.5) +
+    theme(legend.position="top")
+```
+
+In both the optimal model simulations and the human data, the probability of fixating
+the stronger cue steadily increases over the course of the trial, and this increase
+is more pronounced when there is a larger difference in strength.
+
+In the random model, we only see a slight spike at the end of the trial. This
+spike is due to the fact that the model always remembers the item it looks
+at last, and it is also more likely to remember the item with a stronger
+memory.
+
+The random commitment model does not show this effect because the item it
+fixates last (and thus remembers) is usually determined by the random commitment.
+
+## Individual fixation durations
+
+Although the random models we designed did not demonstrate the smoothly
+increasing probability shown by both humans and the optimal model, it is
+possible that the aforementioned last-fixation phenomenon could be partially
+driving that result. We can avoid this confound by looking at the duration of
+individual fixations, conditioning on the fact that each is not the final
+fixation. The model predicts that fixations should be longer for stronger
+cues, and (for non-initial fixations) when the competing cue is weaker.
+
+For each of the first three fixations, we will plot model predictions
+alongside human data. Because we are excluding final fixations, different
+participants are better represented in some part of the x axis than others.
+This produces Simpon's-paradox-like effects. Thus, we plot the fixed effect
+prediction of a mixed effects model rather than a generic fixed effects model.
+The printed regression tables describe the fixed effects of the plotted random 
+effects model applied to the human data.
+
+### First fixation
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    regress(strength_first, first_pres_time) # plot
+```
+
+The optimal model predicts a weak positive effect, while humans show no
+effect. Note: the raw data shows a negative effect, but this doesn't occur within
+participant. The random effects model accounts for the between-participant
+variance that produces the negative effect (c.f. Simpons's paradox).
+
+Previously, the model predicted a stronger effect here. The difference
+is primarily due to changing the distribution from which $p$ is drawn. When $p$
+is low, progress signals are sparse, and thus the model cannot detect the
+memory strength as rapidly (and is thus less sensitive to memory strength on
+the first fixation). I'm not sure that this is a reasonable thing to do.
+But really, it's not that much different from fitting a scaling constant on a
+drift rate.
+
+
+### Second fixation
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(rel_strength, second_pres_time, bins=9) # plot
+```
+
+Previously, we had a significant effect in the human data. Excluding the
+incorrect trials pushed the p up a bit. It does seem plausible that the effect
+is there though.
+
+### Third fixation
+
+```{r, third-fix, fig.width=WIDTH, fig.height=HEIGHT}
+
+df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(rel_strength, third_pres_time)
+```
+
+I previously thought this could be due to selection effects, but given that
+we aren't seeing anything in either random model, I am no longer so worried
+about this. However, the fact the the human result is much stronger than the
+simulation suggests that this might be a fluke.
+
+
+## Overall fixation proportion
+
+A simple (although perahps naïve) test of rational memory: Do people spend
+more time looking at the cue that they have a stronger memory of? This
+analysis only considers trials where both cues are seen.
+
+```{r, fix-prop, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    regress(rel_strength, prop_first)
+```
+
+This is suggestive, but there's a caveat.
+
+### Last-fixation effect
+
+People remember the thing they look at last
+`r round(100 * mean(human$choose_last_seen, na.rm=T))`%
+of the time. In value-based decision making, it has been suggested that
+this "last-fixation effect" could explain away what looks to be evidence for
+adaptive attention allocation. Briefly, the last fixation is
+correlated with both fixation proportion and relative strength, and this
+could be entirely driving the correlation between strength and fixation proportion.
+See [here](last-fixation-21-06-01.html) for a 
+more thorough explanation.
+
+```{r, last-confound, fig.width=WIDTH, fig.height=3}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    regress_interaction(rel_strength, last_pres, prop_first)
+```
+
+The effect of relative memory strength on fixation proportion mostly
+disappears when we control for the effect of the last fixation. In the optimal
+model (with these parameters), it disappears completely! But, we still need to
+explain why we see the overall proportion effect in both the human data and
+optimal simulations, but *not* either of the random models. It seems likely
+that something rational is at play here.
+
+It turns out, the overall proportion effect is driven (we think) by
+an interaction of two other effects:
+
+### Strength predicts last fixation 
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    mutate(last_pres_first = as.numeric(last_pres == "first")) %>% 
+    regress(rel_strength, last_pres_first)
+```
+
+This effect occurs mechanistically (i.e., in the random model) because
+(1) the currently fixated cue is almost always the one remembered,
+(2) remembering the cue terminates the trial, making the current fixation the final one, and
+(3) the stronger cue is more likely to be remembered.
+
+However, this effect *doesn't* occur in the random commitment model because
+the cue it fixates last is usually determined by the random commitment, not
+by crossing the threshold (only the latter being more likely for stronger cues).
+
+### Last fixations are longer
+
+```{r, fix-by-final, fig.width=WIDTH, fig.height=HEIGHT}
+long %>% 
+    # filter(name == "Human") %>% 
+    ggplot(aes(last_fix==1, duration)) + 
+    stat_summary(fun.data=mean_cl_boot, geom="bar", fill="white", color="black") +
+    stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=0.2) +
+    facet_grid(~name) + 
+    scale_x_discrete(name="Fixation Type", labels=c("Non-final", "Final")) +
+    ylab("Duration")
+
+last_diff = long %>% 
+    filter(name == "Human") %>% 
+    with(tapply(duration, last_fix, mean)) %>% 
+    diff
+```
+
+This is itself a cool finding because we see the opposite (shorter final
+fixations) in value-based and perceptual decisions, typically explained as the
+result of crossing a threshold cutting off the final fixations. The reason we
+see this in the optimal model is that the trial doesn't stop when the model
+decides which cue has a stronger memory (as in value-based and perceptual
+tasks). Instead, the model needs to continue fixating the that cue until it
+remembers it. By this logic, the long last fixation is evidence that at some point
+people commit to remembering one of the cues. This is what initially motivated
+the random commitment model.
+
+### Putting the pieces together: rational commitment
+
+So, we've seen that the last fixation tends to be on the stronger cue, and
+this fixation is longer than all the others. It follows that
+overall, more time will be spent looking at the stronger cue. However, these
+two effects only hold in the optimal simulations and human data. Each random
+model can capture one effect, but not the other. Why is this? Well, without a
+commitment decision, there's no natural way to get longer final fixations.
+(Fixations don't get longer over the course of a trial overall). But committing
+*randomly* breaks the relationship between strength and the final fixation.
+Thus, the only way (I think) you can see both of the above effects is for
+there to be non-random---in particular, *rational*---commitment.
+
+Or it could just be the pure random model plus some motor time
+to select the cue. However, given that last fixations are
+`r round(last_diff)`ms longer, this probably isn't driving the effect.
+
+...right? 
+
+
+```{r child = 'extra.rmd'}
+```

@@ -24,6 +24,10 @@ participants = load_data('participants')
 
 multi = load_data('multi-recall') %>%
     filter(!practice) %>%
+    group_by(wid) %>% 
+    mutate(trial_num = row_number()) %>% 
+    ungroup() %>% 
+    # filter(trial_num > 5) %>% # DROP FIRST HALF OF TRIALS
     mutate(
         response_type = factor(response_type, 
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
@@ -306,7 +310,7 @@ strength index.
 X %>% 
     mutate(strength_split = if_else(strength_first > 0, "high strength", "low strength")) %>% 
     ggplot(aes(first_pres_time)) + 
-    geom_histogram() + 
+    geom_histogram() 
     facet_wrap(~strength_split)
 ```
 
