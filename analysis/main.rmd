@@ -1,5 +1,5 @@
 ---
-title: Rational metacognition in memory (all trials)
+title: Rational metacognition in memory
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
