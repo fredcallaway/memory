@@ -2,17 +2,15 @@
 
 # Sanity checks for evidence accumulation
 
-All these plots are testing really basic predictions of the evidence
+These plots test basic predictions of the evidence
 accumulation model, that is, effects that come out in the random model. 
-They are all significant in the human data, but the RT ones are a lot
-weaker. This suggests that we might need to make some adjustments to the base
-accumulation model, especially if we wanted to do any real model fitting.
 
-All these plots exclude timeout trials.
+These plots exclude timeout trials.
 
 ## Probability of remembering first word
 
 ```{r,remember-first, fig.width=WIDTH, fig.height=HEIGHT}
+
 df %>%
     filter(response_type == "correct") %>% 
     mutate(choose_first = as.numeric(choose_first)) %>% 
@@ -44,12 +42,13 @@ df %>%
 
 # Miscellaneous
 
-## Timeout rate
+## Response types
 
-```{r, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    group_by(name) %>% 
-    summarise(timeout_rate = mean(response_type == "timeout")) %>% 
+Note: The model can only predict correct answers and timeouts.
+
+```{r}
+raw_df %>% 
+    with((proportions(table(name, response_type), margin=1))) %>% 
     kable(digits=2)
 ```
 

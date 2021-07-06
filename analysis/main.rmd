@@ -17,7 +17,7 @@ raw_df = bind_rows(
     read_sim("empirical", noise_sd=3),
     multi %>% 
         mutate(name = "human", wid = factor(wid)) %>% 
-        filter(trial_num > 10) %>% # DROP FIRST HALF OF TRIALS
+        # filter(trial_num > 10) %>% # DROP FIRST HALF OF TRIALS
         identity
 )
 

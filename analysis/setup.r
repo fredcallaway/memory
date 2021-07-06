@@ -147,6 +147,7 @@ regress = function(data, xvar, yvar, bins=6, bin_range=0.95) {
         group_modify(function(data, grp) {
             model = if (grp$name == "Human") {
                 model = inject(lmer(!!y ~ !!x + (!!x | wid), data=data))
+                print(glue("N = {nrow(data)}"))
                 smart_print(summ(model))
                 tibble(ggpredict(model, terms = glue("{x} [n=30]}")))
             } else {

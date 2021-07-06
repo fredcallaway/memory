@@ -1,7 +1,7 @@
 
 # %% ==================== Human ====================
 
-VERSIONS = c('v5.0')
+VERSIONS = c('v5.2')
 
 load_data = function(type) {
     VERSIONS %>% 
@@ -13,6 +13,8 @@ participants = load_data('participants')
 
 multi = load_data('multi-recall') %>%
     filter(!practice) %>%
+    group_by(wid) %>% 
+    filter(n() == 19) %>% 
     left_join(select(participants, wid, version)) %>% 
     mutate(
         dataset = if_else(version == "v3.6", "new", "old"),
@@ -40,18 +42,13 @@ multi = load_data('multi-recall') %>%
         prop_first = (total_first) / (total_first + total_second)
     ) 
 
-
-
 simple = load_data('simple-recall') %>% 
+    group_by(wid) %>%
+    mutate(trial_num = row_number()) %>%
     filter(!practice) %>% 
-    group_by(wid) %>% 
-    filter(n() == 59) %>% 
+    # filter(n() == 79) %>% 
     mutate(
-        trial_num = seq(2,60),
-        round = if_else(trial_num <= 20, 1, 2),
-        typing_rt_z = zscore(typing_rt)
-    ) %>% 
-    mutate(
+        typing_rt_z = zscore(typing_rt),
         response_type = factor(response_type, 
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
             # labels=c("Correct", "Intrusion", "Other")
@@ -59,13 +56,11 @@ simple = load_data('simple-recall') %>%
         word_type = factor(word_type, 
             levels=c("low", "high"), labels=c("Low", "High")),
         total_time = rt + type_time,
-        correct = response_type == "correct"
-    ) %>% mutate(
+        correct = response_type == "correct",
         base_rt = rt,
         rt = replace_na(typing_rt, 15000),
         logrtz = zscore(log(rt))
     )
-
 
 add_strength = function(multi, filt, strength) {
     strengths = simple %>% 
@@ -87,7 +82,9 @@ add_strength = function(multi, filt, strength) {
         )
 }
 
-multi = multi %>% add_strength(round > 1, 2 * correct -log(rt))
+multi = multi %>% 
+    add_strength(block > 1, 2 * correct -log(rt)) %>% 
+    mutate(trial_num = row_number())
 
 # %% ==================== Model ====================
 
