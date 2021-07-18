@@ -1,7 +1,7 @@
 
 # %% ==================== Human ====================
 
-VERSIONS = c('v5.2')
+VERSIONS = c('v5.4')
 
 load_data = function(type) {
     VERSIONS %>% 
@@ -53,8 +53,7 @@ simple = load_data('simple-recall') %>%
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
             # labels=c("Correct", "Intrusion", "Other")
         ),
-        word_type = factor(word_type, 
-            levels=c("low", "high"), labels=c("Low", "High")),
+        # word_type = factor(word_type, levels=c("low", "high"), labels=c("Low", "High")),
         total_time = rt + type_time,
         correct = response_type == "correct",
         base_rt = rt,
@@ -83,7 +82,7 @@ add_strength = function(multi, filt, strength) {
 }
 
 multi = multi %>% 
-    add_strength(block > 1, 2 * correct -log(rt)) %>% 
+    add_strength(block > 2, 2 * correct -log(rt)) %>% 
     mutate(trial_num = row_number())
 
 # %% ==================== Model ====================

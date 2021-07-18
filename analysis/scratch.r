@@ -1,4 +1,24 @@
+human %>% 
+    ggplot(aes(strength_first, strength_second)) + geom_smooth()
+
 # %% ==================== GAM / LMER plotting ====================
+
+simple %>% 
+    group_by(block) %>% 
+    summarise(mean(rt))
+
+with(simple, table(wid, block))
+
+# %% --------
+
+human %>% 
+    filter(n_pres < 5) %>% 
+    ggplot(aes(response_rt, fill=n_pres, group=n_pres)) + geom_histogram()
+
+fig()
+# %% --------
+
+(3.8 + 2.5) * 40
 
 
 ```{r}

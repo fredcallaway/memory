@@ -54,11 +54,15 @@ long = df %>%
 
 
 ::: {.alert .alert-info}
-These are results where memory strength is measured in a single cue recall task
-rather than the 2-AFC task.
+**Changes from last pilot:** 
+
+- Added an extra round of training.
+- Using all pre-test trials because that predicts cue selection best. Results are similar
+  when using only the last round as we did previously.
+
 :::
 
-- N = `r nrow(participants)`
+N = `r nrow(participants)`
 
 
 # Main Results
@@ -99,7 +103,6 @@ df %>%
     filter(n_pres >= 2) %>% 
     regress(strength_first, first_pres_time) # plot
 ```
-
 
 ### Second fixation
 

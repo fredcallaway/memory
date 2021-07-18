@@ -18,6 +18,18 @@ df %>%
     ylab("Prob Select First Cue")
 ```
 
+```{r}
+# multi = multi %>% 
+#     mutate(trial_num = row_number())
+
+multi %>%
+    filter(response_type == "correct") %>% 
+    add_strength(block > 0, 2 * correct -log(rt)) %>% 
+    mutate(choose_first = as.numeric(choose_first)) %>% 
+    lmer(choose_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+    # glmer(choose_first ~ rel_strength + (rel_strength|wid), family='binomial', data=.) %>% summ
+```
+
 ## Reaction time by chosen strength
 
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
@@ -50,6 +62,8 @@ Note: The model can only predict correct answers and timeouts.
 raw_df %>% 
     with((proportions(table(name, response_type), margin=1))) %>% 
     kable(digits=2)
+
+    
 ```
 
 ## Reaction time
@@ -73,3 +87,17 @@ df %>%
     labs(x="Number of Fixations", y="Proportion of Trials")
 
 ```
+<!-- 
+# Check response coding
+
+```{r}
+multi %>% filter(word == response)  %>% with(all(correct)) %>% stopifnot
+multi %>% filter(response_type == "other") %>% select(word, response) %>% print(n=100)
+multi %>% filter(response_type == "intrusion") %>% select(word, response) %>% print(n=100)
+multi %>% filter(response_type == "correct" & word != response) %>% select(word, response) %>% print(n=100)
+multi %>% transmute(x=nchar(response)) %>% with(table(x))
+multi %>% filter(nchar(response)  == 3) %>% select(response)
+multi %>% filter(word == 'ewe') %>% select(word, response, response_type)
+
+```
+ -->
