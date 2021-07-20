@@ -76,6 +76,7 @@ df %>%
     labs(x="Reaction Time", y="Density")
 ```
 
+
 ## Number of fixations
 
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}

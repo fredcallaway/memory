@@ -57,9 +57,11 @@ long = df %>%
 **Changes from last pilot:** 
 
 - Added an extra round of training.
-- Using all pre-test trials because that predicts cue selection best. Results are similar
-  when using only the last round as we did previously.
-
+- Provide binary feedback in the first two rounds of training
+- Word stimuli are selected randomly (not selecting high/low recall probability and concreteness)
+- Distractor task comes before final pre-test
+- Like the last round but unlike earlier rounds, we're not dropping the first half of trials
+- Strength is measured by the last round only, as before (but this doesn't make much difference)
 :::
 
 N = `r nrow(participants)`

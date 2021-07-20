@@ -1,5 +1,108 @@
-human %>% 
-    ggplot(aes(strength_first, strength_second)) + geom_smooth()
+
+
+df %>% 
+    filter(response_type == "correct") %>% 
+    with(sum(is.na(rt)))
+
+
+# %% ==================== Memorability / concreteness ====================
+
+madan = read_csv("Madan_pRecall_database.csv") %>% mutate(word=tolower(word))
+# %% --------
+
+build_strength = function(filt, strength) {
+    simple %>% 
+        filter({{ filt }}) %>% 
+        mutate(raw_strength={{ strength }}) %>% 
+        group_by(wid, word) %>% 
+        summarise(raw_strength = mean(raw_strength)) %>%
+        group_by(wid) %>% 
+        mutate(
+            strength = zscore(raw_strength),
+        )
+}
+
+attach_strength = function(multi, strength) {
+    multi %>% 
+        select(-contains("strength")) %>% 
+        left_join(strength, c("wid", "first_word" = "word")) %>% 
+        left_join(strength, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
+        mutate(
+            rel_strength = strength_first - strength_second,
+            chosen_strength = if_else(choose_first, strength_first, strength_second),
+        )
+}
+
+# %% --------
+X = madan %>% mutate(word=tolower(word)) %>% right_join(afc_scores)
+# %% --------
+
+strength = build_strength(block > 2, 2 * correct -log(rt)) %>% drop_na
+X = madan %>% mutate(word=tolower(word)) %>% right_join(strength)
+X %>% 
+    select(-c(word, wid, raw_strength)) %>% 
+    gather(measure, pred, -strength) %>% 
+    nest(-measure) %>%
+    mutate(fit = map(data, ~ lm(strength ~ pred, data = .x)),
+           tidied = map(fit, tidy)) %>%
+    unnest(tidied) %>% 
+    filter(term == "pred") %>% 
+    filter(p.value < .1) %>% 
+    select(-data, -fit) %>% 
+    # mutate(p.value = round(p.value, digits=4)) %>% 
+    kable(digits=3)
+
+# %% --------
+model_strength = function(strength, formula) {    
+    data = madan %>% 
+        mutate(word=tolower(word)) %>%
+        right_join(strength)
+
+    model = lm(formula, data=data)
+
+    data %>% transmute(
+        wid,
+        word, 
+        empirical_strength = strength,
+        strength = predict(model)   
+    )
+}
+
+model = lm(rt ~ strength_first, data=drop_na(multi))
+
+strength = build_strength(block > 2, 2 * correct -log(rt)) 
+
+mstrength = strength %>% 
+    
+
+multi %>% attach_strength(model_strength(strength, strength ~ Animacy)) %>% 
+    with(lmer(choose_first ~ strength_first + (1|wid)), data=.) %>% summ
+
+multi %>% attach_strength(strength) %>% 
+    with(lmer(choose_first ~ strength_first + (1|wid)), data=.) %>% summ
+
+
+# %% --------
+human %>% attach_strength(strength) %>%
+    mutate(choose_first = as.numeric(choose_first)) %>% 
+    regress(strength_first, choose_first)
+fig()
+
+# %% --------
+
+madan
+multi %>% 
+    left_join(afc_scores, c("wid", "first_word" = "word")) %>% 
+    left_join(afc_scores, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
+    mutate(
+        rel_strength = strength_first - strength_second,
+        chosen_strength = if_else(choose_first, strength_first, strength_second),
+    ) %>% 
+    group_by(wid) %>% 
+    mutate(
+        trial_num = row_number(),
+        typing_rt_z = zscore(typing_rt)
+    )
 
 # %% ==================== GAM / LMER plotting ====================
 
