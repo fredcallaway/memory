@@ -11,14 +11,31 @@ output:
 ```{r setup, include=FALSE}
 source("setup.r")
 source("load_data_simple.r")
+
+DROP_HALF = FALSE
+DROP_ACC = TRUE
+
+if (DROP_ACC) {
+    keep_acc = multi %>% 
+        group_by(wid) %>% 
+        summarise(accuracy=mean(correct)) %>% 
+        filter(accuracy > 0.5) %>% 
+        with(wid)
+    N_total = multi %>% with(length(unique(wid)))
+    N_drop_acc = N_total - length(keep_acc)
+    print(glue('Dropping {N_drop_acc} participants with less than 50% accuracy in critical trials'))
+    multi = multi %>% filter(wid %in% keep_acc)
+}
+if (DROP_HALF) {
+    multi = multi %>% filter(trial_num > 10)
+    print("Dropping the first half of critical trials")
+}
+
 raw_df = bind_rows(
     read_sim("optimal_prior", noise_sd=1),
     read_sim("empirical_commitment", noise_sd=1),
     read_sim("empirical", noise_sd=1),
-    multi %>% 
-        mutate(name = "human", wid = factor(wid)) %>% 
-        # filter(trial_num > 10) %>% # DROP FIRST HALF OF TRIALS
-        identity
+    multi %>% mutate(name = "human", wid = factor(wid))
 ) %>% mutate(
     name = recode_factor(name, .ordered=T,
         # "Optimal" = "optimal",
@@ -52,19 +69,32 @@ long = df %>%
     make_fixations
 ```
 
+Experiment versions: `r paste(VERSIONS)`
 
-::: {.alert .alert-info}
-**Changes from last pilot:** 
-
-- Added an extra round of training.
-- Provide binary feedback in the first two rounds of training
+- Two rounds of training and pre-test
+- No feedback in any pre-test trials
 - Word stimuli are selected randomly (not selecting high/low recall probability and concreteness)
 - Distractor task comes before final pre-test
-- Like the last round but unlike earlier rounds, we're not dropping the first half of trials
-- Strength is measured by the last round only, as before (but this doesn't make much difference)
-:::
+- _Not_ dropping the first half of trials
+- Strength is measured in the last round only
 
-N = `r nrow(participants)`
+
+```{r}
+# simple %>% 
+#     filter(block == max(block)) %>% 
+#     group_by(wid) %>% 
+#     summarise(accuracy=mean(correct)) %>% 
+#     with(mean(accuracy == 0))
+
+
+# simple %>% 
+#     filter(block == max(block)) %>% 
+#     group_by(wid) %>% 
+#     summarise(accuracy=mean(correct)) %>% 
+#     ggplot(aes(accuracy)) + geom_density() +
+#     coord_cartesian(xlim=c(0, 1.05), ylim=c(NULL))
+
+```
 
 
 # Main Results

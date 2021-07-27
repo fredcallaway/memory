@@ -1,11 +1,11 @@
 
 # %% ==================== Human ====================
 
-VERSIONS = c('v5.4')
+VERSIONS = c('v5.5')
 
 load_data = function(type) {
     VERSIONS %>% 
-    map(~ read_csv(glue('../data/{.x}/{type}.csv'))) %>% 
+    map(~ read_csv(glue('../data/{.x}/{type}.csv'), col_types = cols())) %>% 
     bind_rows
 }
 
@@ -82,13 +82,13 @@ add_strength = function(multi, filt, strength) {
 }
 
 multi = multi %>% 
-    add_strength(block > 2, 2 * correct -log(rt)) %>% 
+    add_strength(block == max(block), 2 * correct -log(rt)) %>% 
     mutate(trial_num = row_number())
 
 # %% ==================== Model ====================
 
 read_sim = function(name, noise_sd=0) {
-    read_csv(glue("../model/results/sim_{name}.csv")) %>%  mutate(
+    read_csv(glue("../model/results/sim_{name}.csv"), col_types = cols()) %>%  mutate(
         name = !!name,
         # raw_strength_first = strength_first,
         # raw_strength_second = strength_second,

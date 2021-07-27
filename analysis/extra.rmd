@@ -63,7 +63,6 @@ raw_df %>%
     with((proportions(table(name, response_type), margin=1))) %>% 
     kable(digits=2)
 
-    
 ```
 
 ## Reaction time
@@ -88,17 +87,3 @@ df %>%
     labs(x="Number of Fixations", y="Proportion of Trials")
 
 ```
-<!-- 
-# Check response coding
-
-```{r}
-multi %>% filter(word == response)  %>% with(all(correct)) %>% stopifnot
-multi %>% filter(response_type == "other") %>% select(word, response) %>% print(n=100)
-multi %>% filter(response_type == "intrusion") %>% select(word, response) %>% print(n=100)
-multi %>% filter(response_type == "correct" & word != response) %>% select(word, response) %>% print(n=100)
-multi %>% transmute(x=nchar(response)) %>% with(table(x))
-multi %>% filter(nchar(response)  == 3) %>% select(response)
-multi %>% filter(word == 'ewe') %>% select(word, response, response_type)
-
-```
- -->
