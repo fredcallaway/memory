@@ -1,5 +1,5 @@
 ---
-title: Rational metacognition in memory w/ cued recall strength
+title: Rational metacognition in memory w/ cued recall strength (all trials)
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
@@ -23,12 +23,10 @@ if (DROP_ACC) {
         with(wid)
     N_total = multi %>% with(length(unique(wid)))
     N_drop_acc = N_total - length(keep_acc)
-    print(glue('Dropping {N_drop_acc} participants with less than 50% accuracy in critical trials'))
     multi = multi %>% filter(wid %in% keep_acc)
 }
 if (DROP_HALF) {
     multi = multi %>% filter(trial_num > 10)
-    print("Dropping the first half of critical trials")
 }
 
 raw_df = bind_rows(
@@ -50,7 +48,7 @@ raw_df = bind_rows(
 
 df = raw_df %>% 
     filter(
-        response_type %in% c("correct", "timeout"),
+        # response_type %in% c("correct", "timeout"),
         # abs(rel_strength) < 4.24,
         # abs(strength_first) < 3,
         # abs(strength_second) < 3,
@@ -60,6 +58,15 @@ optimal = filter(df, name == "Optimal")
 random = filter(df, name == "Random")
 human = filter(df, name == "Human")
 WIDTH = 7.5; HEIGHT = 2.5
+```
+
+```{r}
+if (DROP_ACC) {
+    cat(glue('Dropping {N_drop_acc} participants with less than 50% accuracy in critical trials'))
+}
+if (DROP_HALF) {
+    cat("Dropping the first half of critical trials")
+}
 ```
 
 ```{r, include=FALSE}
@@ -77,6 +84,7 @@ Experiment versions: `r paste(VERSIONS)`
 - Distractor task comes before final pre-test
 - _Not_ dropping the first half of trials
 - Strength is measured in the last round only
+- **_Not_ excluding incorrect trials**
 
 
 ```{r}
