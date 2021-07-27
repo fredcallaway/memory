@@ -82,9 +82,8 @@ Experiment versions: `r paste(VERSIONS)`
 - No feedback in any pre-test trials
 - Word stimuli are selected randomly (not selecting high/low recall probability and concreteness)
 - Distractor task comes before final pre-test
-- _Not_ dropping the first half of trials
 - Strength is measured in the last round only
-- **_Not_ excluding incorrect trials**
+<!-- - **_Not_ excluding incorrect trials** -->
 
 
 ```{r}
