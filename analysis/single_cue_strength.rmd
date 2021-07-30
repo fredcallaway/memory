@@ -48,7 +48,8 @@ raw_df = bind_rows(
 
 df = raw_df %>% 
     filter(
-        # response_type %in% c("correct", "timeout"),
+        # response_type != "intrusion",
+        response_type %in% c("correct", "timeout"),
         # abs(rel_strength) < 4.24,
         # abs(strength_first) < 3,
         # abs(strength_second) < 3,
@@ -131,6 +132,8 @@ long %>%
     labs(x="Normalized Time", y="Probability Fixate\nStronger Cue", color="Strength Difference") +
     geom_hline(yintercept=0.5) +
     theme(legend.position="top")
+
+participants
 ```
 
 ## Individual fixation durations
@@ -201,6 +204,100 @@ last_diff = long %>%
     diff
 ```
 
+```{r}
+long %>% 
+    filter(name == "Human") %>% 
+    mutate(is_last = last_fix==1) %>% 
+    lmer(duration ~ is_last + (is_last|wid), data=.) %>% 
+    summ
 
-```{r child = 'extra.rmd'}
 ```
+
+# Sanity checks for evidence accumulation
+
+These plots test basic predictions of the evidence
+accumulation model, that is, effects that come out in the random model. 
+
+These plots exclude timeout trials.
+
+## Probability of remembering first word
+
+```{r,remember-first, fig.width=WIDTH, fig.height=HEIGHT}
+
+df %>%
+    filter(response_type == "correct") %>% 
+    mutate(choose_first = as.numeric(choose_first)) %>% 
+    regress(rel_strength, choose_first) +
+    ylab("Prob Select First Cue")
+```
+
+```{r}
+# multi = multi %>% 
+#     mutate(trial_num = row_number())
+
+multi %>%
+    filter(response_type == "correct") %>% 
+    add_strength(block > 0, 2 * correct -log(rt)) %>% 
+    mutate(choose_first = as.numeric(choose_first)) %>% 
+    lmer(choose_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
+    # glmer(choose_first ~ rel_strength + (rel_strength|wid), family='binomial', data=.) %>% summ
+```
+
+## Reaction time by chosen strength
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(response_type == "correct") %>% 
+    regress(chosen_strength, rt)
+```
+
+## Last fixation duration by strength
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(response_type == "correct") %>% 
+    filter(n_pres > 0) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    ) %>% 
+    regress(last_strength, last_pres_time)
+```
+
+# Miscellaneous
+
+## Response types
+
+Note: The model can only predict correct answers and timeouts.
+
+```{r}
+raw_df %>% 
+    with((proportions(table(name, response_type), margin=1))) %>% 
+    kable(digits=2)
+
+```
+
+## Reaction time
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    ggplot(aes(rt)) +
+    geom_density() +
+    facet_grid(~name) +
+    labs(x="Reaction Time", y="Density")
+```
+
+
+## Number of fixations
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres < 10) %>% 
+    ggplot(aes(n_pres, ..prop..)) +
+    geom_bar() +
+    facet_grid(~name) +
+    labs(x="Number of Fixations", y="Proportion of Trials")
+
+```
+

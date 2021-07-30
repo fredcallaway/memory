@@ -130,7 +130,7 @@ make_fixations = function(df) {
     df %>% 
         ungroup() %>% 
         filter(n_pres >= 1) %>% 
-        select(name, rel_strength, presentation_times, n_pres) %>% 
+        select(name, wid, rel_strength, presentation_times, n_pres) %>% 
         mutate(
             trial = row_number(),
             strength_diff = cut(abs(rel_strength), 
