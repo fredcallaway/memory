@@ -24,6 +24,7 @@ options(
     "summ-groups.table"=FALSE,
     "jtools-digits"=3
 )
+WIDTH = 7.5; HEIGHT = 2.5
 
 RED =  "#E41A1C" 
 BLUE =  "#377EB8" 
@@ -33,6 +34,7 @@ ORANGE =  "#FF7F00"
 YELLOW =  "#FFDD47" 
 GRAY = "#8E8E8E"
 BLACK = "#1B1B1B"
+
 theme_set(theme_bw(base_size = 14))
 theme_update(
     panel.grid.major.x = element_blank(),

@@ -1,4 +1,3 @@
-
 # %% ==================== Human ====================
 
 VERSIONS = c('v5.5')
@@ -148,4 +147,46 @@ make_fixations = function(df) {
         )
 }
 
+if (DROP_ACC) {
+    keep_acc = multi %>% 
+        group_by(wid) %>% 
+        summarise(accuracy=mean(correct)) %>% 
+        filter(accuracy > 0.5) %>% 
+        with(wid)
+    N_total = multi %>% with(length(unique(wid)))
+    N_drop_acc = N_total - length(keep_acc)
+    multi = multi %>% filter(wid %in% keep_acc)
+}
+if (DROP_HALF) {
+    multi = multi %>% filter(trial_num > 10)
+}
+
+df = raw_df = bind_rows(
+    read_sim("optimal_prior", noise_sd=1),
+    read_sim("empirical_commitment", noise_sd=1),
+    read_sim("empirical", noise_sd=1),
+    multi %>% mutate(name = "human", wid = factor(wid))
+) %>% mutate(
+    name = recode_factor(name, .ordered=T,
+        # "Optimal" = "optimal",
+        "optimal_prior" = "Optimal",
+        "human" = "Human",
+        "empirical" = "Random",
+        "empirical_commitment" = "Random Commitment",
+        # "rand_gamma" = "Random",
+    ),
+    last_pres = if_else(n_pres %% 2 == 1, "first", "second")
+)
+
+if (DROP_ERROR) {
+    df = raw_df %>% 
+        filter(
+            response_type %in% c("correct", "timeout"),
+            # response_type != "intrusion",
+        )
+}
+
+optimal = filter(df, name == "Optimal")
+random = filter(df, name == "Random")
+human = filter(df, name == "Human")
 

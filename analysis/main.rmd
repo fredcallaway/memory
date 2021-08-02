@@ -1,5 +1,5 @@
 ---
-title: Rational metacognition in memory w/ cued recall strength (all trials)
+title: Rational metacognition in memory
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
@@ -9,72 +9,17 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-source("setup.r")
-source("load_data_simple.r")
-
 DROP_HALF = FALSE
 DROP_ACC = TRUE
-
-if (DROP_ACC) {
-    keep_acc = multi %>% 
-        group_by(wid) %>% 
-        summarise(accuracy=mean(correct)) %>% 
-        filter(accuracy > 0.5) %>% 
-        with(wid)
-    N_total = multi %>% with(length(unique(wid)))
-    N_drop_acc = N_total - length(keep_acc)
-    multi = multi %>% filter(wid %in% keep_acc)
-}
-if (DROP_HALF) {
-    multi = multi %>% filter(trial_num > 10)
-}
-
-raw_df = bind_rows(
-    read_sim("optimal_prior", noise_sd=1),
-    read_sim("empirical_commitment", noise_sd=1),
-    read_sim("empirical", noise_sd=1),
-    multi %>% mutate(name = "human", wid = factor(wid))
-) %>% mutate(
-    name = recode_factor(name, .ordered=T,
-        # "Optimal" = "optimal",
-        "optimal_prior" = "Optimal",
-        "human" = "Human",
-        "empirical" = "Random",
-        "empirical_commitment" = "Random Commitment",
-        # "rand_gamma" = "Random",
-    ),
-    last_pres = if_else(n_pres %% 2 == 1, "first", "second")
-)
-
-df = raw_df %>% 
-    filter(
-        # response_type != "intrusion",
-        response_type %in% c("correct", "timeout"),
-        # abs(rel_strength) < 4.24,
-        # abs(strength_first) < 3,
-        # abs(strength_second) < 3,
-    )
-
-optimal = filter(df, name == "Optimal")
-random = filter(df, name == "Random")
-human = filter(df, name == "Human")
-WIDTH = 7.5; HEIGHT = 2.5
+DROP_ERROR = FALSE
+source("setup.r")
+source("load_data.r")
 ```
 
 ```{r}
-if (DROP_ACC) {
-    cat(glue('Dropping {N_drop_acc} participants with less than 50% accuracy in critical trials'))
-}
-if (DROP_HALF) {
-    cat("Dropping the first half of critical trials")
-}
-```
-
-```{r, include=FALSE}
-long = df %>% 
-    group_by(name) %>%
-    slice_sample(n=10000) %>% 
-    make_fixations
+if (DROP_ACC) cat(glue('Dropping {N_drop_acc} participants with less than 50% accuracy in critical trials'))
+if (DROP_HALF) cat("Dropping the first half of critical trials")
+if (DROP_ERROR) cat("Dropping error trials") else cat("_Including_ error trials")
 ```
 
 Experiment versions: `r paste(VERSIONS)`
@@ -87,29 +32,13 @@ Experiment versions: `r paste(VERSIONS)`
 <!-- - **_Not_ excluding incorrect trials** -->
 
 
-```{r}
-# simple %>% 
-#     filter(block == max(block)) %>% 
-#     group_by(wid) %>% 
-#     summarise(accuracy=mean(correct)) %>% 
-#     with(mean(accuracy == 0))
-
-
-# simple %>% 
-#     filter(block == max(block)) %>% 
-#     group_by(wid) %>% 
-#     summarise(accuracy=mean(correct)) %>% 
-#     ggplot(aes(accuracy)) + geom_density() +
-#     coord_cartesian(xlim=c(0, 1.05), ylim=c(NULL))
-
-```
-
-
-# Main Results
-
-## Fixation time course
+# Fixation time course
 
 ```{r, time-course, fig.width=WIDTH, fig.height=3}
+long = df %>% 
+    group_by(name) %>%
+    slice_sample(n=10000) %>% 
+    make_fixations
 
 normalized_timestep = function(long) {
     long %>% 
@@ -132,13 +61,11 @@ long %>%
     labs(x="Normalized Time", y="Probability Fixate\nStronger Cue", color="Strength Difference") +
     geom_hline(yintercept=0.5) +
     theme(legend.position="top")
-
-participants
 ```
 
-## Individual fixation durations
+# Fixation durations
 
-### First fixation
+## First fixation
 
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
@@ -146,7 +73,7 @@ df %>%
     regress(strength_first, first_pres_time) # plot
 ```
 
-### Second fixation
+## Second fixation
 
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
@@ -154,7 +81,7 @@ df %>%
     regress(rel_strength, second_pres_time, bins=9) # plot
 ```
 
-### Third fixation
+## Third fixation
 
 ```{r, third-fix, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
@@ -162,7 +89,7 @@ df %>%
     regress(rel_strength, third_pres_time)
 ```
 
-## Overall fixation proportion
+# Overall fixation proportion
 
 ```{r, fix-prop, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
@@ -170,7 +97,7 @@ df %>%
     regress(rel_strength, prop_first)
 ```
 
-### Last-fixation effect
+## Last-fixation effect
 
 ```{r, last-confound, fig.width=WIDTH, fig.height=3}
 df %>% 
@@ -178,7 +105,7 @@ df %>%
     regress_interaction(rel_strength, last_pres, prop_first)
 ```
 
-### Strength predicts last fixation 
+## Strength predicts last fixation 
 
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
@@ -186,7 +113,7 @@ df %>%
     regress(rel_strength, last_pres_first)
 ```
 
-### Last fixations are longer
+## Last fixations are longer
 
 ```{r, fix-by-final, fig.width=WIDTH, fig.height=HEIGHT}
 long %>% 
@@ -202,23 +129,22 @@ last_diff = long %>%
     filter(name == "Human") %>% 
     with(tapply(duration, last_fix, mean)) %>% 
     diff
-```
 
-```{r}
 long %>% 
     filter(name == "Human") %>% 
-    mutate(is_last = last_fix==1) %>% 
+    mutate(is_last = int(last_fix==1)) %>% 
     lmer(duration ~ is_last + (is_last|wid), data=.) %>% 
     summ
 
 ```
+
 
 # Sanity checks for evidence accumulation
 
 These plots test basic predictions of the evidence
 accumulation model, that is, effects that come out in the random model. 
 
-These plots exclude timeout trials.
+These plots only include correct trials.
 
 ## Probability of remembering first word
 
@@ -226,21 +152,9 @@ These plots exclude timeout trials.
 
 df %>%
     filter(response_type == "correct") %>% 
-    mutate(choose_first = as.numeric(choose_first)) %>% 
+    mutate(choose_first = int(choose_first)) %>% 
     regress(rel_strength, choose_first) +
     ylab("Prob Select First Cue")
-```
-
-```{r}
-# multi = multi %>% 
-#     mutate(trial_num = row_number())
-
-multi %>%
-    filter(response_type == "correct") %>% 
-    add_strength(block > 0, 2 * correct -log(rt)) %>% 
-    mutate(choose_first = as.numeric(choose_first)) %>% 
-    lmer(choose_first ~ rel_strength + (rel_strength|wid), data=.) %>% summ
-    # glmer(choose_first ~ rel_strength + (rel_strength|wid), family='binomial', data=.) %>% summ
 ```
 
 ## Reaction time by chosen strength
