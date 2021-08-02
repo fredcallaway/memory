@@ -8,37 +8,65 @@ output:
     self_contained: true
 ---
 
-```{r setup, include=FALSE}
-DROP_HALF = FALSE
-DROP_ACC = TRUE
-DROP_ERROR = FALSE
-source("setup.r")
-source("load_data.r")
+```{r, include=FALSE}
+VERSIONS = c('v5.5')
+knitr::opts_chunk$set(
+    results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
+)
 ```
 
-```{r}
-if (DROP_ACC) cat(glue('Dropping {N_drop_acc} participants with less than 50% accuracy in critical trials'))
-if (DROP_HALF) cat("Dropping the first half of critical trials")
-if (DROP_ERROR) cat("Dropping error trials") else cat("_Including_ error trials")
-```
+# Info
 
-Experiment versions: `r paste(VERSIONS)`
-
+## Experiment
 - Two rounds of training and pre-test
 - No feedback in any pre-test trials
 - Word stimuli are selected randomly (not selecting high/low recall probability and concreteness)
 - Distractor task comes before final pre-test
-- Strength is measured in the last round only
-<!-- - **_Not_ excluding incorrect trials** -->
+- Strength is measured by accuracy and reaction time in the last pre-test round (two trials per pair)
+- Version(s): `r paste(VERSIONS)`
+
+## Analysis
+```{r setup, echo=FALSE}
+DROP_HALF = FALSE
+DROP_ACC = TRUE
+DROP_ERROR = FALSE
+NORMALIZE_FIXATIONS = TRUE
+MIXED_DURATIONS = FALSE
+source("setup.r")
+source("load_data.r")
+if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
+if (NORMALIZE_FIXATIONS) info("Z-scoring fixation durations")
+```
 
 
 # Fixation time course
 
-```{r, time-course, fig.width=WIDTH, fig.height=3}
+```{r}
 long = df %>% 
     group_by(name) %>%
     slice_sample(n=10000) %>% 
     make_fixations
+```
+
+```{r}
+if(NORMALIZE_FIXATIONS) {
+    avg_ptime = long %>% group_by(name,wid) %>% 
+        filter(last_fix == 0) %>% 
+        summarise(duration_mean=mean(duration), duration_sd=sd(duration))
+    df = df %>% 
+        left_join(avg_ptime) %>% 
+        mutate(
+            first_pres_time_raw = first_pres_time,
+            second_pres_time_raw = second_pres_time,
+            third_pres_time_raw = third_pres_time,
+            first_pres_time = (first_pres_time_raw - duration_mean)/duration_sd,
+            second_pres_time = (second_pres_time_raw - duration_mean)/duration_sd,
+            third_pres_time = (third_pres_time_raw - duration_mean)/duration_sd
+        )
+}
+```
+
+```{r, time-course, fig.width=WIDTH, fig.height=3}
 
 normalized_timestep = function(long) {
     long %>% 
@@ -70,7 +98,7 @@ long %>%
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(n_pres >= 2) %>% 
-    regress(strength_first, first_pres_time) # plot
+    regress(strength_first, first_pres_time, mixed=MIXED_DURATIONS)
 ```
 
 ## Second fixation
@@ -78,7 +106,7 @@ df %>%
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(n_pres >= 3) %>% 
-    regress(rel_strength, second_pres_time, bins=9) # plot
+    regress(rel_strength, second_pres_time, mixed=MIXED_DURATIONS)
 ```
 
 ## Third fixation
@@ -86,7 +114,7 @@ df %>%
 ```{r, third-fix, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(n_pres >= 4) %>% 
-    regress(rel_strength, third_pres_time)
+    regress(rel_strength, third_pres_time, mixed=MIXED_DURATIONS)
 ```
 
 # Overall fixation proportion
@@ -154,7 +182,7 @@ df %>%
     filter(response_type == "correct") %>% 
     mutate(choose_first = int(choose_first)) %>% 
     regress(rel_strength, choose_first) +
-    ylab("Prob Select First Cue")
+    ylab("Prob Select First Cue") + ylim(0, 1)
 ```
 
 ## Reaction time by chosen strength

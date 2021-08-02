@@ -1,7 +1,3 @@
-knitr::opts_chunk$set(
-    results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
-)
-
 library(tidyverse)
 library(lme4)
 library(jtools)
@@ -142,13 +138,17 @@ make_breaks = function(x, n=7, q=.025) {
     seq(xmin, xmax, length.out=n)
 }
 
-regress = function(data, xvar, yvar, bins=6, bin_range=0.95) {
+regress = function(data, xvar, yvar, bins=6, bin_range=0.95, mixed=TRUE) {
     x = ensym(xvar); y = ensym(yvar)
     preds = data %>% 
         group_by(name) %>% 
         group_modify(function(data, grp) {
             model = if (grp$name == "Human") {
-                model = inject(lmer(!!y ~ !!x + (!!x | wid), data=data))
+                if (mixed) {
+                    model = inject(lmer(!!y ~ !!x + (!!x | wid), data=data))
+                } else {
+                    model = inject(lm(!!y ~ !!x, data=data))
+                }
                 print(glue("N = {nrow(data)}"))
                 smart_print(summ(model))
                 tibble(ggpredict(model, terms = glue("{x} [n=30]}")))

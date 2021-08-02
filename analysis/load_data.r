@@ -1,6 +1,8 @@
 # %% ==================== Human ====================
 
-VERSIONS = c('v5.5')
+info = function(txt) {
+    cat(glue("- {txt}\n\n"))
+}
 
 load_data = function(type) {
     VERSIONS %>% 
@@ -156,8 +158,10 @@ if (DROP_ACC) {
     N_total = multi %>% with(length(unique(wid)))
     N_drop_acc = N_total - length(keep_acc)
     multi = multi %>% filter(wid %in% keep_acc)
+    info(glue('Dropping {N_drop_acc} participants with less than 50% accuracy in critical trials'))
 }
 if (DROP_HALF) {
+    info("Dropping the first half of critical trials")
     multi = multi %>% filter(trial_num > 10)
 }
 
@@ -179,14 +183,17 @@ df = raw_df = bind_rows(
 )
 
 if (DROP_ERROR) {
+    info("Dropping error trials")
     df = raw_df %>% 
         filter(
             response_type %in% c("correct", "timeout"),
             # response_type != "intrusion",
         )
+} else {
+    info("_Including_ error trials")
 }
 
 optimal = filter(df, name == "Optimal")
 random = filter(df, name == "Random")
 human = filter(df, name == "Human")
-
+info(glue("{length(unique(human$wid))} participants and {nrow(human)} trials in the analysis"))
