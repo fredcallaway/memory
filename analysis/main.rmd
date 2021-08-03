@@ -26,11 +26,11 @@ knitr::opts_chunk$set(
 - Version(s): `r paste(VERSIONS)`
 
 ## Analysis
-```{r setup, echo=FALSE}y
+```{r setup, echo=FALSE}
 DROP_HALF = FALSE
 DROP_ACC = TRUE
 DROP_ERROR = FALSE
-NORMALIZE_FIXATIONS = TRUE
+NORMALIZE_FIXATIONS = FALSE
 MIXED_DURATIONS = TRUE
 source("setup.r")
 source("load_data.r")
