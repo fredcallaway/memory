@@ -26,12 +26,12 @@ knitr::opts_chunk$set(
 - Version(s): `r paste(VERSIONS)`
 
 ## Analysis
-```{r setup, echo=FALSE}
+```{r setup, echo=FALSE}y
 DROP_HALF = FALSE
 DROP_ACC = TRUE
 DROP_ERROR = FALSE
 NORMALIZE_FIXATIONS = TRUE
-MIXED_DURATIONS = FALSE
+MIXED_DURATIONS = TRUE
 source("setup.r")
 source("load_data.r")
 if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
