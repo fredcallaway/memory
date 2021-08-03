@@ -29,7 +29,7 @@ knitr::opts_chunk$set(
 ```{r setup, echo=FALSE}
 DROP_HALF = FALSE
 DROP_ACC = TRUE
-DROP_ERROR = FALSE
+DROP_ERROR = TRUE
 NORMALIZE_FIXATIONS = FALSE
 MIXED_DURATIONS = TRUE
 source("setup.r")

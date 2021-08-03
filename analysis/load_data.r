@@ -186,7 +186,7 @@ if (DROP_ERROR) {
     info("Dropping error trials")
     df = raw_df %>% 
         filter(
-            response_type %in% c("correct", "timeout"),
+            response_type %in% c("correct", "timeout", "empty"),
             # response_type != "intrusion",
         )
 } else {
