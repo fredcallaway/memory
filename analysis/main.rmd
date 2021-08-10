@@ -15,8 +15,6 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Info
-
 ## Experiment
 - Two rounds of training and pre-test
 - No feedback in any pre-test trials
@@ -35,36 +33,10 @@ MIXED_DURATIONS = TRUE
 source("setup.r")
 source("load_data.r")
 if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
-if (NORMALIZE_FIXATIONS) info("Z-scoring fixation durations")
 ```
 
 
 # Fixation time course
-
-```{r}
-long = df %>% 
-    group_by(name) %>%
-    slice_sample(n=10000) %>% 
-    make_fixations
-```
-
-```{r}
-if(NORMALIZE_FIXATIONS) {
-    avg_ptime = long %>% group_by(name,wid) %>% 
-        filter(last_fix == 0) %>% 
-        summarise(duration_mean=mean(duration), duration_sd=sd(duration))
-    df = df %>% 
-        left_join(avg_ptime) %>% 
-        mutate(
-            first_pres_time_raw = first_pres_time,
-            second_pres_time_raw = second_pres_time,
-            third_pres_time_raw = third_pres_time,
-            first_pres_time = (first_pres_time_raw - duration_mean)/duration_sd,
-            second_pres_time = (second_pres_time_raw - duration_mean)/duration_sd,
-            third_pres_time = (third_pres_time_raw - duration_mean)/duration_sd
-        )
-}
-```
 
 ```{r, time-course, fig.width=WIDTH, fig.height=3}
 

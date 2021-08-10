@@ -1,5 +1,88 @@
 library(simr)
+
+
+
+# %% ==================== Aug 4 ====================
+human %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
+    summ()
+
 # %% --------
+
+model = human %>% 
+    filter(n_pres >= 2) %>% 
+    lm(first_pres_time ~ strength_first, data=.)
+
+
+# %% --------
+model = human %>% 
+    filter(n_pres >= 3) %>% 
+    lm(second_pres_time ~ rel_strength, data=.)
+
+
+powerSim(extend(model, along="wid", n=150), nsim=100)
+powerSim(model, nsim=100)
+
+# %% --------
+
+groups = human %>% nest_by(wid, .keep=TRUE) %>% with(data)
+
+sample_p = function(N) {
+    bind_rows(sample(groups, N, replace=T)) %>% 
+        filter(n_pres >= 2) %>% 
+        lm(first_pres_time ~ strength_first, data=.) %>% 
+        tidy %>% 
+        with(p.value[2])
+}
+
+n_sim = 300
+N = seq(100, 500, 50)
+results = map(N, ~ replicate(n_sim, sample_p(.x)))
+power = unlist(map(results, ~ mean(.x < .05)))
+fixed_pwr = tibble(N, power)
+fixed_pwr
+# %% --------
+
+groups = human %>% nest_by(wid, .keep=TRUE) %>% with(data)
+
+sample_p = function(N) {
+    data = sample(groups, N, replace=T) %>% 
+        map(~ mutate(.x, wid=round(1e10 * runif(1)))) %>%
+        bind_rows
+    model = data %>% 
+        filter(n_pres >= 2) %>% 
+        lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.)
+    summ(model)$coeftable["strength_first", "p"]
+}
+
+results = map(N, ~ replicate(n_sim, sample_p(.x)))
+power = unlist(map(results, ~ mean(.x < .05)))
+mixed_pwr = tibble(N, power)
+
+# %% --------
+
+mixed_pwr %>% ggplot(aes(N, power)) + geom_line() + geom_hline(yintercept=0.8) + 
+    ggtitle("First Fixation Duration") + expand_limits(y=1)
+fig()
+
+# %% --------
+sample_p = function(data, N) {
+    independence_test(route_cost ~ feedback == "meta",
+                       data=resample(data, N),
+                       alternative="greater") %>% pvalue
+}
+
+
+
+
+
+
+
+
+# %% ==================== Previous ====================
+
+
 
 model = human %>% 
     filter(response_type == "correct") %>% 

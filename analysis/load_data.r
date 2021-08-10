@@ -186,12 +186,35 @@ if (DROP_ERROR) {
     info("Dropping error trials")
     df = raw_df %>% 
         filter(
-            response_type %in% c("correct", "timeout", "empty"),
+            response_type %in% c("correct", "timeout"),
             # response_type != "intrusion",
         )
 } else {
     info("_Including_ error trials")
 }
+
+long = df %>% 
+    group_by(name) %>%
+    slice_sample(n=10000) %>% 
+    make_fixations
+
+if (NORMALIZE_FIXATIONS) {
+    info("Z-scoring fixation durations")
+    avg_ptime = long %>% group_by(name,wid) %>% 
+        filter(last_fix == 0) %>% 
+        summarise(duration_mean=mean(duration), duration_sd=sd(duration))
+    df = df %>% 
+        left_join(avg_ptime) %>% 
+        mutate(
+            first_pres_time_raw = first_pres_time,
+            second_pres_time_raw = second_pres_time,
+            third_pres_time_raw = third_pres_time,
+            first_pres_time = (first_pres_time_raw - duration_mean)/duration_sd,
+            second_pres_time = (second_pres_time_raw - duration_mean)/duration_sd,
+            third_pres_time = (third_pres_time_raw - duration_mean)/duration_sd
+        )
+}
+
 
 optimal = filter(df, name == "Optimal")
 random = filter(df, name == "Random")

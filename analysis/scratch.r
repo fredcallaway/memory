@@ -12,6 +12,12 @@ multi %>% filter(word == 'ewe') %>% select(word, response, response_type)
 
 ```
 
+# %% --------
+
+human %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
+    summ
 
 # %% ==================== Pretest Diagnostics ====================
 

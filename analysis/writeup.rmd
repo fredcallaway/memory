@@ -16,8 +16,8 @@ focus their efforts on recalling the target which is more strongly represented
 in memory, because it can be recalled with less effort. Here we present a
 simple form of such a model, and test this key prediction in a cued-recall
 experiment in which participants can select which of two possible targets to
-remember. We find tentative support for a model in which memory search is
-guided by partial recall progress in order to minimize the time spent recalling.
+remember. We find support for a model in which memory search is guided by
+partial recall progress in order to minimize the time spent recalling.
 
 # Model
 
@@ -58,9 +58,9 @@ knitr::include_graphics("../model/figs/simple_fixation.png")
 ## Alternative models *NEW*
 
 In order to discern which model predictions are specific to a rational
-meta-memory model, we show predictions of two alternative models. The "Random"
+meta-memory model, we show predictions of two alternative models. The _Random_
 model randomly samples fixation durations from the empirical distribution. We
-also A more sophisticated "Random Commitment" model was developed to account
+also A more sophisticated _Random Commitment_ model was developed to account
 for the empirical fact that last fixations are considerably longer than all
 other fixations. This model samples the total number of fixations on each
 trial from the empirical distribution and then samples the duration of each
@@ -108,3 +108,12 @@ In the simulations, we sample the parameter $p$ from a $\text{Beta}(2, 6)$
 distribution, which was chosen because it makes some of the plots look better.
 This corresponds to an assumption about the range of accumulation rates
 (memory strengths) that are likely.
+
+## Timeline *NEW*
+
+- Exposure: each of 40 pairs shown once
+- Test: cued-recall image to word, no feedback, each image shown once
+- Exposure
+- Distractor: 30 seconds of simple arithmetic
+- Test: each image shown *twice*. Performance used as memory strength index
+- Critical: double-cue recall, each pair shown once (two per trial, so twenty trials)
