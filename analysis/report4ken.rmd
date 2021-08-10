@@ -1,0 +1,215 @@
+---
+title: Rational metacognition in memory
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+---
+
+```{r, include=FALSE}
+VERSIONS = c('v5.5')
+knitr::opts_chunk$set(
+    results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
+)
+```
+
+::: {.alert .alert-info}
+The introduction below is mostly the same as the previous versions. New sections are marked *NEW*.
+:::
+
+```{r child = 'writeup.rmd'}
+```
+
+
+```{r setup, echo=FALSE}
+DROP_HALF = FALSE
+DROP_ACC = TRUE
+DROP_ERROR = TRUE
+NORMALIZE_FIXATIONS = TRUE
+MIXED_DURATIONS = TRUE
+source("setup.r")
+source("load_data.r")
+if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
+```
+
+# Results
+
+## Fixation time course
+
+```{r, time-course, fig.width=WIDTH, fig.height=3}
+
+normalized_timestep = function(long) {
+    long %>% 
+        group_by(trial) %>%
+        mutate(prop_duration = duration / sum(duration)) %>% 
+        ungroup() %>% 
+        mutate(n_step=round(prop_duration * 100)) %>% 
+        uncount(n_step) %>% 
+        group_by(trial) %>% 
+        mutate(normalized_timestep = row_number())
+}
+
+long %>% 
+    normalized_timestep %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_stronger, group = strength_diff, color=strength_diff)) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_grid(~name) +
+    labs(x="Normalized Time", y="Probability Fixate\nStronger Cue", color="Strength Difference") +
+    geom_hline(yintercept=0.5) +
+    theme(legend.position="top")
+```
+
+## First fixation
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    regress(strength_first, first_pres_time, mixed=MIXED_DURATIONS)
+```
+
+## Second fixation
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(rel_strength, second_pres_time, mixed=MIXED_DURATIONS)
+```
+
+## Third fixation
+
+```{r, third-fix, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(rel_strength, third_pres_time, mixed=MIXED_DURATIONS)
+```
+
+## Overall fixation proportion
+
+```{r, fix-prop, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    regress(rel_strength, prop_first)
+```
+
+## Last-fixation effect
+
+```{r, last-confound, fig.width=WIDTH, fig.height=3}
+df %>% 
+    filter(n_pres >= 2) %>% 
+    regress_interaction(rel_strength, last_pres, prop_first)
+```
+
+## Strength predicts last fixation 
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    mutate(last_pres_first = as.numeric(last_pres == "first")) %>% 
+    regress(rel_strength, last_pres_first)
+```
+
+## Last fixations are longer
+
+```{r, fix-by-final, fig.width=WIDTH, fig.height=HEIGHT}
+long %>% 
+    # filter(name == "Human") %>% 
+    ggplot(aes(last_fix==1, duration)) + 
+    stat_summary(fun.data=mean_cl_boot, geom="bar", fill="white", color="black") +
+    stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=0.2) +
+    facet_grid(~name) + 
+    scale_x_discrete(name="Fixation Type", labels=c("Non-final", "Final")) +
+    ylab("Duration")
+
+last_diff = long %>% 
+    filter(name == "Human") %>% 
+    with(tapply(duration, last_fix, mean)) %>% 
+    diff
+
+long %>% 
+    filter(name == "Human") %>% 
+    mutate(is_last = int(last_fix==1)) %>% 
+    lmer(duration ~ is_last + (is_last|wid), data=.) %>% 
+    summ
+
+```
+
+
+# Sanity checks for evidence accumulation
+
+These plots test basic predictions of the evidence
+accumulation model, that is, effects that come out in the random model. 
+
+These plots only include correct trials.
+
+## Probability of remembering first word
+
+```{r,remember-first, fig.width=WIDTH, fig.height=HEIGHT}
+
+df %>%
+    filter(response_type == "correct") %>% 
+    mutate(choose_first = int(choose_first)) %>% 
+    regress(rel_strength, choose_first) +
+    ylab("Prob Select First Cue") + ylim(0, 1)
+```
+
+## Reaction time by chosen strength
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(response_type == "correct") %>% 
+    regress(chosen_strength, rt)
+```
+
+## Last fixation duration by strength
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(response_type == "correct") %>% 
+    filter(n_pres > 0) %>% 
+    mutate(
+        last_pres_time = map_dbl(presentation_times, last),
+        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
+        last_strength = if_else(last_pres == "first", strength_first, strength_second)
+    ) %>% 
+    regress(last_strength, last_pres_time)
+```
+
+# Miscellaneous
+
+## Response types
+
+Note: The model can only predict correct answers and timeouts.
+
+```{r}
+raw_df %>% 
+    with((proportions(table(name, response_type), margin=1))) %>% 
+    kable(digits=2)
+
+```
+
+## Reaction time
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    ggplot(aes(rt)) +
+    geom_density() +
+    facet_grid(~name) +
+    labs(x="Reaction Time", y="Density")
+```
+
+
+## Number of fixations
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+df %>% 
+    filter(n_pres < 10) %>% 
+    ggplot(aes(n_pres, ..prop..)) +
+    geom_bar() +
+    facet_grid(~name) +
+    labs(x="Number of Fixations", y="Proportion of Trials")
+
+```
+
