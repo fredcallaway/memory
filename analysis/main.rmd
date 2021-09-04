@@ -1,5 +1,5 @@
 ---
-title: Rational metacognition in memory
+title: Rational metacognition in memory (Pre-registered dataset)
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r, include=FALSE}
-VERSIONS = c('v5.5')
+VERSIONS = c('v5.6')
 knitr::opts_chunk$set(
     results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
 )
@@ -68,7 +68,7 @@ long %>%
 ## First fixation
 
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
+df %>%
     filter(n_pres >= 2) %>% 
     regress(strength_first, first_pres_time, mixed=MIXED_DURATIONS)
 ```
@@ -149,11 +149,10 @@ These plots only include correct trials.
 ## Probability of remembering first word
 
 ```{r,remember-first, fig.width=WIDTH, fig.height=HEIGHT}
-
 df %>%
     filter(response_type == "correct") %>% 
     mutate(choose_first = int(choose_first)) %>% 
-    regress(rel_strength, choose_first) +
+    regress(strength_first, choose_first) +
     ylab("Prob Select First Cue") + ylim(0, 1)
 ```
 

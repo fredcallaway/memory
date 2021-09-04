@@ -40,7 +40,8 @@ multi = load_data('multi-recall') %>%
         presentation_times_second = map(presentation_times, ~ .x[c(F, T)]),
         total_first = map_dbl(presentation_times_first, ~sum(unlist(.x)), .default=0),
         total_second = replace_na(map_dbl(presentation_times_second, ~sum(unlist(.x)), .default=0), 0),
-        prop_first = (total_first) / (total_first + total_second)
+        prop_first = (total_first) / (total_first + total_second),
+        trial_num = row_number()
     ) 
 
 simple = load_data('simple-recall') %>% 
@@ -82,9 +83,9 @@ add_strength = function(multi, filt, strength) {
         )
 }
 
-multi = multi %>% 
-    add_strength(block == max(block), 2 * correct -log(rt)) %>% 
-    mutate(trial_num = row_number())
+
+multi = multi %>% add_strength(block == max(block), 5 * correct - log(rt))
+
 
 # %% ==================== Model ====================
 
@@ -186,7 +187,8 @@ if (DROP_ERROR) {
     info("Dropping error trials")
     df = raw_df %>% 
         filter(
-            response_type %in% c("correct", "timeout"),
+            response_type == "correct",
+            # response_type %in% c("correct", "timeout"),
             # response_type != "intrusion",
         )
 } else {
