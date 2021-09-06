@@ -4,17 +4,17 @@ using ProgressMeter
     using DataFrames
     include("binomial_accumulator.jl")
     include("utils.jl")
+    include("empirical_fixation.jl")
+    include("constants.jl")
 end
 include("figure.jl")
-
 # %% --------
 
 @everywhere function make_sims(pol, N=10000)
-    time_limit = 15
-    ms_per_sample = 1000 * (time_limit / pol.m.max_step)
+    ms_per_sample = 1000 * (TIME_LIMIT / pol.m.max_step)
     b = mutate(initial_belief(pol.m), focused=1)
     sims = map(1:N) do i
-        s = (s1, s2) = sample_state(m)
+        s = (s1, s2) = sample_state(pol.m)
         sim = simulate(pol; s, b)
         presentation_times = parse_presentations(sim.cs, ms_per_sample)
         # recode things to make 1 correspond to first seen item
@@ -35,7 +35,7 @@ end
 
 # %% --------
 
-m = MetaMDP(step_size=4, max_step=60, threshold=20, sample_cost=1, switch_cost=6, miss_cost=0, prior=(2,6))
+m = MetaMDP(step_size=4, max_step=60, threshold=20, sample_cost=1, switch_cost=5, miss_cost=0, prior=(1,1))
 
 monte_carlo() do 
     p = rand(Beta(m.prior...))
@@ -57,8 +57,32 @@ countmap(df.outcome)
 CSV.write("results/sim_empirical.csv", df)
 
 # %% --------
+mm = MetaMDP(step_size=4, max_step=60, threshold=20, sample_cost=1, switch_cost=6, miss_cost=0, prior=(1,1))
+pols = individual_empirical_policies(mm);
+filter!(pols) do pol
+    length(pol.commitment_dist.support) != 0
+end;
 
-df = make_sims(empirical_commitment_policy2(m))
-countmap(df.outcome)
-@show mean(length.(df.presentation_times))
+df = mapreduce(vcat, pols) do pol
+    make_sims(pol, 100)
+end
+
 CSV.write("results/sim_empirical_commitment.csv", df)
+
+# %% --------
+pols = individual_empirical_policies(mm, commitment=false);
+filter!(pols) do pol
+    length(pol.duration_dist.support) != 0
+end
+
+df = mapreduce(vcat, pols) do pol
+    make_sims(pol, 100)
+end
+
+CSV.write("results/sim_empirical.csv", df)
+
+# %% --------
+
+
+
+
