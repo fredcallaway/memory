@@ -98,8 +98,9 @@ function default_hash(b::Belief{1})
 end
 
 function default_hash(b::Belief{2})
+    return hash(b)
     not_focused = b.focused == 1 ? 2 : 1
-    hash(b.counts[b.focused], hash(b.counts[not_focused]))
+    hash(b.n_step, hash(b.counts[b.focused], hash(b.counts[not_focused])))
 end
 
 ValueFunction(m::MetaMDP, hasher::Function) = ValueFunction(m, hasher, Dict{UInt64, Float64}())
