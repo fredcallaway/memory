@@ -1,12 +1,6 @@
+using CSV
 using ProgressMeter
-@everywhere begin
-    using CSV
-    using DataFrames
-    include("binomial_accumulator.jl")
-    include("utils.jl")
-    include("empirical_fixation.jl")
-    include("constants.jl")
-end
+@everywhere include("simulate.jl")
 include("figure.jl")
 # %% --------
 
@@ -34,8 +28,15 @@ include("figure.jl")
 end
 
 # %% --------
+m = MetaMDP(step_size=4, max_step=60, threshold=20, sample_cost=1, switch_cost=5, miss_cost=0, prior=(1, 1))
 
-m = MetaMDP(step_size=4, max_step=60, threshold=20, sample_cost=1, switch_cost=5, miss_cost=0, prior=(1,1))
+V = ValueFunction(m)
+@time V(initial_belief(m))
+df = make_sims(SoftOptimalPolicy(V; β=0.3))
+@show mean(length.(df.presentation_times))
+CSV.write("results/sim_optimal.csv", df)
+# %% --------
+m = MetaMDP(step_size=4, max_step=60, threshold=20, sample_cost=1, switch_cost=5, miss_cost=0, prior=(2,6))
 
 monte_carlo() do 
     p = rand(Beta(m.prior...))
@@ -48,7 +49,6 @@ df = make_sims(SoftOptimalPolicy(V; β=0.3))
 @show mean(length.(df.presentation_times))
 CSV.write("results/sim_optimal_prior.csv", df)
 
-
 # %% --------
 include("empirical_fixation.jl")
 df = make_sims(empirical_policy(m))
@@ -58,22 +58,11 @@ CSV.write("results/sim_empirical.csv", df)
 
 # %% --------
 mm = MetaMDP(step_size=4, max_step=60, threshold=20, sample_cost=1, switch_cost=6, miss_cost=0, prior=(1,1))
-pols = individual_empirical_policies(mm);
-filter!(pols) do pol
-    length(pol.commitment_dist.support) != 0
-end;
-
-df = mapreduce(vcat, pols) do pol
-    make_sims(pol, 100)
-end
-
+df = simulate_individual_empirical(mm)
 CSV.write("results/sim_empirical_commitment.csv", df)
 
 # %% --------
 pols = individual_empirical_policies(mm, commitment=false);
-filter!(pols) do pol
-    length(pol.duration_dist.support) != 0
-end
 
 df = mapreduce(vcat, pols) do pol
     make_sims(pol, 100)

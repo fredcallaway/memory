@@ -132,9 +132,8 @@ make_fixations = function(df) {
     df %>% 
         ungroup() %>% 
         filter(n_pres >= 1) %>% 
-        select(name, wid, rel_strength, presentation_times, n_pres) %>% 
+        select(name, wid, rel_strength, presentation_times, n_pres, trial_id) %>% 
         mutate(
-            trial = row_number(),
             strength_diff = cut(abs(rel_strength), 
                                 c(0, 0.35, 1.25, 10),
                                 # quantile(abs(rel_strength), c(0, 0.2, 1.),  na.rm = T),
@@ -166,38 +165,43 @@ if (DROP_HALF) {
     multi = multi %>% filter(trial_num > 10)
 }
 
+# %% --------
 df = raw_df = bind_rows(
-    read_sim("optimal_prior", noise_sd=1),
-    read_sim("empirical_commitment", noise_sd=1),
+    read_sim(OPTIMAL_VERSION, noise_sd=1),
+    # read_sim("empirical_commitment", noise_sd=1),
+    # read_sim("rand_fit", noise_sd=0),
     read_sim("empirical", noise_sd=1),
     multi %>% mutate(name = "human", wid = factor(wid))
 ) %>% mutate(
     name = recode_factor(name, .ordered=T,
-        # "Optimal" = "optimal",
+        "optimal" = "Optimal",
         "optimal_prior" = "Optimal",
         "human" = "Human",
         "empirical" = "Random",
         "empirical_commitment" = "Random Commitment",
+        "rand_fit" = "Random Fit"
         # "rand_gamma" = "Random",
     ),
-    last_pres = if_else(n_pres %% 2 == 1, "first", "second")
+    last_pres = if_else(n_pres %% 2 == 1, "first", "second"),
+    trial_id = row_number(),
+
 )
 
 if (DROP_ERROR) {
-    info("Dropping error trials")
-    df = raw_df %>% 
-        filter(
-            response_type == "correct",
-            # response_type %in% c("correct", "timeout"),
-            # response_type != "intrusion",
-        )
+info("Dropping error trials")
+df = raw_df %>% 
+    filter(
+        response_type == "correct",
+        # response_type %in% c("correct", "timeout"),
+        # response_type != "intrusion",
+    )
 } else {
-    info("_Including_ error trials")
+info("_Including_ error trials")
 }
 
 long = df %>% 
-    group_by(name) %>%
-    slice_sample(n=10000) %>% 
+    # group_by(name) %>%
+    # slice_sample(n=10000) %>% 
     make_fixations
 
 if (NORMALIZE_FIXATIONS) {
@@ -213,7 +217,7 @@ if (NORMALIZE_FIXATIONS) {
             third_pres_time_raw = third_pres_time,
             first_pres_time = (first_pres_time_raw - duration_mean)/duration_sd,
             second_pres_time = (second_pres_time_raw - duration_mean)/duration_sd,
-            third_pres_time = (third_pres_time_raw - duration_mean)/duration_sd
+            third_pres_time = (third_pres_time_raw - duration_mean)/duration_sd,
         )
 }
 

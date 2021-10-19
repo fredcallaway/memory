@@ -1,87 +1,40 @@
-using ProgressMeter
-@everywhere using DataFrames
-using SplitApplyCombine
-using CSV
-
-@everywhere include("binomial_accumulator.jl")
-@everywhere include("utils.jl")
-
-mkpath("tmp")
-mkpath("tmp/V")
-mkpath("tmp/sim")
-mkpath("results")
+using DataFrames
+include("binomial_accumulator.jl")
+include("utils.jl")
+include("empirical_fixation.jl")
+include("constants.jl")
 # %% --------
 
-#=
-THIS IS NOT THE CURRENT VERSION!
-=#
-
-G = grid(step_size=[4], max_step=[60], difficulty=.4:.05:.6, switch_cost=[0, 2, 4], miss_cost=[0, 600])
-
-@everywhere function make_mdp(g)
-    @unpack step_size, max_step, difficulty, switch_cost, miss_cost = g
-    threshold = step_size * max_step * difficulty
-    MetaMDP(;step_size, max_step, threshold, switch_cost, miss_cost)
-end
-# %% --------
-
-@everywhere function generate_sims(policy::Policy)
-    sims = NamedTuple[]    
-    foreach(.3:.1:.6) do v0
-        foreach(0:.01:.2) do vd
-            s = (v0 - vd, v0 + vd)
-            foreach(1:1000) do i
-                sim = simulate(policy; s)
-                outcome = sim.bs[end].focused
-                push!(sims, (;outcome, sim.cs, v0, vd))
-            end
+function make_sims(pol, N=10000)
+    ms_per_sample = 1000 * (TIME_LIMIT / pol.m.max_step)
+    b = mutate(initial_belief(pol.m), focused=1)
+    sims = map(1:N) do i
+        s = (s1, s2) = sample_state(pol.m)
+        sim = simulate(pol; s, b)
+        presentation_times = parse_presentations(sim.cs, ms_per_sample)
+        # recode things to make 1 correspond to first seen item
+        outcome = let x = sim.bs[end].focused
+            x == -1 ? -1 :
+            x == first(sim.cs) ? 1 :
+            2
         end
+        strength_first, strength_second = first(sim.cs) == 1 ? (s1, s2) : (s2, s1)
+
+
+        (;strength_first, strength_second, presentation_times, outcome,
+         duration_first = sum(presentation_times[1:2:end]),
+         duration_second = sum(presentation_times[2:2:end]))
     end
-    sims
+    DataFrame(sims[:])
 end
 
-function run_sims(make_policy, name, G)
-    println("Simulating $name policy on $(length(G)) MDPs")
-    mkpath("tmp/sims/$name/")
-    X = @showprogress pmap(G) do g
-        m = make_mdp(g)
-        # cache("tmp/sims/$name/" * id(m)) do
-        policy = make_policy(m)
-        generate_sims(policy)
-        # end
+function simulate_individual_empirical(m::MetaMDP, N=100; kws...)
+    pols = individual_empirical_policies(m; kws...)
+    filter!(pols) do pol
+        length(pol.commitment_dist.support) != 0
+    end;
+
+    mapreduce(vcat, pols) do pol
+        make_sims(pol, N)
     end
-    
-    df = mapmany(G, X.data) do prm, sim
-        map(sim) do t
-            rt = length(t.cs)
-            fix_prop = counts(t.cs, 1:2)[2] / rt
-            (;prm..., t.outcome, t.v0, t.vd, fix_prop, rt,
-             first_fix=t.cs[1], last_fix=t.cs[end])
-        end
-    end |> DataFrame 
-    df |> CSV.write("results/sim_$name.csv")
-    println("Wrote results/sim_$name.csv")
-    df
-end
-
-# %% --------
-m = make_mdp(first(G))
-generate_sims(RandomPolicy(m))
-
-# %% --------
-
-df = run_sims("random", G(switch_cost=0, miss_cost=0)) do m
-    RandomPolicy(m, 0.1)
-end
-
-# %% --------
-
-run_sims("optimal", G) do m
-    V = cache("tmp/V/" * id(m)) do
-        println("Computing value function")
-        V = ValueFunction(m)
-        V(initial_belief(m))
-        V
-    end
-    OptimalPolicy(V)
 end

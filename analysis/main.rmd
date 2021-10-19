@@ -11,6 +11,7 @@ output:
 ```{r, include=FALSE}
 VERSIONS = c('v5.6')
 knitr::opts_chunk$set(
+    fig.path="figs/",
     results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
 )
 ```
@@ -35,17 +36,17 @@ source("load_data.r")
 if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
 ```
 
-
 # Fixation time course
 
-```{r, time-course, fig.width=WIDTH, fig.height=3}
+```{r, time-course, fig.width=WIDTH, fig.height=2.9}
 
 normalized_timestep = function(long) {
     long %>% 
         group_by(trial) %>%
-        mutate(prop_duration = duration / sum(duration)) %>% 
-        ungroup() %>% 
-        mutate(n_step=round(prop_duration * 100)) %>% 
+        # this somewhat complex method ensures that all trials have exactly 100 steps
+        # (this isn't true if you just round duration, as I did initially)
+        mutate(percentage_complete = round(100*cumsum(duration / sum(duration)))) %>% 
+        mutate(n_step = diff(c(0, percentage_complete))) %>% 
         uncount(n_step) %>% 
         group_by(trial) %>% 
         mutate(normalized_timestep = row_number())
@@ -67,7 +68,7 @@ long %>%
 
 ## First fixation
 
-```{r, fig.width=WIDTH, fig.height=HEIGHT}
+```{r first, fig.width=WIDTH, fig.height=HEIGHT}
 df %>%
     filter(n_pres >= 2) %>% 
     regress(strength_first, first_pres_time, mixed=MIXED_DURATIONS)
@@ -75,7 +76,7 @@ df %>%
 
 ## Second fixation
 
-```{r, fig.width=WIDTH, fig.height=HEIGHT}
+```{r second, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(n_pres >= 3) %>% 
     regress(rel_strength, second_pres_time, mixed=MIXED_DURATIONS)
@@ -83,7 +84,7 @@ df %>%
 
 ## Third fixation
 
-```{r, third-fix, fig.width=WIDTH, fig.height=HEIGHT}
+```{r third, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(n_pres >= 4) %>% 
     regress(rel_strength, third_pres_time, mixed=MIXED_DURATIONS)
@@ -91,7 +92,7 @@ df %>%
 
 # Overall fixation proportion
 
-```{r, fix-prop, fig.width=WIDTH, fig.height=HEIGHT}
+```{r fix-prop, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(n_pres >= 2) %>% 
     regress(rel_strength, prop_first)
@@ -99,7 +100,7 @@ df %>%
 
 ## Last-fixation effect
 
-```{r, last-confound, fig.width=WIDTH, fig.height=3}
+```{r last-confound, fig.width=WIDTH, fig.height=3}
 df %>% 
     filter(n_pres >= 2) %>% 
     regress_interaction(rel_strength, last_pres, prop_first)
@@ -107,7 +108,7 @@ df %>%
 
 ## Strength predicts last fixation 
 
-```{r, fig.width=WIDTH, fig.height=HEIGHT}
+```{r last-strength, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     mutate(last_pres_first = as.numeric(last_pres == "first")) %>% 
     regress(rel_strength, last_pres_first)
@@ -115,7 +116,7 @@ df %>%
 
 ## Last fixations are longer
 
-```{r, fix-by-final, fig.width=WIDTH, fig.height=HEIGHT}
+```{r fix-by-final, fig.width=WIDTH, fig.height=HEIGHT}
 long %>% 
     # filter(name == "Human") %>% 
     ggplot(aes(last_fix==1, duration)) + 
@@ -148,25 +149,33 @@ These plots only include correct trials.
 
 ## Probability of remembering first word
 
-```{r,remember-first, fig.width=WIDTH, fig.height=HEIGHT}
+```{r remember-first, fig.width=WIDTH, fig.height=HEIGHT}
 df %>%
     filter(response_type == "correct") %>% 
     mutate(choose_first = int(choose_first)) %>% 
-    regress(strength_first, choose_first) +
+    regress(strength_first, choose_first, logistic=TRUE) +
     ylab("Prob Select First Cue") + ylim(0, 1)
 ```
 
 ## Reaction time by chosen strength
 
-```{r, fig.width=WIDTH, fig.height=HEIGHT}
+```{r rt-strength, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(response_type == "correct") %>% 
     regress(chosen_strength, rt)
 ```
 
+```{r}
+human %>%
+    filter(response_type == "correct") %>% 
+    # glmer(rt ~ chosen_strength + (chosen_strength|wid), data=., family=gaussian) %>% 
+    lm(rt ~ chosen_strength, data=.) %>% 
+    summ
+```
+
 ## Last fixation duration by strength
 
-```{r, fig.width=WIDTH, fig.height=HEIGHT}
+```{r last-duration-strength, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(response_type == "correct") %>% 
     filter(n_pres > 0) %>% 
@@ -184,7 +193,7 @@ df %>%
 
 Note: The model can only predict correct answers and timeouts.
 
-```{r}
+```{r responses, fig.width=WIDTH, fig.height=HEIGHT}
 raw_df %>% 
     with((proportions(table(name, response_type), margin=1))) %>% 
     kable(digits=2)
@@ -193,7 +202,7 @@ raw_df %>%
 
 ## Reaction time
 
-```{r, fig.width=WIDTH, fig.height=HEIGHT}
+```{r rt, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     ggplot(aes(rt)) +
     geom_density() +
@@ -204,7 +213,7 @@ df %>%
 
 ## Number of fixations
 
-```{r, fig.width=WIDTH, fig.height=HEIGHT}
+```{r nfix, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(n_pres < 10) %>% 
     ggplot(aes(n_pres, ..prop..)) +

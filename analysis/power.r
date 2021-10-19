@@ -1,48 +1,85 @@
 library(simr)
 
-
-
 # %% ==================== Aug 4 ====================
-human %>% 
-    filter(n_pres >= 2) %>% 
-    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
-    summ()
 
-# %% --------
-
-model = human %>% 
-    filter(n_pres >= 2) %>% 
-    lm(first_pres_time ~ strength_first, data=.)
-
-
-# %% --------
-model = human %>% 
-    filter(n_pres >= 3) %>% 
-    lm(second_pres_time ~ rel_strength, data=.)
-
-
-powerSim(extend(model, along="wid", n=150), nsim=100)
-powerSim(model, nsim=100)
+VERSIONS = c('v5.5')
+DROP_HALF = FALSE
+DROP_ACC = TRUE
+DROP_ERROR = TRUE
+NORMALIZE_FIXATIONS = TRUE
+MIXED_DURATIONS = TRUE
+source("setup.r")
+source("load_data.r")
+if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
 
 # %% --------
 
 groups = human %>% nest_by(wid, .keep=TRUE) %>% with(data)
 
-sample_p = function(N) {
-    bind_rows(sample(groups, N, replace=T)) %>% 
-        filter(n_pres >= 2) %>% 
-        lm(first_pres_time ~ strength_first, data=.) %>% 
-        tidy %>% 
-        with(p.value[2])
+sample_p = function(N, run_model) {
+    data = sample(groups, N, replace=T) %>% 
+        map(~ mutate(.x, wid=round(1e10 * runif(1)))) %>%
+        bind_rows
+    tryCatch(run_model(data), error=function(c) NaN)
 }
 
-n_sim = 300
-N = seq(100, 500, 50)
-results = map(N, ~ replicate(n_sim, sample_p(.x)))
-power = unlist(map(results, ~ mean(.x < .05)))
-fixed_pwr = tibble(N, power)
-fixed_pwr
+power_analysis = function(N, n_sim, run_model) {
+    results = map(N, ~ replicate(n_sim, sample_p(.x, run_model))) %>% unlist
+    expand.grid(
+        sim_i = 1:n_sim,
+        N = N
+    ) %>% 
+    rowwise() %>% 
+    mutate(
+        p = sample_p(N, run_model)
+    ) %>% ungroup()
+}
+
 # %% --------
+N = c(400, 500, 600)
+n_sim = 300
+
+p1 = power_analysis(N, n_sim, . %>% 
+    filter(n_pres >= 2) %>% 
+    lm(first_pres_time ~ strength_first, data=.) %>%
+    tidy %>% with(p.value[2])
+) %>% mutate(name="fixed zscore")
+
+p2 = power_analysis(N, n_sim, . %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time_raw ~ strength_first + (strength_first|wid), data=.) %>% 
+    summ %>% with(coeftable[2, "p"])
+) %>% mutate(name="mixed raw")
+
+p3 = power_analysis(N, n_sim, . %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
+    summ %>% with(coeftable[2, "p"])
+) %>% mutate(name="mixed zscore")
+
+X = bind_rows(p1, p2, p3)
+
+# %% --------
+
+X %>% ggplot(aes(p, fill=name, alpha=0.1)) +
+    geom_histogram(position="identity") + facet_grid(N ~ .) + coord_cartesian(xlim=c(0, 0.25), ylim=c(NULL))
+fig()
+
+# %% --------
+X %>% 
+    group_by(name, N) %>%
+    summarise(power=mean(p<.05, na.rm=T)) %>% 
+    ggplot(aes(N, power, color=name)) + geom_line()
+fig("", 6, 3)
+
+# %% --------
+human %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time_raw ~ strength_first + (strength_first|wid), data=.) %>% 
+    summ %>% with(coeftable[2, "p"])
+
+# %% ==================== Old ====================
+
 
 groups = human %>% nest_by(wid, .keep=TRUE) %>% with(data)
 
@@ -72,9 +109,6 @@ sample_p = function(data, N) {
                        data=resample(data, N),
                        alternative="greater") %>% pvalue
 }
-
-
-
 
 
 

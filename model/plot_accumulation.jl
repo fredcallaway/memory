@@ -1,7 +1,7 @@
 include("binomial_accumulator.jl")
 include("figure.jl")
 using StatsPlots
-
+# %% --------
 figure() do
     θs = (0.2, 0.5, 0.8)
     for (i, θ) in enumerate(θs)
@@ -53,11 +53,14 @@ figure() do
     plot(p1, p2, layout=(2,1), size=(400,500))
 end
 
-# %% --------
+# %% ==================== Policy Heatmap ====================
+
 m = MetaMDP{2}(step_size=2, threshold=19, switch_cost=0., max_step=60)
 pol = OptimalPolicy(m)
 @show pol.V(initial_belief(m))
+
 # %% --------
+
 X = product(0:m.max_step-2, 0:m.threshold) do t, h
     t == m.max_step && return 0.
     h > t && return NaN
@@ -71,24 +74,6 @@ end
 rng = maximum(filter(!isnan, (abs.(X))))
 figure() do    
     heatmap(X', c=:RdBu_11, cbar=false, clims=(-rng, rng),
-        grid=false, xlab="Time", ylab="Accumulated Evidence", size=(400,250)
-    )
-end
-
-# %% --------
-X = product(0:m.max_step-2, 0:m.threshold) do t, μ
-    t == m.max_step && return 0.
-    h > t && return NaN
-    b = Belief{2}(t, 1, ((1+h, 1+t-h), (1, 1)))
-    q1, q2 = Q(pol.V, b)
-    #q1 ≈ q2 && return NaN
-    float(act(pol, b))
-end
-
-figure() do    
-    heatmap(X', c=:viridis, clim=(1, 2.5), cbar=false,
-        grid=false,
-        xlab="Time",
-        ylab="Evidence",
+        grid=false, xlab="Time on Cue", ylab="Accumulated Evidence", size=(400,250)
     )
 end

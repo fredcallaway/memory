@@ -31,12 +31,16 @@ YELLOW =  "#FFDD47"
 GRAY = "#8E8E8E"
 BLACK = "#1B1B1B"
 
-theme_set(theme_bw(base_size = 14))
+theme_set(theme_bw(base_size = 12))
 theme_update(
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank(),
-    panel.grid.major.y = element_blank()
+    panel.grid.major.y = element_blank(),
+    strip.background = element_blank(),
+    strip.text.x = element_text(size=12),
+    legend.position="top",
+    panel.spacing = unit(0.6, "lines"),
 )
 
 update_geom_defaults("line", list(size = 1.2))
@@ -138,32 +142,47 @@ make_breaks = function(x, n=7, q=.025) {
     seq(xmin, xmax, length.out=n)
 }
 
-regress = function(data, xvar, yvar, bins=6, bin_range=0.95, mixed=TRUE) {
+regress = function(data, xvar, yvar, bins=6, bin_range=0.95, mixed=TRUE, logistic=FALSE) {
     x = ensym(xvar); y = ensym(yvar)
-    preds = data %>% 
-        group_by(name) %>% 
-        group_modify(function(data, grp) {
-            model = if (grp$name == "Human") {
-                if (mixed) {
-                    model = inject(lmer(!!y ~ !!x + (!!x | wid), data=data))
-                } else {
-                    model = inject(lm(!!y ~ !!x, data=data))
-                }
-                print(glue("N = {nrow(data)}"))
-                smart_print(summ(model))
-                tibble(ggpredict(model, terms = glue("{x} [n=30]}")))
-            } else {
-                model = inject(lm(!!y ~ !!x, data=data))
-                tibble(ggpredict(model, terms = glue("{x} [n=30]}")))
-            }
-        })
 
     xx = filter(data, name == "Human")[[x]]
     q = (1 - bin_range) / 2
     xmin = quantile(xx, q, na.rm=T)
     xmax = quantile(xx, 1 - q, na.rm=T)
 
-    preds %>% ggplot(aes(x, predicted)) +
+    preds = data %>% 
+        group_by(name) %>% 
+        group_modify(function(data, grp) {
+            model = if (grp$name == "Human") {
+                if (mixed) {
+                    if (logistic) {
+                        model = inject(glmer(!!y ~ !!x + (!!x | wid), family=binomial, data=data))
+                    } else {
+                        model = inject(lmer(!!y ~ !!x + (!!x | wid), data=data))
+                    }
+                } else {
+                    if (logistic) {
+                        model = inject(glm(!!y ~ !!x, family=binomial, data=data))
+                    } else {
+                        model = inject(lm(!!y ~ !!x, data=data))
+                    }
+                }
+                print(glue("N = {nrow(data)}"))
+                smart_print(summ(model))
+                tibble(ggpredict(model, terms = glue("{x} [n=100]}")))
+            } else {
+                if (logistic) {
+                    model = inject(glm(!!y ~ !!x, family=binomial, data=data))
+                } else {
+                    model = inject(lm(!!y ~ !!x, data=data))
+                }
+                tibble(ggpredict(model, terms = glue("{x} [n=100]}")))
+            }
+        })
+
+    preds %>% 
+        filter(between(x, xmin, xmax)) %>% 
+        ggplot(aes(x, predicted)) +
         geom_line() +
         geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
         stat_summary_bin(aes({{xvar}}, {{yvar}}), 

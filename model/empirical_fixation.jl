@@ -64,7 +64,10 @@ end
 
 function individual_empirical_policies(m; kws...)
     df = load_multi()
-    map(groupby(df, :wid)) do d
+    pols = map(groupby(df, :wid)) do d
         random_policy(m; fixations=d.presentation_times, kws...)
+    end
+    filter!(pols) do pol
+        length(pol.duration_dist.support) != 0
     end
 end

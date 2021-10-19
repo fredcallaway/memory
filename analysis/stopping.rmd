@@ -141,7 +141,18 @@ n_drop_rt = nt - n_trial
 <!-- - Dropping `r n_drop_rt` recall trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis. -->
 
 
-##
+## Foo
+
+
+```{r}
+trials %>% 
+    filter(response_type == "empty") %>% 
+    regress(strength, rt) #plot
+
+trials %>% 
+    mutate(empty=1 * (response_type == "empty")) %>% 
+    regress(strength, empty) #plot
+```
 
 ```{r}
 trials %>% 

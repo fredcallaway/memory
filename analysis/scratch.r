@@ -1,4 +1,22 @@
- 
+
+human %>% 
+    filter(n_pres >= 2) %>% 
+    add_strength(block == max(block), 5 * correct - log(rt)) %>% 
+    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
+    summ
+
+# %% --------
+
+human %>%
+    filter(response_type == "correct") %>% 
+    add_strength(block == max(block),  7 * correct - log(rt)) %>% 
+    mutate(choose_first = int(choose_first)) %>% 
+    glmer(choose_first ~ strength_first + (strength_first|wid), data=., family=binomial) %>% 
+    summary
+
+# %% --------
+load_data('simple-recall') %>% with(table(block))
+# %% --------
 # Check response coding
 
 ```{r}
@@ -9,7 +27,6 @@ multi %>% filter(response_type == "correct" & word != response) %>% select(word,
 multi %>% transmute(x=nchar(response)) %>% with(table(x))
 multi %>% filter(nchar(response)  == 3) %>% select(response)
 multi %>% filter(word == 'ewe') %>% select(word, response, response_type)
-
 ```
 
 # %% --------
