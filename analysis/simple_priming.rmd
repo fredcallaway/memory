@@ -1,0 +1,58 @@
+---
+title: Predicting recall RT with 2-AFC RT (v4.0)
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+---
+
+
+```{r setup, include=FALSE}
+source("setup.r")
+
+# VERSIONS = c('v6.0')
+VERSIONS = c('v8.1')
+# VERSIONS = c('v2.0', 'v2.0B')
+
+load_data = function(type) {
+    VERSIONS %>% 
+    map(~ read_csv(glue('../data/{.x}/{type}.csv'))) %>% 
+    bind_rows
+}
+
+all_trials = load_data('simple-recall') %>% 
+    filter(!practice) %>% 
+    mutate(
+        response_type = factor(response_type, 
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
+        total_time = rt + type_time,
+        correct = response_type == "correct"
+    ) %>% mutate(
+        base_rt = rt,
+        rt = typing_rt
+    )
+```
+
+```{r}
+all_trials %>% 
+    filter(prime) %>% 
+    ggplot(aes(prime_related, typing_rt, group=wid)) +
+    stat_summary(fun.data=mean_se, geom="line")
+```
+
+```{r}
+all_trials %>% 
+    lm(typing_rt ~ prime_related, data=.) %>% summ
+    # lmer(typing_rt ~ prime_related + (prime_related|wid), data=.) %>% summ
+```
+
+```{r}
+load_data('survey')$Q0
+
+
+```
+

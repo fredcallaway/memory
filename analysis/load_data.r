@@ -41,8 +41,10 @@ multi = load_data('multi-recall') %>%
         total_first = map_dbl(presentation_times_first, ~sum(unlist(.x)), .default=0),
         total_second = replace_na(map_dbl(presentation_times_second, ~sum(unlist(.x)), .default=0), 0),
         prop_first = (total_first) / (total_first + total_second),
-        trial_num = row_number()
-    ) 
+        trial_num = row_number(),
+        first_primed = primed_word == first_word,
+    )
+
 
 simple = load_data('simple-recall') %>% 
     group_by(wid) %>%
@@ -82,7 +84,6 @@ add_strength = function(multi, filt, strength) {
             chosen_strength = if_else(choose_first, strength_first, strength_second),
         )
 }
-
 
 multi = multi %>% add_strength(block == max(block), 5 * correct - log(rt))
 

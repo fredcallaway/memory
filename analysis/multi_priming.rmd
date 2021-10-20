@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r, include=FALSE}
-VERSIONS = c('v5.6')
+VERSIONS = c('v9.0')
 knitr::opts_chunk$set(
     fig.path="figs/",
     results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
@@ -37,58 +37,119 @@ source("load_data.r")
 if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
 ```
 
+# Probability of choosing the primed word
+
+```{r}
+multi %>% 
+    ggplot(aes(first_primed, as.numeric(choose_first))) +
+    stat_summary(fun.data=mean_cl_boot)
+```
+
+
+# Overall fixation proportion
+
+```{r}
+multi %>% 
+    filter(n_pres>1) %>% 
+    ggplot(aes(rel_strength, prop_first, color=first_primed)) +
+    geom_smooth()
+```
+
+```{r}
+multi %>% 
+    filter(n_pres>1) %>% 
+    ggplot(aes(first_primed, prop_first)) +
+    stat_summary(fun.data=mean_cl_boot)
+```
+
+
+# Fixation durations
+
+## First fixation
+
+```{r first}
+human %>%
+    filter(n_pres >= 2) %>% 
+    ggplot(aes(first_primed, first_pres_time)) +
+    stat_summary(fun.data=mean_cl_boot)
+
+human %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time ~ first_primed  + (first_primed|wid), data=.) %>% 
+    summ
+```
+
+## Second fixation
+
+```{r second}
+human %>% 
+    filter(n_pres >= 3) %>% 
+    ggplot(aes(first_primed, second_pres_time)) +
+    stat_summary(fun.data=mean_cl_boot)
+
+human %>% 
+    filter(n_pres >= 3) %>% 
+    lmer(second_pres_time ~ first_primed  + (first_primed|wid), data=.) %>% 
+    summ
+```
+
+## Third fixation
+
+```{r third}
+human %>% 
+    filter(n_pres >= 4) %>% 
+    ggplot(aes(first_primed, third_pres_time)) +
+    stat_summary(fun.data=mean_cl_boot)
+
+human %>% 
+    filter(n_pres >= 4) %>% 
+    lmer(third_pres_time ~ first_primed  + (first_primed|wid), data=.) %>% 
+    summ
+```
+
+
+```{r}
+load_data('survey')$Q0
+```
+
 # Fixation time course
 
 ```{r, time-course, fig.width=WIDTH, fig.height=2.9}
 
 normalized_timestep = function(long) {
     long %>% 
-        group_by(trial) %>%
+        group_by(trial_id) %>%
         # this somewhat complex method ensures that all trials have exactly 100 steps
         # (this isn't true if you just round duration, as I did initially)
         mutate(percentage_complete = round(100*cumsum(duration / sum(duration)))) %>% 
         mutate(n_step = diff(c(0, percentage_complete))) %>% 
         uncount(n_step) %>% 
-        group_by(trial) %>% 
+        group_by(trial_id) %>% 
         mutate(normalized_timestep = row_number())
 }
 
+x %>% 
+    left_join(select(human, trial_id, first_primed)) %>% 
+    mutate(fix_primed = 1*(fix_first == first_primed)) %>% 
+    normalized_timestep
+
+
+```
+
+```{r}
 long %>% 
+    filter(name == 'Human') %>% 
+    left_join(select(human, trial_id, first_primed)) %>% 
+    mutate(fix_primed = 1*(fix_first == first_primed)) %>% 
     normalized_timestep %>% 
     drop_na(strength_diff) %>% 
-    ggplot(aes(normalized_timestep/100, fix_stronger, group = strength_diff, color=strength_diff)) +
+    ggplot(aes(normalized_timestep/100, fix_primed)) +
     geom_smooth(se=F) + 
     ylim(0, 1) +
     facet_grid(~name) +
-    labs(x="Normalized Time", y="Probability Fixate\nStronger Cue", color="Strength Difference") +
+    labs(x="Normalized Time", y="Probability Fixate Primed Cue", color="Strength Difference") +
     geom_hline(yintercept=0.5) +
     theme(legend.position="top")
-```
-
-# Fixation durations
-
-## First fixation
-
-```{r first, fig.width=WIDTH, fig.height=HEIGHT}
-df %>%
-    filter(n_pres >= 2) %>% 
-    regress(strength_first, first_pres_time, mixed=MIXED_DURATIONS)
-```
-
-## Second fixation
-
-```{r second, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    filter(n_pres >= 3) %>% 
-    regress(rel_strength, second_pres_time, mixed=MIXED_DURATIONS)
-```
-
-## Third fixation
-
-```{r third, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    filter(n_pres >= 4) %>% 
-    regress(rel_strength, third_pres_time, mixed=MIXED_DURATIONS)
 ```
 
 # Overall fixation proportion
@@ -214,8 +275,8 @@ df %>%
 
 ## Number of fixations
 
-```{r nfix, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
+```{r nfix}
+human %>% 
     filter(n_pres < 10) %>% 
     ggplot(aes(n_pres, ..prop..)) +
     geom_bar() +
