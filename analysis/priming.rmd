@@ -187,7 +187,7 @@ low first-cue strengths are more common when the first cue is primed
 (consistent with my explanation). Note: these are fixed effects because we
 can't fit the full mixed model.
 
-```{r third-interact, fig.width=4, fig.height=HEIGHT}
+```{r third-interact1, fig.width=4, fig.height=HEIGHT}
 human %>% 
     filter(n_pres >= 4) %>% 
     mutate(first_primed = int(first_primed)) %>% 
@@ -202,6 +202,73 @@ human %>%
     labs(x=pretty_name("strength_first"), y=pretty_name("third_pres_time"))
 
 ```
+
+# More interactions
+
+For completeness, here are all the main memory strength effects from
+Experiment 1, adding an interaction with the prime. The simple ones look very
+reasonable. The fixation durations are all really noisy, so I'm not going to
+interpret them.
+
+## Choice
+
+```{r choice-interact, fig.width=4, fig.height=HEIGHT}
+
+prime_interaction = function(data, xvar, yvar) {
+    y = ensym(yvar)
+    x = ensym(xvar)
+    data %>% 
+        mutate(first_primed = int(first_primed)) %>% 
+        lm(inject(!!y ~ !!x * first_primed), data=.) %>% 
+        summ %>% smart_print
+    data %>% 
+        ggplot(aes({{xvar}}, {{yvar}}, color=primed)) +
+        geom_smooth(method='lm') +
+        labs(x=pretty_name(x), y=pretty_name(y)) +
+        geom_xdensity +
+        theme(legend.position="right")
+}
+
+human %>%
+    filter(n_pres > 0) %>% 
+    mutate(choose_first = int(choose_first)) %>% 
+    prime_interaction(strength_first, choose_first)
+```
+
+## Overall fixation proportion
+
+```{r fix-prop-interact, fig.width=4, fig.height=HEIGHT}
+
+human %>% 
+    filter(n_pres > 0) %>% 
+    mutate(choose_first = int(choose_first)) %>% 
+    prime_interaction(rel_strength, prop_first)
+```
+
+## First fixation
+
+```{r firsd-interact, fig.width=4, fig.height=HEIGHT}
+human %>%
+    filter(n_pres >= 2) %>% 
+    prime_interaction(strength_first, first_pres_time)
+```
+
+## Second fixation
+
+```{r second-interact, fig.width=4, fig.height=HEIGHT}
+human %>% 
+    filter(n_pres >= 3) %>% 
+    prime_interaction(rel_strength, second_pres_time)
+```
+
+## Third fixation
+
+```{r third-interact, fig.width=4, fig.height=HEIGHT}
+human %>% 
+    filter(n_pres >= 4) %>% 
+    prime_interaction(rel_strength, third_pres_time)
+```
+
 
 # Miscellaneous
 
@@ -238,6 +305,4 @@ human %>%
     geom_bar() +
     facet_grid(~name) +
     labs(x="Number of Fixations", y="Proportion of Trials")
-
 ```
-
