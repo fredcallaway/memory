@@ -12,6 +12,8 @@ library(stickylabeller)
 library(ggeffects)
 library(rlang)
 library(knitr)
+library(ggside)
+
 
 options(
     "summ-model.info"=FALSE, 
@@ -133,6 +135,15 @@ pretty_name = function(x) {
         str_replace_all("pres", "fixation") %>% 
         str_to_title
 }
+
+geom_xdensity = list(
+    geom_xsidedensity(aes(y=stat(density))),
+    scale_xsidey_continuous(breaks = NULL, labels = "")
+)
+geom_ydensity = list(
+    geom_ysidedensity(aes(x=stat(density))),
+    scale_ysidex_continuous(breaks = NULL, labels = "")
+)
 
 # %% --------
 

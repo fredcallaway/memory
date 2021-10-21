@@ -1,0 +1,243 @@
+---
+title: Cue-selection with overt semantic primes
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+---
+
+```{r, include=FALSE}
+VERSIONS = c('v9.0')
+knitr::opts_chunk$set(
+    fig.path="figs/",
+    results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
+)
+```
+
+## Experiment
+
+It's exactly the same as Experiment 1 except that we provide a semantic
+prime for one of the target words before each critical trial (and we 
+change the words to support this).
+
+[Here](https://memorygame29.herokuapp.com/?skip=6) is a demonstration of the
+prime. It's an overt (300ms on screen without mask) semantic prime. I selected
+stimuli using a free-association dataset, picking targets that were very likely
+to be produced for given a cue word (the cue becomes our prime). They are not
+subtle, e.g. "wick" primes "candle", "teddy" primes "bear".
+
+Going forward, I think we should probably try to soften the prime, ideally
+making it subliminal. But I wanted to start by establishing the basic
+priming effect.
+
+Version(s): `r paste(VERSIONS)`
+
+## Analysis
+```{r setup, echo=FALSE}
+OPTIMAL_VERSION = "optimal_prior"
+DROP_HALF = FALSE
+DROP_ACC = TRUE
+DROP_ERROR = TRUE
+NORMALIZE_FIXATIONS = TRUE
+MIXED_DURATIONS = TRUE
+source("setup.r")
+source("load_data.r")
+if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
+
+human = human %>% mutate(primed = if_else(first_primed, "first", "second"))
+
+WIDTH = 3.2
+HEIGHT = 3
+```
+
+Note: I'm just plotting raw means here, but the regression is still mixed effects.
+
+# Probability of choosing the primed word
+
+Sanity check.
+
+```{r choice, fig.width=WIDTH, fig.height=HEIGHT}
+prime_effect = function(data, yvar) {
+    data %>% 
+        mutate(first_primed = int(first_primed)) %>% 
+        tidylmer(first_primed, {{yvar}}) %>% summ %>% smart_print
+    data %>% 
+        ggplot(aes(primed, {{yvar}})) +
+        stat_summary(fun.data=mean_cl_boot) +
+        labs(x="Primed", y=pretty_name(ensym(yvar)))
+}
+
+human %>% 
+    filter(n_pres > 0) %>% 
+    mutate(choose_first = int(choose_first)) %>% 
+    prime_effect(choose_first)
+```
+
+# Overall fixation proportion
+
+```{r overall, fig.width=WIDTH, fig.height=HEIGHT}
+human %>%
+    filter(n_pres>1) %>% 
+    prime_effect(prop_first)
+```
+
+Great!
+
+# Fixation time course
+
+```{r time-course, fig.width=WIDTH, fig.height=HEIGHT}
+normalized_timestep = function(long) {
+    long %>% 
+        group_by(trial_id) %>%
+        # this somewhat complex method ensures that all trials have exactly 100 steps
+        # (this isn't true if you just round duration, as I did initially)
+        mutate(percentage_complete = round(100*cumsum(duration / sum(duration)))) %>% 
+        mutate(n_step = diff(c(0, percentage_complete))) %>% 
+        uncount(n_step) %>% 
+        group_by(trial_id) %>% 
+        mutate(normalized_timestep = row_number())
+}
+
+long %>% 
+    filter(name == 'Human') %>% 
+    left_join(select(human, trial_id, first_primed)) %>% 
+    mutate(fix_primed = 1*(fix_first == first_primed)) %>% 
+    normalized_timestep %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_primed)) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_grid(~name) +
+    labs(x="Normalized Time", y="Probability Fixate Primed Cue", color="Strength Difference") +
+    geom_hline(yintercept=0.5) +
+    theme(legend.position="top")
+
+```
+
+Looks good! The point where the curve starts to rise (around 0.3) is
+a bit later than in Experiment 1. 
+
+<!-- 
+This could be taken as evidence against
+an intuitive model of the prime: increasing the starting point in the
+evidence accumulation process. In that case, the optimal model would 
+(in most cases) immediately switch to the primed word. However, there
+are many other reasons I can imagine that people wouldn't switch
+immediately like that.
+-->
+
+
+# Fixation durations
+
+## First fixation
+
+```{r first, fig.width=WIDTH, fig.height=HEIGHT}
+
+human %>%
+    filter(n_pres >= 2) %>% 
+    prime_effect(first_pres_time)
+```
+
+Not surprising, given that it didn't come out in Experiment 1.
+
+## Second fixation
+
+```{r second, fig.width=WIDTH, fig.height=HEIGHT}
+human %>% 
+    filter(n_pres >= 3) %>% 
+    prime_effect(second_pres_time)
+```
+
+Not significant, but that's looking pretty good for N=25!
+
+```{r}
+human %>% 
+    filter(n_pres >= 3) %>% 
+    mutate(first_primed = int(first_primed)) %>% 
+    lm(second_pres_time ~ first_primed + strength_first, data=.) %>% summ
+```
+
+## Third fixation
+
+```{r third, fig.width=WIDTH, fig.height=HEIGHT}
+human %>% 
+    filter(n_pres >= 4) %>% 
+    prime_effect(third_pres_time)
+
+```
+
+Ok that's weird.... we predict the opposite effect.
+
+This could be a selection confound. We are picking out trials where there are
+at least four fixations. For the first-primed group, this means the person looked
+at the primed cue for a second time but still couldn't remember it and switched back
+to the second cue. Perhaps this only happens when the memory for the first cue
+is *really* weak. Given that we know memory strength predicts third fixation duration,
+it makes sense that trials which are (inadvertently) selected to have weak first-cue
+memory strength will have shorter third fixations.
+
+Controlling for the strength of the first cue, the negative effect of the
+prime all but disappears. Note that our memory strength measure is noisy, so
+even controlling for this, we can still be selecting for cues that are
+actually not remembered well despite what our measure says (roughly, we are
+selecting for the residual errror in the strength measure). We also see that
+low first-cue strengths are more common when the first cue is primed
+(consistent with my explanation). Note: these are fixed effects because we
+can't fit the full mixed model.
+
+```{r third-interact, fig.width=4, fig.height=HEIGHT}
+human %>% 
+    filter(n_pres >= 4) %>% 
+    mutate(first_primed = int(first_primed)) %>% 
+    lm(third_pres_time ~ first_primed * strength_first, data=.) %>%
+    summ
+
+human %>% 
+    filter(n_pres >= 4) %>% 
+    ggplot(aes(strength_first, third_pres_time, color=primed)) +
+    geom_smooth(method='lm') +
+    geom_xdensity + theme(legend.position="right") +
+    labs(x=pretty_name("strength_first"), y=pretty_name("third_pres_time"))
+
+```
+
+# Miscellaneous
+
+## Response types
+
+We see a similar accuracy rate to Experiment 1.
+
+```{r}
+raw_df %>% 
+    with((proportions(table(name, response_type), margin=1))) %>% 
+    kable(digits=2)
+```
+
+## Reaction time
+
+Similar as well.
+
+```{r rt, fig.width=WIDTH, fig.height=HEIGHT}
+human %>% 
+    ggplot(aes(rt)) +
+    geom_density() +
+    facet_grid(~name) +
+    labs(x="Reaction Time", y="Density")
+```
+
+## Number of fixations
+
+Similar.
+
+```{r nfix}
+human %>% 
+    filter(n_pres < 10) %>% 
+    ggplot(aes(n_pres, ..prop..)) +
+    geom_bar() +
+    facet_grid(~name) +
+    labs(x="Number of Fixations", y="Proportion of Trials")
+
+```
+
