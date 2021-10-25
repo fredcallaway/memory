@@ -105,20 +105,24 @@ function compute_value_functions!(model::BackwardsInduction)
                         # sample from 1:  Q(s, a) = sum p(s′|s,a) * V(s′) - cost
                         a = 1
                         cost = (last_a == a || tt == 1) ? sample_cost : sample_cost + switch_cost
-                        q1 = Q[a, last_a, e1, e2, t1, t2] = -cost + sum(1:N+1) do x
+                        q1 = -cost
+                        for x in 1:N+1
                             e1′ = min(e1 + x - 1, e_max)  # -1 b/c index space, min b/c can't exceed threshold
                             #@assert isfinite(V[a, e1′, e2, t1+1, t2])
-                            T[x, e1, t1] * V[a, e1′, e2, t1+1, t2]
+                            q1 += T[x, e1, t1] * V[a, e1′, e2, t1+1, t2]
                         end
+                        Q[a, last_a, e1, e2, t1, t2] = q1
                         
                         # sample from 2
                         a = 2
                         cost = (last_a == a || tt == 1) ? sample_cost : sample_cost + switch_cost
-                        q2 = Q[a, last_a, e1, e2, t1, t2] = -cost + sum(1:N+1) do x
+                        q2 = -cost
+                        for x in 1:N+1
                             e2′ = min(e2 + x - 1, e_max)
                             #@assert isfinite(V[a, e1, e2′, t1, t2+1])
-                            T[x, e2, t2] * V[a, e1, e2′, t1, t2+1]
+                            q2 += T[x, e2, t2] * V[a, e1, e2′, t1, t2+1]
                         end
+                        Q[a, last_a, e1, e2, t1, t2] = q2
 
                         # terminate
                         #q3 = Q[3, last_a, e1+1, e2+1, t1, tt] = term_reward(model, μ1, μ2)
