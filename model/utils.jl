@@ -52,11 +52,23 @@ end
 
 keymax(X::KeyedArray) = (; (d=>x[i] for (d, x, i) in zip(dimnames(X), axiskeys(X), argmax(X).I))...)
 keymax(x::KeyedArray{<:Real, 1}) = axiskeys(x, 1)[argmax(x)]
+keymin(X::KeyedArray) = (; (d=>x[i] for (d, x, i) in zip(dimnames(X), axiskeys(X), argmin(X).I))...)
+keymin(x::KeyedArray{<:Real, 1}) = axiskeys(x, 1)[argmin(x)]
 
 Base.dropdims(idx::Union{Symbol,Int}...) = X -> dropdims(X, dims=idx)
+squeezify(f) = (X, dims...) -> dropdims(f(X; dims); dims)
+smaximum = squeezify(maximum)
+sminimum = squeezify(minimum)
+smean = squeezify(mean)
 
 function monte_carlo(f, N=10000)
     N \ mapreduce(+, 1:N) do i
+        f()
+    end
+end
+
+function repeatedly(f, N=10000)
+    map(1:N) do i
         f()
     end
 end
