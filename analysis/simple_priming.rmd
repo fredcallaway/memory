@@ -13,7 +13,7 @@ output:
 source("setup.r")
 
 # VERSIONS = c('v6.0')
-VERSIONS = c('v8.1')
+VERSIONS = c('v8.4')
 # VERSIONS = c('v2.0', 'v2.0B')
 
 load_data = function(type) {
@@ -40,13 +40,23 @@ all_trials = load_data('simple-recall') %>%
 ```{r}
 all_trials %>% 
     filter(prime) %>% 
-    ggplot(aes(prime_related, typing_rt, group=wid)) +
-    stat_summary(fun.data=mean_se, geom="line")
+    ggplot(aes(prime_related, typing_rt, color=wid, group=wid)) +
+    stat_summary(fun.data=mean_se, geom="line") +
+    stat_summary(fun.data=mean_se)
 ```
 
 ```{r}
 all_trials %>% 
-    lm(typing_rt ~ prime_related, data=.) %>% summ
+    filter(prime) %>% 
+    lmer(typing_rt ~ prime_related + (1|wid), data=.) %>% summ
+    # lmer(typing_rt ~ prime_related + (prime_related|wid), data=.) %>% summ
+```
+
+```{r}
+all_trials %>% 
+    filter(prime) %>% 
+    mutate(correct = int(correct)) %>% 
+    glm(correct ~ prime_related, family=binomial, data=.) %>% summ
     # lmer(typing_rt ~ prime_related + (prime_related|wid), data=.) %>% summ
 ```
 

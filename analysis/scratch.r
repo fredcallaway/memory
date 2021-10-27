@@ -1,4 +1,66 @@
 
+X = long %>% 
+    filter(name == 'Human') %>% 
+    left_join(select(human, trial_id, first_primed, version))
+
+
+# %% --------
+human %>% 
+    filter(n_pres >= 1) %>% 
+    rowwise() %>% 
+    mutate(
+        last_pres_time = last(presentation_times),
+        last_pres_prop = last_pres_time / choice_rt
+    ) %>% 
+    ungroup() %>% 
+    filter(n_pres < 6) %>% 
+    group_by(n_pres) %>% 
+    summarise(mean(last_pres_prop))
+
+# %% --------
+
+long %>% 
+    filter(name=="Human" & strength_diff  != "small") %>% 
+    filter(between(n_pres, 2, 5)) %>% 
+    left_join(select(human, trial_id, n_pres)) %>% 
+    normalized_timestep %>% 
+    # drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_stronger, color = as_factor(n_pres))) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_grid(~name) +
+    labs(x="Normalized Time", y="Probability Fixate\nStronger Cue") +
+    geom_hline(yintercept=0.5) + theme(legend.position="right")
+
+fig(w=6)
+
+# %% --------
+
+long %>% 
+    filter(name=="Human" & strength_diff  != "small") %>% 
+    filter(n_pres > 2) %>% 
+    left_join(select(human, trial_id)) %>% 
+    normalized_timestep %>% 
+    # drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_stronger)) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_grid(~name) +
+    labs(x="Normalized Time", y="Probability Fixate\nStronger Cue") +
+    geom_hline(yintercept=0.5) + theme(legend.position="right")
+
+fig(w=6)
+
+# %% --------
+X = raw_df %>% filter(name == "Human")
+# %% --------
+X %>% 
+    filter(!correct) %>% 
+    select()
+
+
+
+# %% --------
 human %>% 
     filter(n_pres >= 2) %>% 
     add_strength(block == max(block), 5 * correct - log(rt)) %>% 

@@ -74,6 +74,12 @@ json_to_columns <- function(df, column){
         bind_cols(json_df)
 }
 
+ensure_column <- function(data, col) {
+  add <-col[!col%in%names(data)]
+  if(length(add)!=0) data[add] <- NA
+  data
+}
+
 zscore = function(x) as.vector(scale(x))
 
 system('mkdir -p figs')

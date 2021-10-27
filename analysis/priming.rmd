@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r, include=FALSE}
-VERSIONS = c('v9.0')
+VERSIONS = c('v9.0', 'v9.1')
 knitr::opts_chunk$set(
     fig.path="figs/",
     results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
@@ -46,7 +46,9 @@ source("setup.r")
 source("load_data.r")
 if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
 
-human = human %>% mutate(primed = if_else(first_primed, "first", "second"))
+human = human %>% mutate(
+    primed = if_else(first_primed, "first", "second"),
+)
 
 WIDTH = 3.2
 HEIGHT = 3
@@ -83,8 +85,6 @@ human %>%
     prime_effect(prop_first)
 ```
 
-Great!
-
 # Fixation time course
 
 ```{r time-course, fig.width=WIDTH, fig.height=HEIGHT}
@@ -99,10 +99,9 @@ normalized_timestep = function(long) {
         group_by(trial_id) %>% 
         mutate(normalized_timestep = row_number())
 }
-
 long %>% 
     filter(name == 'Human') %>% 
-    left_join(select(human, trial_id, first_primed)) %>% 
+    left_join(select(human, trial_id, first_primed, version)) %>% 
     mutate(fix_primed = 1*(fix_first == first_primed)) %>% 
     normalized_timestep %>% 
     drop_na(strength_diff) %>% 
@@ -110,39 +109,49 @@ long %>%
     geom_smooth(se=F) + 
     ylim(0, 1) +
     facet_grid(~name) +
-    labs(x="Normalized Time", y="Probability Fixate Primed Cue", color="Strength Difference") +
+    labs(x="Normalized Time", y="Probability Fixate Primed Cue") +
     geom_hline(yintercept=0.5) +
     theme(legend.position="top")
 
 ```
 
-Looks good! The point where the curve starts to rise (around 0.3) is
-a bit later than in Experiment 1. 
-
 <!-- 
-This could be taken as evidence against
-an intuitive model of the prime: increasing the starting point in the
-evidence accumulation process. In that case, the optimal model would 
-(in most cases) immediately switch to the primed word. However, there
-are many other reasons I can imagine that people wouldn't switch
-immediately like that.
--->
+```{r,fig.width=6, fig.height=HEIGHT}
+long %>% 
+    filter(name == 'Human') %>% 
+    filter(strength_diff != "small") %>% 
+    filter(between(n_pres, 2, 5)) %>% 
+    left_join(select(human, trial_id, first_primed, version, n_pres)) %>% 
+    mutate(fix_primed = 1*(fix_first == first_primed)) %>% 
+    normalized_timestep %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_primed, color=as_factor(n_pres))) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_grid(~name) +
+    labs(x="Normalized Time", y="Probability Fixate Primed Cue") +
+    geom_hline(yintercept=0.5) +
+    theme(legend.position="right")
 
+```
+-->
 
 # Fixation durations
 
 ## First fixation
 
-```{r first, fig.width=WIDTH, fig.height=HEIGHT}
+This effect is the opposite of predicted. Something weird is going on,
+see the interaction below.
 
+```{r first, fig.width=WIDTH, fig.height=HEIGHT}
 human %>%
     filter(n_pres >= 2) %>% 
     prime_effect(first_pres_time)
 ```
 
-Not surprising, given that it didn't come out in Experiment 1.
-
 ## Second fixation
+
+In the right direction, but small and insignificant.
 
 ```{r second, fig.width=WIDTH, fig.height=HEIGHT}
 human %>% 
@@ -150,16 +159,9 @@ human %>%
     prime_effect(second_pres_time)
 ```
 
-Not significant, but that's looking pretty good for N=25!
-
-```{r}
-human %>% 
-    filter(n_pres >= 3) %>% 
-    mutate(first_primed = int(first_primed)) %>% 
-    lm(second_pres_time ~ first_primed + strength_first, data=.) %>% summ
-```
-
 ## Third fixation
+
+Same thing.
 
 ```{r third, fig.width=WIDTH, fig.height=HEIGHT}
 human %>% 
@@ -168,47 +170,11 @@ human %>%
 
 ```
 
-Ok that's weird.... we predict the opposite effect.
+# Strength-prime interactions
 
-This could be a selection confound. We are picking out trials where there are
-at least four fixations. For the first-primed group, this means the person looked
-at the primed cue for a second time but still couldn't remember it and switched back
-to the second cue. Perhaps this only happens when the memory for the first cue
-is *really* weak. Given that we know memory strength predicts third fixation duration,
-it makes sense that trials which are (inadvertently) selected to have weak first-cue
-memory strength will have shorter third fixations.
-
-Controlling for the strength of the first cue, the negative effect of the
-prime all but disappears. Note that our memory strength measure is noisy, so
-even controlling for this, we can still be selecting for cues that are
-actually not remembered well despite what our measure says (roughly, we are
-selecting for the residual errror in the strength measure). We also see that
-low first-cue strengths are more common when the first cue is primed
-(consistent with my explanation). Note: these are fixed effects because we
-can't fit the full mixed model.
-
-```{r third-interact1, fig.width=4, fig.height=HEIGHT}
-human %>% 
-    filter(n_pres >= 4) %>% 
-    mutate(first_primed = int(first_primed)) %>% 
-    lm(third_pres_time ~ first_primed * strength_first, data=.) %>%
-    summ
-
-human %>% 
-    filter(n_pres >= 4) %>% 
-    ggplot(aes(strength_first, third_pres_time, color=primed)) +
-    geom_smooth(method='lm') +
-    geom_xdensity + theme(legend.position="right") +
-    labs(x=pretty_name("strength_first"), y=pretty_name("third_pres_time"))
-
-```
-
-# More interactions
-
-For completeness, here are all the main memory strength effects from
-Experiment 1, adding an interaction with the prime. The simple ones look very
-reasonable. The fixation durations are all really noisy, so I'm not going to
-interpret them.
+For the most part, we don't see interactions, and the main effect of the prime
+sticks around when accounting for strength. The interesting exception is 
+first fixation duration.
 
 ## Choice
 
@@ -247,6 +213,15 @@ human %>%
 
 ## First fixation
 
+We have a strong negative effect of strength on first fixation duration when
+the first cue is primed. This is peculiar. I think it's probably some kind of 
+selection effect. Something like... if people have a strong memory for a primed
+item, the only way they could not remember it is if they mistakenly switch away
+quickly. Alternatively, participants could be using a strategy where they remember
+the first target but look at the second image to double check that the first image
+is actually the right cue. Note that with the explicit prime, people could know
+the target before even seeing a cue (this is a problem with the explicit prime).
+
 ```{r firsd-interact, fig.width=4, fig.height=HEIGHT}
 human %>%
     filter(n_pres >= 2) %>% 
@@ -271,6 +246,18 @@ human %>%
 
 
 # Miscellaneous
+
+
+## Awareness
+
+We ask: "Did you notice anything about the letters that flashed in the last test round?"
+
+```{r}
+survey = load_data('survey') 
+survey %>% 
+    left_join(select(participants, wid, version)) %>% 
+    select(Q0) %>% kable
+```
 
 ## Response types
 

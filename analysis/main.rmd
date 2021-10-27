@@ -43,13 +43,13 @@ if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
 
 normalized_timestep = function(long) {
     long %>% 
-        group_by(trial) %>%
+        group_by(trial_id) %>%
         # this somewhat complex method ensures that all trials have exactly 100 steps
         # (this isn't true if you just round duration, as I did initially)
         mutate(percentage_complete = round(100*cumsum(duration / sum(duration)))) %>% 
         mutate(n_step = diff(c(0, percentage_complete))) %>% 
         uncount(n_step) %>% 
-        group_by(trial) %>% 
+        group_by(trial_id) %>% 
         mutate(normalized_timestep = row_number())
 }
 
@@ -221,6 +221,15 @@ df %>%
     geom_bar() +
     facet_grid(~name) +
     labs(x="Number of Fixations", y="Proportion of Trials")
+```
 
+## All fixation duration
+
+```{r}
+long %>% 
+    filter(name == "Human") %>% 
+    filter(presentation < 6) %>% 
+    ggplot(aes(presentation, duration, color=as_factor(last_fix))) +
+    stat_summary(fun.data=mean_cl_boot)
 ```
 

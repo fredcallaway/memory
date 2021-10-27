@@ -17,8 +17,8 @@ multi = load_data('multi-recall') %>%
     group_by(wid) %>% 
     filter(n() == 19) %>% 
     left_join(select(participants, wid, version)) %>% 
+    ensure_column(c("primed", "primed_word")) %>% 
     mutate(
-        dataset = if_else(version == "v3.6", "new", "old"),
         response_type = factor(response_type, 
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
             # labels=c("Correct", "Intrusion", "Other")
