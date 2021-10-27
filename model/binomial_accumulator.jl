@@ -66,7 +66,7 @@ function _results(head_dist::Distribution, m::MetaMDP{N}, b::Belief{N}, c::Int) 
         return [(1., Belief(-1, -1, b.counts), -m.miss_cost)]
     end
 
-    cost = c != b.focused ? m.sample_cost + m.switch_cost : m.sample_cost
+    cost = (b.n_step == 0 || c != b.focused) ? m.sample_cost + m.switch_cost : m.sample_cost
     map(0:m.step_size) do heads
         α, β = b.counts[c]
         p = pdf(head_dist, heads)
