@@ -17,19 +17,19 @@ function figure(f, name="tmp"; kws...)
     end
 end
 
-function Plots.heatmap(X::KeyedArray{<:Real,2}; kws...)
+function Plots.heatmap(X::KeyedArray{<:Union{Missing,Real},2}; kws...)
     ylabel, xlabel = dimnames(X)
     heatmap(reverse(axiskeys(X))..., X; xlabel, ylabel, kws...)
 end
 
-function Plots.plot(x::KeyedArray{<:Real,1}; kws...)
+function Plots.plot(x::KeyedArray{<:Union{Missing,Real},1}; kws...)
     plot(axiskeys(x, 1), collect(x); xlabel=string(dimnames(x, 1)), kws...)
 end
-function Plots.plot!(x::KeyedArray{<:Real,1}; kws...)
+function Plots.plot!(x::KeyedArray{<:Union{Missing,Real},1}; kws...)
     plot!(axiskeys(x, 1), collect(x); xlabel=string(dimnames(x, 1)), kws...)
 end
 
-function Plots.plot(X::KeyedArray{<:Real,2}; kws...)
+function Plots.plot(X::KeyedArray{<:Union{Missing,Real},2}; kws...)
     k = dimnames(X, 2)
     plot(axiskeys(X, 1), collect(X);
         xlabel=dimnames(X, 1),
