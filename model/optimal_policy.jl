@@ -148,7 +148,7 @@ end
 OptimalPolicy(m::MetaMDP) = OptimalPolicy(m, BackwardsInduction(m))
 
 function act(pol::OptimalPolicy, b::Belief)
-    f, e1, e2, t1, t2 = belief2index(m, b)
+    f, e1, e2, t1, t2 = belief2index(pol.m, b)
     q = @view pol.B.Q[:, f, e1, e2, t1, t2]
     argmax(q)
 end

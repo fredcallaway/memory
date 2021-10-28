@@ -2,18 +2,75 @@ using ProgressMeter
 using CSV, DataFrames, DataFramesMeta
 using JSON
 @everywhere begin
-    include("binomial_accumulator.jl")
+    using StatsBase
     include("utils.jl")
     include("figure.jl")
     include("constants.jl")
-    include("backwards_induction.jl")
+    include("mdp.jl")
+    include("optimal_policy.jl")
 end
 # time out proportion
 # average fixation duration
 # average fixation length
 
 Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
+
+# %% ==================== Simulate ====================
+
+@everywhere begin
+    qq = .1:.2:.9
+    function compute_metrics(rt, nfix)
+        (q_rt = quantile(rt, qq), μ_rt = mean(rt), σ_rt = std(rt),
+         p_nfix = counts(nfix, 1:5) ./ length(nfix),
+         μ_nfix = mean(nfix), σ_nfix = std(nfix))
+    end
+    missing_metrics = map(x->missing, compute_metrics([1.], [1]))
+
+    make_mdp(prm) = MetaMDP(;prm.step_size, prm.max_step, prm.threshold, prm.switch_cost, prior=(prm.α, prm.β))
+end
+
+prms = grid(
+    step_size=[1],
+    max_step=[120],
+    α = 1:5,
+    β = 1:10,
+    threshold = 5:2:15,
+    switch_cost = 0:.25:2
+)
+
+size(prms)
 # %% --------
+mkpath("tmp/try_one")
+
+@everywhere function try_one(prm; N=50000, disable_cache=false)
+    name = replace(string(prm),  r"[() ]" => "")
+    cache("tmp/try_one/$name"; disable=disable_cache) do
+        # WARNING: assuming 12 second max
+        pol = OptimalPolicy(make_mdp(prm))
+        sims = repeatedly(N) do
+            simulate(pol)
+        end;
+        filter!(sims) do sim
+            sim.b.focused != -1
+        end
+        error_rate = 1 - (length(sims) / N)
+        isempty(sims) && return (;error_rate, missing_metrics)
+
+        rt = map(sims) do sim
+            100 * sim.total_cost  # include switch cost in RT
+        end
+        nfix = map(sims) do sim
+            sim.fix_log.n
+        end
+        (;error_rate, compute_metrics(rt, nfix)...)
+    end
+end
+
+sumstats = @showprogress pmap(try_one, prms)
+serialize("results/sumstats", sumstats)
+
+# %% ==================== Human ====================
+
 function load_data()
     simple = mapreduce(vcat, VERSIONS) do version
         CSV.read("../data/$version/simple-recall.csv", DataFrame)
@@ -44,94 +101,15 @@ function load_data()
 end
 df = load_data()
 
-# %% --------
-@everywhere begin
-    qq = .1:.2:.9
-    function compute_metrics(rt, nfix)
-        (q_rt = quantile(rt, qq), μ_rt = mean(rt), σ_rt = std(rt),
-         p_nfix = counts(nfix, 1:5) ./ length(nfix),
-         μ_nfix = mean(nfix), σ_nfix = std(nfix))
-    end
-    missing_metrics = map(x->missing, compute_metrics([1.], [1]))
-
-    make_mdp(prm) = MetaMDP(;step_size=4, max_step=120, prm.threshold, sample_cost=1,
-                            prm.switch_cost, miss_cost=0, prior=(prm.α, prm.β))
-end
-
 target = @chain df begin
     @subset :response_type .== "correct"
     @with compute_metrics(:choice_rt, length.(:presentation_times))
 end
 
-# %% --------
-prms = grid(
-    α = 1:5,
-    β = 1:10,
-    threshold = 20:10:60,
-    switch_cost = 0:.25:2
-)
-
-size(prms)
-# %% --------
-mkpath("tmp/try_one")
-
-@everywhere function try_one(prm)
-    name = replace(string(prm),  r"[() ]" => "")
-    cache("tmp/try_one/$name") do
-        # WARNING: assuming 12 second max
-        m = MetaMDP(;step_size=4, max_step=120, prm.threshold, sample_cost=1, prm.switch_cost, miss_cost=0, prior=(prm.α, prm.β))
-        pol = BIPolicy(m)
-        sims = repeatedly(10000) do
-            simulate(pol)
-        end
-        error_rate = length(sims) \ mapreduce(+, sims) do sim
-            sim.bs[end].focused == -1
-        end
-        filter!(sims) do sim
-            sim.bs[end].focused != -1
-        end
-
-        isempty(sims) && return (;error_rate, missing_metrics)
-
-        rt = map(sims) do sim
-            #100 .* length(sim.cs)
-            -100 * sim.total_cost  # include switch cost in RT
-        end
-        nfix = map(sims) do sim
-            sum(diff(sim.cs) .!= 0) + 1
-        end
-        (;error_rate, compute_metrics(rt, nfix)...)
-    end
-end
-
-sumstats = @showprogress pmap(try_one, prms)
-
-serialize("results/sumstats", sumstats)
-
 # %% ==================== Analyze ====================
-
 sumstats = deserialize("results/sumstats")
-
-err_rt = map(sumstats) do s
-    sum(abs.(s.q_rt .- target.q_rt))
-end
-err_nfix = map(sumstats) do s
-    sum(abs.(s.p_nfix .- target.p_nfix))
-end
-
-bad_err = getfield.(sumstats, :error_rate) .> .15
-loss = err_rt .+ 10000000err_nf
-ix .+ 1e10bad_err
-#rank = sortperm(loss[:])
-
-serialize("tmp/fit_mdp", make_mdp(keymin(loss)))
-
-pol = BIPolicy(make_mdp(keymin(loss)))
-sims = make_sims(pol; ms_per_sample=100)
-try_one(keymin(loss))
-
-
 # %% --------
+
 rt_loss(s) = abs(s.μ_rt - target.μ_rt) / target.σ_rt
 nfix_loss(s) = abs(s.μ_nfix - target.μ_nfix) / target.σ_nfix
 #rt_loss(s) = sum(abs.(s.q_rt .- target.q_rt))
@@ -139,26 +117,12 @@ nfix_loss(s) = abs(s.μ_nfix - target.μ_nfix) / target.σ_nfix
 err_loss(s) = (s.error_rate > .15)
 full_loss(s) = rt_loss(s) + 2000 * nfix_loss(s) + 1e10 * err_loss(s)
 
-prm = keymin(full_loss.(sumstats))
-sumstats(;prm...)
-
-try_one(prm)
-
-m = make_mdp(prm)
-pol = BIPolicy(m)
-
 # %% --------
 
-function get_sim()
-    for i in 1:10000
-        sim = simulate(pol)
-        if length(parse_presentations(sim.cs, 100)) == 3
-            return sim
-        end
-    end
-end
+loss = full_loss.(sumstats)
+best = keymin(loss)
+try_one(best)
 
-sim = get_sim()
 
 # %% ==================== RT ====================
 
@@ -168,45 +132,61 @@ function remove_bad!(X, sds=2)
     X
 end
 
+S = sumstats(step_size=1, max_step=120)
+X = rt_loss.(S)
+
 figure() do
-    sminimum(err_rt, :threshold, :switch_cost)  |> remove_bad! |> heatmap
+    X(;best.threshold, best.switch_cost) |> heatmap
 end
-# %% --------
+
 figure() do
-    sminimum(err_rt, :α, :β) |> remove_bad! |> heatmap
+    X(;best.α, best.β) |> heatmap
+end
+
+figure() do
+    sminimum(X, :threshold, :switch_cost)  |> remove_bad! |> heatmap
+end
+
+figure() do
+    sminimum(X, :α, :β) |> remove_bad! |> heatmap
 end
 
 # %% ==================== N fix ====================
+X = nfix_loss.(S)
 
 figure() do
-    sminimum(err_nfix, :threshold, :switch_cost) |> remove_bad! |> heatmap
+    X(;best.threshold, best.switch_cost) |> heatmap
 end
 
 figure() do
-    sminimum(err_nfix, :α, :β) |> remove_bad! |> heatmap
-end
-
-# %% ====================  ====================
-
-figure() do
-    smaximum(rt, :threshold, :switch_cost) |> heatmap
+    X(;best.α, best.β) |> heatmap
 end
 
 figure() do
-    smaximum(nfix, :α, :β) |> heatmap
+    sminimum(X, :threshold, :switch_cost)  |> remove_bad! |> heatmap
 end
 
 figure() do
-    smaximum(getfield.(sumstats, :μ_nfix), :α, :β) |> heatmap
+    sminimum(X, :α, :β) |> remove_bad! |> heatmap
 end
 
+# %% ==================== Write simulation ====================
 
-# %% ==================== Prop fix ====================
+function make_frame(pol, N=10000; ms_per_sample=100)
+    sims = map(1:N) do i
+        sim = simulate(pol; fix_log=FullFixLog())
+        strength_first, strength_second = sim.s
+        presentation_times = sim.fix_log.fixations .* ms_per_sample
+        outcome = sim.b.focused
+        (;strength_first, strength_second, presentation_times, outcome,
+         duration_first = sum(presentation_times[1:2:end]),
+         duration_second = sum(presentation_times[2:2:end]))
+    end
+    DataFrame(sims[:])
+end
 
-df
-
-
-
-
+pol = OptimalPolicy(make_mdp(best))
+make_frame(pol)
+try_one(best)
 
 

@@ -2,6 +2,7 @@ using Serialization
 using AxisKeys
 using SplitApplyCombine
 import Base.Iterators: product
+using Statistics
 
 # %% ==================== Project-specific ====================
 
@@ -23,7 +24,8 @@ end
 # %% ==================== General Purpose ====================
 
 
-function cache(f, file)
+function cache(f, file; disable=false)
+    disable && return f()
     isfile(file) && return deserialize(file)
     result = f()
     serialize(file, result)

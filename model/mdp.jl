@@ -98,6 +98,19 @@ function Base.push!(g::NumFixLog, c)
     end
 end
 
+mutable struct FullFixLog
+    focused::Int
+    fixations::Vector{Int}
+end
+FullFixLog() = FullFixLog(0, [])
+function Base.push!(g::FullFixLog, c)
+    if c != g.focused
+        g.focused = c
+        push!(g.fixations, 1)
+    else
+        g.fixations[end] += 1
+    end
+end
 
 function simulate(policy; b=initial_belief(policy.m), s::State=sample_state(policy.m),
                  belief_log=NoLog(), fix_log=NumFixLog())
@@ -109,14 +122,13 @@ function simulate(policy; b=initial_belief(policy.m), s::State=sample_state(poli
         push!(fix_log, c)
         total_cost += step!(m, s, b, c)
         is_terminal(b) && break
-        c = act(pol, b)
+        c = act(policy, b)
     end
     push!(belief_log, b)
     (;total_cost, b, s, belief_log, fix_log)
 end
 
 # %% ==================== Policies ====================
-
 
 struct RandomPolicy <: Policy
     m::MetaMDP
