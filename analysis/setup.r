@@ -107,10 +107,21 @@ smart_print = function(x, ...) {
 }
 
 inject = rlang::inject
+
 tidylmer = function(data, xvar, yvar) {
     y = ensym(yvar)
     x = ensym(xvar)
     inject(lmer(!!y ~ !!x + (!!x | wid), data=data))
+}
+tidyglmer = function(data, xvar, yvar, family="binomial") {
+    y = ensym(yvar)
+    x = ensym(xvar)
+    inject(glmer(!!y ~ !!x + (!!x | wid), data=data, family=family))
+}
+tidymer = function(data, xvar, yvar) {
+    binary_y = all(na.omit(data[[ensym(yvar)]]) %in% 0:1)
+    fun = if (binary_y) tidyglmer else tidylmer
+    fun(data, {{xvar}}, {{yvar}})
 }
 tidylm = function(data, xvar, yvar) {
     y = ensym(yvar)

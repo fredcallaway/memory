@@ -3,6 +3,7 @@ library(simr)
 # %% ==================== Aug 4 ====================
 
 VERSIONS = c('v5.5')
+OPTIMAL_VERSION = "optimal_prior"
 DROP_HALF = FALSE
 DROP_ACC = TRUE
 DROP_ERROR = TRUE
@@ -36,7 +37,7 @@ power_analysis = function(N, n_sim, run_model) {
 }
 
 # %% --------
-N = c(400, 500, 600)
+N = c(52)
 n_sim = 300
 
 p1 = power_analysis(N, n_sim, . %>% 
@@ -77,6 +78,27 @@ human %>%
     filter(n_pres >= 2) %>% 
     lmer(first_pres_time_raw ~ strength_first + (strength_first|wid), data=.) %>% 
     summ %>% with(coeftable[2, "p"])
+
+
+# %% ==================== Oct 27 ====================
+
+
+pp = power_analysis(N, n_sim, . %>% 
+    filter(n_pres >= 3) %>% 
+    lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% 
+    summ %>% with(coeftable[2, "p"])
+)
+
+mean(pp$p < .642)
+
+# %% --------
+
+
+p2 = power_analysis(N, n_sim, . %>% 
+    filter(n_pres >= 3) %>% 
+    lmer(second_pres_time ~ rel_strength + (1|wid), data=.) %>% 
+    summ %>% with(coeftable[2, "p"])
+)
 
 # %% ==================== Old ====================
 

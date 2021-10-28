@@ -661,11 +661,17 @@ afc %>%
     summarise(mean(correct)) %>% print(n=100)
 
 # %% --------
-X %>% ggplot(aes(wid, choose_last_seen, color=correct, group=correct)) +
-    geom
+f = function(data, col) {
+    data %>% select({{col}})
+}
+g = function(data, col) {
+    f(data, {{col}})
+}
 
-```
+mtcars %>% g(disp)
 
+
+# %% --------
 
 ```{r}
 multi %>% 

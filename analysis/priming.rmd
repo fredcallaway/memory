@@ -48,6 +48,7 @@ if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
 
 human = human %>% mutate(
     primed = if_else(first_primed, "first", "second"),
+    primed = factor(primed, levels=c("second", "first"))
 )
 
 WIDTH = 3.2
@@ -62,19 +63,19 @@ Sanity check.
 
 ```{r choice, fig.width=WIDTH, fig.height=HEIGHT}
 prime_effect = function(data, yvar) {
-    data %>% 
-        mutate(first_primed = int(first_primed)) %>% 
-        tidylmer(first_primed, {{yvar}}) %>% summ %>% smart_print
-    data %>% 
-        ggplot(aes(primed, {{yvar}})) +
-        stat_summary(fun.data=mean_cl_boot) +
+    model = data %>% tidymer(primed, {{yvar}})
+    model %>% summ %>% smart_print
+    
+    model %>% ggpredict(terms="primed") %>% 
+        ggplot(aes(x, predicted, ymin=conf.low, ymax=conf.high)) + 
+        geom_pointrange() +
         labs(x="Primed", y=pretty_name(ensym(yvar)))
 }
 
 human %>% 
     filter(n_pres > 0) %>% 
     mutate(choose_first = int(choose_first)) %>% 
-    prime_effect(choose_first)
+    prime_effect(choose_first) + ylim(0,1)
 ```
 
 # Overall fixation proportion
