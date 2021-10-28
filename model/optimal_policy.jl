@@ -18,7 +18,6 @@ t1: total time on item 1
     sample_cost::Float64 = .001
     switch_cost::Float64 = 0.
     miss_cost::Float64 = 0.
-    switch_steps::Int = 0
     max_step::Int = 100
 
     # time and evidence begin at zero but we need indices, so they get shifted +1
@@ -45,9 +44,9 @@ function beta_binomial_pdf(step_size, α0, β0, t_max, e_max)
 end
 
 function Base.show(io::IO, model::BackwardsInduction)
-    println("BackwardsInduction")
+    println(io, "BackwardsInduction")
     for k in [:step_size, :α0, :β0, :sample_cost, :switch_cost, :miss_cost, :max_step]
-        println("  $k: ", getfield(model, k))
+        println(io, "  $k: ", getfield(model, k))
     end
 end
 
@@ -128,68 +127,28 @@ function BackwardsInduction(m::MetaMDP)
     b
 end
 
-struct BIPolicy
+function belief2index(m::MetaMDP, b::Belief)
+    e1 = b.heads[1] + 1
+    t1 = (b.heads[1] + b.tails[1]) ÷ m.step_size + 1
+    e2 = b.heads[2] + 1
+    t2 = (b.heads[2] + b.tails[2]) ÷ m.step_size + 1
+    (b.focused, e1, e2, t1, t2)
+end
+
+function value(B::BackwardsInduction, b::Belief)
+    B.V[belief2index(m, b)...]
+end
+
+
+struct OptimalPolicy
     m::MetaMDP
     B::BackwardsInduction
 end    
 
-BIPolicy(m::MetaMDP) = BIPolicy(m, BackwardsInduction(m))
+OptimalPolicy(m::MetaMDP) = OptimalPolicy(m, BackwardsInduction(m))
 
-function act(pol::BIPolicy, b::Belief)
-    #@assert (sum(b.counts[1]) - 2) % 4 == 0
-    #@assert (sum(b.counts[2]) - 2) % 4 == 0
-    m = pol.m
-    heads, tails = b.counts[1] .- pol.m.prior
-    e1 = heads + 1
-    t1 = (heads + tails) ÷ m.step_size + 1
-    
-    heads, tails = b.counts[2] .- pol.m.prior
-    e2 = heads + 1
-    t2 = (heads + tails) ÷ m.step_size + 1
-
-    q = pol.B.Q[:, b.focused, e1, e2, t1, t2]
+function act(pol::OptimalPolicy, b::Belief)
+    f, e1, e2, t1, t2 = belief2index(m, b)
+    q = @view pol.B.Q[:, f, e1, e2, t1, t2]
     argmax(q)
 end
-
-#function sample_transition(model, last_a, e1, e2, t1, t2, a)
-#    @unpack T = model
-
-#    last_a, e1, e2, t1, t2, a = 1, 1, 1, 1, 1, 1
-
-#    T[:, e1, t1]
-
-#    t2 = 1 + tt - t1
-#    probs = map(1:nv) do v′
-#        a == 1 ? T[v′, v1, t1] : T[v′, v2, t2]
-#    end
-#    v′ = sample(1:nv, Weights(probs))
-#    a == 1 ? (a, v′, v2, t1+1, tt+1) : (a, v1, v′, t1, tt+1)
-#end
-
-#function rollout(model, s0; β=1e10, force=Int[])
-#    @unpack μs, Q, t_max = model
-#    total_reward = 0.
-#    last_a, v1, v2, t1, tt = state2index(model, s0)
-#    fixations = Int[]
-#    while tt < t_max
-#        #push!(states, (last_a, v1, v2, t1, tt))
-#        if tt <= length(force)
-#            a = force[tt]
-#        else
-#            a = tt == t_max ? 3 : sample(Weights(softmax(β .* Q[:, last_a, v1, v2, t1, tt])))
-#        end
-#        if a == 3
-#            μ1 = μs[v1]; μ2 = μs[v2]
-#            total_reward += term_reward(model, μ1, μ2)
-#            break
-#        else
-#            push!(fixations, a)
-#            last_a, v1, v2, t1, tt = sample_transition(model, last_a, v1, v2, t1, tt, a)
-#            total_reward -= cost(model, last_a, tt, a)
-#        end
-#    end
-#    state = index2state(model, (last_a, v1, v2, t1, tt))
-#    (;state, fixations)
-#end
-
-
