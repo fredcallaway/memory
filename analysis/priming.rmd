@@ -236,6 +236,7 @@ human %>%
     prime_interaction(rel_strength, second_pres_time)
 ```
 
+
 ## Third fixation
 
 ```{r third-interact, fig.width=4, fig.height=HEIGHT}
@@ -292,4 +293,17 @@ human %>%
     geom_bar() +
     facet_grid(~name) +
     labs(x="Number of Fixations", y="Proportion of Trials")
+```
+
+## All fixation duration
+
+```{r}
+long %>% 
+    filter(name == "Human") %>% 
+    filter(last_fix == 0 ) %>% 
+    left_join(select(human, trial_id, first_primed)) %>% 
+    mutate(fix_primed = 1*(fix_first == first_primed)) %>% 
+    filter(presentation < 6) %>% 
+    ggplot(aes(presentation, duration, color=as_factor(first_primed))) +
+    stat_summary(fun.data=mean_cl_boot)
 ```
