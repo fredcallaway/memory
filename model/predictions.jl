@@ -4,8 +4,9 @@ using ProgressMeter
 include("figure.jl")
 # %% --------
 
-@everywhere function make_sims(pol, N=10000)
-    ms_per_sample = 1000 * (TIME_LIMIT / pol.m.max_step)
+@everywhere function make_sims(pol, N=10000; 
+        ms_per_sample = 1000 * (TIME_LIMIT / pol.m.max_step))
+    
     b = mutate(initial_belief(pol.m), focused=1)
     sims = map(1:N) do i
         s = (s1, s2) = sample_state(pol.m)
@@ -26,6 +27,8 @@ include("figure.jl")
     end
     DataFrame(sims[:])
 end
+
+# %% --------
 
 # %% --------
 m = MetaMDP(step_size=4, max_step=60, threshold=20, sample_cost=1, switch_cost=5, miss_cost=0, prior=(1, 1))

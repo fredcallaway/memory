@@ -53,6 +53,9 @@ df = load_data()
          μ_nfix = mean(nfix), σ_nfix = std(nfix))
     end
     missing_metrics = map(x->missing, compute_metrics([1.], [1]))
+
+    make_mdp(prm) = MetaMDP(;step_size=4, max_step=120, prm.threshold, sample_cost=1,
+                            prm.switch_cost, miss_cost=0, prior=(prm.α, prm.β))
 end
 
 target = @chain df begin
@@ -64,8 +67,8 @@ end
 prms = grid(
     α = 1:5,
     β = 1:10,
-    threshold = 10:10:70,
-    switch_cost = 0:.5:5
+    threshold = 20:10:60,
+    switch_cost = 0:.25:2
 )
 
 size(prms)
@@ -85,7 +88,7 @@ mkpath("tmp/try_one")
             sim.bs[end].focused == -1
         end
         filter!(sims) do sim
-            sim.bs[end].focused != 1
+            sim.bs[end].focused != -1
         end
 
         isempty(sims) && return (;error_rate, missing_metrics)
@@ -115,7 +118,47 @@ end
 err_nfix = map(sumstats) do s
     sum(abs.(s.p_nfix .- target.p_nfix))
 end
-prms[argmin(err_rt)]
+
+bad_err = getfield.(sumstats, :error_rate) .> .15
+loss = err_rt .+ 10000000err_nf
+ix .+ 1e10bad_err
+#rank = sortperm(loss[:])
+
+serialize("tmp/fit_mdp", make_mdp(keymin(loss)))
+
+pol = BIPolicy(make_mdp(keymin(loss)))
+sims = make_sims(pol; ms_per_sample=100)
+try_one(keymin(loss))
+
+
+# %% --------
+rt_loss(s) = abs(s.μ_rt - target.μ_rt) / target.σ_rt
+nfix_loss(s) = abs(s.μ_nfix - target.μ_nfix) / target.σ_nfix
+#rt_loss(s) = sum(abs.(s.q_rt .- target.q_rt))
+#nfix_loss(s) = sum(abs.(s.p_nfix .- target.p_nfix))
+err_loss(s) = (s.error_rate > .15)
+full_loss(s) = rt_loss(s) + 2000 * nfix_loss(s) + 1e10 * err_loss(s)
+
+prm = keymin(full_loss.(sumstats))
+sumstats(;prm...)
+
+try_one(prm)
+
+m = make_mdp(prm)
+pol = BIPolicy(m)
+
+# %% --------
+
+function get_sim()
+    for i in 1:10000
+        sim = simulate(pol)
+        if length(parse_presentations(sim.cs, 100)) == 3
+            return sim
+        end
+    end
+end
+
+sim = get_sim()
 
 # %% ==================== RT ====================
 
@@ -156,11 +199,6 @@ end
 figure() do
     smaximum(getfield.(sumstats, :μ_nfix), :α, :β) |> heatmap
 end
-
-bad_err = getfield.(sumstats, :error_rate) .> .15
-loss = err_rt .+ 500err_nfix .+ 1e10bad_err
-rank = sortperm(loss[:])
-
 
 
 # %% ==================== Prop fix ====================
