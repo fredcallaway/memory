@@ -14,6 +14,19 @@ source("load_data.r")
 if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
 
 # %% --------
+write_tex = tex_writer("stats")
+human %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
+    tidy(conf.int=T) %>% 
+    filter(term == "strength_first") %>% 
+    rowwise() %>% group_walk(~ with(.x, 
+        write_tex("pilot_effect", "{100*mean:.1}\\% $\\pm$ {100*sd:.1}\\%")
+    ))
+
+# not finished
+    
+# %% --------
 
 groups = human %>% nest_by(wid, .keep=TRUE) %>% with(data)
 
@@ -37,7 +50,7 @@ power_analysis = function(N, n_sim, run_model) {
 }
 
 # %% --------
-N = c(52)
+N = c(394)
 n_sim = 300
 
 p1 = power_analysis(N, n_sim, . %>% 
@@ -59,6 +72,8 @@ p3 = power_analysis(N, n_sim, . %>%
 ) %>% mutate(name="mixed zscore")
 
 X = bind_rows(p1, p2, p3)
+# X = p3
+p3 %>% summarise(mean(p<.05))  #92.7
 
 # %% --------
 
@@ -132,13 +147,7 @@ sample_p = function(data, N) {
                        alternative="greater") %>% pvalue
 }
 
-
-
-
-
 # %% ==================== Previous ====================
-
-
 
 model = human %>% 
     filter(response_type == "correct") %>% 

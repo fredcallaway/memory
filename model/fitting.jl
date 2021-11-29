@@ -1,7 +1,7 @@
 using ProgressMeter
-using CSV, DataFrames, DataFramesMeta
 using JSON
 @everywhere begin
+    using CSV, DataFrames, DataFramesMeta
     using StatsBase
     include("utils.jl")
     include("figure.jl")
@@ -30,16 +30,15 @@ Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2
 end
 
 prms = grid(
-    step_size=[1],
+    step_size=[4],
     max_step=[120],
     α = 1:5,
     β = 1:10,
-    threshold = 5:2:15,
+    threshold = 20:5:60,
     switch_cost = 0:.25:2
 )
 
 size(prms)
-# %% --------
 mkpath("tmp/try_one")
 
 @everywhere function try_one(prm; N=50000, disable_cache=false)
@@ -48,7 +47,7 @@ mkpath("tmp/try_one")
         # WARNING: assuming 12 second max
         pol = OptimalPolicy(make_mdp(prm))
         sims = repeatedly(N) do
-            simulate(pol)
+            sim = simulate(pol)            
         end;
         filter!(sims) do sim
             sim.b.focused != -1
@@ -57,7 +56,8 @@ mkpath("tmp/try_one")
         isempty(sims) && return (;error_rate, missing_metrics)
 
         rt = map(sims) do sim
-            100 * sim.total_cost  # include switch cost in RT
+            # 100 * sim.total_cost  # include switch cost in RT
+            100 * (sim.total_cost - sim.fix_log.n * pol.m.switch_cost)
         end
         nfix = map(sims) do sim
             sim.fix_log.n
@@ -99,7 +99,12 @@ function load_data()
         @select :wid :presentation_times :choose_first :response_type :strength_first :strength_second :choice_rt
     end
 end
-df = load_data()
+df = @chain load_data() begin
+    @rtransform(
+        :duration_first = sum(:presentation_times[1:2:end]),
+        :duration_second = sum(:presentation_times[2:2:end])
+    )
+end
 
 target = @chain df begin
     @subset :response_type .== "correct"
@@ -110,10 +115,10 @@ end
 sumstats = deserialize("results/sumstats")
 # %% --------
 
-rt_loss(s) = abs(s.μ_rt - target.μ_rt) / target.σ_rt
-nfix_loss(s) = abs(s.μ_nfix - target.μ_nfix) / target.σ_nfix
-#rt_loss(s) = sum(abs.(s.q_rt .- target.q_rt))
-#nfix_loss(s) = sum(abs.(s.p_nfix .- target.p_nfix))
+# rt_loss(s) = abs(s.μ_rt - target.μ_rt) / target.σ_rt
+# nfix_loss(s) = abs(s.μ_nfix - target.μ_nfix) / target.σ_nfix
+rt_loss(s) = sum(abs.(s.q_rt .- target.q_rt))
+nfix_loss(s) = sum(abs.(s.p_nfix .- target.p_nfix))
 err_loss(s) = (s.error_rate > .15)
 full_loss(s) = rt_loss(s) + 2000 * nfix_loss(s) + 1e10 * err_loss(s)
 
@@ -123,7 +128,6 @@ loss = full_loss.(sumstats)
 best = keymin(loss)
 try_one(best)
 
-
 # %% ==================== RT ====================
 
 function remove_bad!(X, sds=2)
@@ -132,7 +136,7 @@ function remove_bad!(X, sds=2)
     X
 end
 
-S = sumstats(step_size=1, max_step=120)
+S = sumstats(step_size=4, max_step=120)
 X = rt_loss.(S)
 
 figure() do
@@ -172,12 +176,13 @@ end
 
 # %% ==================== Write simulation ====================
 
-function make_frame(pol, N=10000; ms_per_sample=100)
+@everywhere function make_frame(pol, N=10000; ms_per_sample=100)
     sims = map(1:N) do i
         sim = simulate(pol; fix_log=FullFixLog())
         strength_first, strength_second = sim.s
-        presentation_times = sim.fix_log.fixations .* ms_per_sample
+        presentation_times = sim.fix_log.fixations .* ms_per_sample #.+ pol.m.switch_cost * ms_per_sample
         outcome = sim.b.focused
+
         (;strength_first, strength_second, presentation_times, outcome,
          duration_first = sum(presentation_times[1:2:end]),
          duration_second = sum(presentation_times[2:2:end]))
@@ -186,7 +191,15 @@ function make_frame(pol, N=10000; ms_per_sample=100)
 end
 
 pol = OptimalPolicy(make_mdp(best))
-make_frame(pol)
-try_one(best)
+try_one(best).μ_rt
+target.μ_rt
+sim = make_frame(pol)
+sim 
+@chain sim begin
+    @rsubset :outcome != -1
+    @with mean(:duration_first .+ :duration_second)
+end
+sim |> CSV.write("results/sim_new_optimal.csv")
+
 
 

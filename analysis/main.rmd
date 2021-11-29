@@ -26,7 +26,7 @@ knitr::opts_chunk$set(
 
 ## Analysis
 ```{r setup, echo=FALSE}
-OPTIMAL_VERSION = "optimal_prior"
+OPTIMAL_VERSION = "new_optimal"
 DROP_HALF = FALSE
 DROP_ACC = TRUE
 DROP_ERROR = TRUE
@@ -96,7 +96,7 @@ df %>%
 ```{r fix-prop, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     filter(n_pres >= 2) %>% 
-    regress(rel_strength, prop_first)
+    regress(rel_strength, prop_first) + ylim(0,1)
 ```
 
 ## Last-fixation effect
@@ -139,7 +139,6 @@ long %>%
     summ
 
 ```
-
 
 # Sanity checks for evidence accumulation
 
@@ -188,6 +187,13 @@ df %>%
     regress(last_strength, last_pres_time)
 ```
 
+```{r}
+long %>% filter(name == "Human") %>% 
+    mutate(rel_strength_fixated = if_else(fix_first==1, rel_strength, -rel_strength)) %>% 
+    mutate(last_fix = factor(last_fix)) %>% 
+    regress_interaction(rel_strength_fixated, last_fix, duration) #plot
+```
+
 # Miscellaneous
 
 ## Response types
@@ -225,11 +231,12 @@ df %>%
 
 ## All fixation duration
 
-```{r}
+```{r all-fix, fig.width=WIDTH, fig.height=HEIGHT}
 long %>% 
-    filter(name == "Human") %>% 
     filter(presentation < 6) %>% 
     ggplot(aes(presentation, duration, color=as_factor(last_fix))) +
-    stat_summary(fun.data=mean_cl_boot)
+    stat_summary(fun.data=mean_cl_boot) +
+    facet_grid(~name)
 ```
+
 

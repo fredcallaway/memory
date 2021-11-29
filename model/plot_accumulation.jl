@@ -1,6 +1,97 @@
+
+
+
+# %% ==================== Vector beliefs ====================
+include("mdp.jl")
+include("utils.jl")
+include("figure.jl")
+# %% --------
+
+function plot_vec!(h, t, c)
+    scatter!([t], [h]; c, markersize=10)
+    lo, hi = (6-t) .* quantile(Beta(1+h,1+t-h), [0.1, 0.9])
+    @show lo hi
+    plot!([t, 6], [h, h+lo]; c, fillrange=[h, h+hi], fillalpha=0.3, alpha=0)
+    hline!([6], line=(:black,))
+end
+# function plot_vec!(h, t, c)
+#     plot!([0, t], [0, h]; c)
+#     lo, hi = t .* quantile(Beta(1+h,1+t-h), [0.1, 0.9])
+#     plot!([0, t], [0, lo]; c, fillrange=[0, hi], fillalpha=0.3, alpha=0)
+# end
+
+function plot_belief(name, h1, t1, h2, t2)
+    @assert h1 ≤ t1 && h2 ≤ t2
+    plot(size=(200,200), dpi=500, xticks=false, yticks=false, xlim=(-0.4,7), ylim=(-0.4,7), 
+        aspect_ratio=:equal, framestyle = :zerolines)
+    plot_vec!(h1, t1, 1)
+    plot_vec!(h2, t2, 2)
+    savefig("vec-figs/$name")
+end
+
+
+# h = 1; t = 1
+# d =
+mkpath("vec-figs")
+
+plot_belief("one", 0,0,0,0)
+plot_belief("two", 1, 1, 0, 0)
+plot_belief("three", 1, 2, 6, 6)
+
+
+# %% --------
+
+
+function plot_vec!(h, t, c)
+    scatter!([t], [h]; c, markersize=6)
+    lo, hi = (60-t) .* quantile(Beta(1+h,1+t-h), [0.1, 0.9])
+    @show lo hi
+    plot!([t, 60], [h, h+lo]; c, fillrange=[h, h+hi], fillalpha=0.3, alpha=0)
+    hline!([20], line=(:black, :dash))
+end
+
+function plot_belief(name, h1, t1, h2, t2)
+    @assert h1 ≤ t1 && h2 ≤ t2
+    plot(size=(400,250), dpi=500, xlim=(-0.4,60), ylim=(-0.4,20),
+          xlabel="Time Fixated", ylabel="Accumulated Evidence")
+    plot_vec!(h1, t1, 1)
+    plot_vec!(h2, t2, 2)
+    savefig("vec-figs/$name")
+end
+
+plot_belief("four", 1, 4, 2, 8)
+
+
+
+# %% --------
+mkpath("beta-figs")
+
+function plot_beta!(h, t, c)
+    d = Beta(1+h,1+t-h)
+    x = 0:.001:1
+    plot!(x, pdf.(d, x))
+end
+
+function plot_belief(name, h1, t1, h2, t2)
+    @assert h1 ≤ t1 && h2 ≤ t2
+    plot(size=(200,200), dpi=500, xticks=false, yticks=false, xlim=(0,1), ylim=(0,3))
+    plot_beta!(h1, t1, 1)
+    plot_beta!(h2, t2, 2)
+    savefig("beta-figs/$name")
+end
+
+plot_belief("one", 0,0,0,0)
+plot_belief("two", 1, 1, 0, 0)
+plot_belief("three", 1, 2, 6, 6)
+
+plot_belief("four", 1, 4, 2, 6)
+
+
+# %% ==================== Outdated ====================
 include("binomial_accumulator.jl")
 include("figure.jl")
 using StatsPlots
+
 # %% --------
 figure() do
     θs = (0.2, 0.5, 0.8)
@@ -77,3 +168,5 @@ figure() do
         grid=false, xlab="Time on Cue", ylab="Accumulated Evidence", size=(400,250)
     )
 end
+
+

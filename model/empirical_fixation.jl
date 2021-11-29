@@ -22,7 +22,8 @@ function act(pol::RandomCommitmentPolicy, b::Belief)
         commit = pol.time_to_commit == 0
         pol.time_to_switch = commit ? -1 : ceil(Int, rand(pol.duration_dist)) - 1
         #@assert pol.time_to_switch >= 0
-        rand(setdiff(1:n_item(b), b.focused))
+        b.focused == 1 ? 2 : 1
+        # rand(setdiff(1:n_item(b), b.focused))
     else
         pol.time_to_switch -= 1
         b.focused
@@ -35,7 +36,7 @@ end
     end
     wid_counts = countmap(multi.wid)
     filter!(multi) do row
-        !row.practice && wid_counts[row.wid] == 20
+        !row.practice && wid_counts[row.wid] == 20 && row.response_type == "correct"
     end
     multi.presentation_times = map(Vector{Float64} ∘ JSON.parse, multi.presentation_times)
     multi

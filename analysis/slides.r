@@ -38,6 +38,11 @@ df %>%
     regress(rel_strength, prop_first)
 fig("overall", WIDTH, HEIGHT)
 
+df %>% 
+    filter(n_pres >= 2) %>% 
+    regress(rel_strength, last_fix, prop_first)
+fig("overall_interaction", WIDTH, HEIGHT)
+
 # %% --------
 df %>% 
     filter(n_pres >= 2) %>% 
@@ -94,7 +99,7 @@ fig("time-course", WIDTH, HEIGHT+.5)
 df %>%
     filter(n_pres >= 2) %>% 
     # filter(between(strength_first, -4, 4)) %>% 
-    regress(strength_first, first_pres_time, mixed=MIXED_DURATIONS)
+    regress(strength_first, first_pres_time, mixed=MIXED_DURATIONS) +
 fig("first", WIDTH, HEIGHT)
 
 # %% --------
@@ -118,7 +123,9 @@ fig("first-fix-slope")
 
 df %>% 
     filter(n_pres >= 3) %>% 
-    regress(rel_strength, second_pres_time, mixed=MIXED_DURATIONS)
+    mutate(inv_rel_strength = -rel_strength) %>% 
+    regress(inv_rel_strength, second_pres_time, mixed=MIXED_DURATIONS) +
+    xlab("Second - First Memory Strength")
 fig("second", WIDTH, HEIGHT)
 
 # %% --------
@@ -127,7 +134,8 @@ fig("second", WIDTH, HEIGHT)
 df %>% 
     filter(n_pres >= 4) %>% 
     filter(name  != "Random Commitment") %>% 
-    regress(rel_strength, third_pres_time, mixed=MIXED_DURATIONS)
+    regress(rel_strength, third_pres_time, mixed=MIXED_DURATIONS) + 
+    xlab("First - Second Memory Strength")
 fig("third", WIDTH, HEIGHT)
 
 # %% --------
@@ -154,7 +162,7 @@ long %>%
     filter(name  != "Random Commitment") %>% 
     # filter(name  != "Random") %>% 
     filter(duration <= 5000) %>%
-    last_fix==1, "final", "non-final")) %>% 
+    mutate(type=if_else(last_fix==1, "final", "non-final")) %>% 
     ggplot(aes(duration/1000, fill=type, y = ..width..*..density..)) +
     geom_histogram(position="identity", breaks=seq(0, 5.001, .250), alpha=0.5) +
     facet_grid(~name) +

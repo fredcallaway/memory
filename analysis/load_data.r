@@ -11,8 +11,9 @@ load_data = function(type) {
 }
 
 participants = load_data('participants')
+multi_raw = load_data('multi-recall')
 
-multi = load_data('multi-recall') %>%
+multi = multi_raw %>% 
     filter(!practice) %>%
     group_by(wid) %>% 
     filter(n() == 19) %>% 
@@ -29,6 +30,7 @@ multi = load_data('multi-recall') %>%
         first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
         second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
         third_pres_time = map_dbl(presentation_times, 3, .default=NaN),
+        fourth_pres_time = map_dbl(presentation_times, 4, .default=NaN),
         choose_first = word == first_word,
         n_pres = lengths(presentation_times),
         odd_pres = mod(n_pres, 2) == 1,
@@ -46,7 +48,7 @@ multi = load_data('multi-recall') %>%
     )
 
 
-simple = load_data('simple-recall') %>% 
+simple_raw = simple = load_data('simple-recall') %>% 
     group_by(wid) %>%
     mutate(trial_num = row_number()) %>%
     filter(!practice) %>% 
@@ -63,10 +65,11 @@ simple = load_data('simple-recall') %>%
         base_rt = rt,
         rt = replace_na(typing_rt, 15000),
         logrtz = zscore(log(rt))
-    )
+    ) %>% 
+    rowwise() %>% mutate(rt = min(rt, 15000)) %>% ungroup()
 
-add_strength = function(multi, filt, strength) {
-    strengths = simple %>% 
+compute_strength = function(filt, strength) {
+    simple %>% 
         filter({{ filt }}) %>% 
         mutate(raw_strength={{ strength }}) %>% 
         group_by(wid, word) %>% 
@@ -75,18 +78,28 @@ add_strength = function(multi, filt, strength) {
         mutate(
             strength = zscore(raw_strength),
         )
+}
+
+add_strength = function(multi, filt, strength) {
+    strengths = compute_strength({{filt}}, {{strength}})
     multi %>% 
         select(-contains("strength")) %>% 
         left_join(strengths, c("wid", "first_word" = "word")) %>% 
         left_join(strengths, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
         mutate(
-            rel_strength = strength_first - strength_second,
+            rel_strength = (strength_first - strength_second) / sqrt(2),  # keep it standardized
             chosen_strength = if_else(choose_first, strength_first, strength_second),
         )
 }
 
-multi = multi %>% add_strength(block == max(block), 5 * correct - log(rt))
+simple %>% 
+    filter(block == max(block)) %>% 
+    mutate(raw_strength = 5 * correct - log(rt)) %>% 
+    group_by(wid, word) %>% 
+    summarise(raw_strength = mean(raw_strength))
 
+
+multi = multi %>% add_strength(block == max(block), 5 * correct - log(rt))
 
 # %% ==================== Model ====================
 
@@ -109,6 +122,7 @@ read_sim = function(name, noise_sd=0) {
         first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
         second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
         third_pres_time = map_dbl(presentation_times, 3, .default=NaN),
+        fourth_pres_time = map_dbl(presentation_times, 4, .default=NaN),
         choose_first = outcome == 1,
         n_pres = lengths(presentation_times),
         odd_pres = mod(n_pres, 2) == 1,
@@ -129,15 +143,17 @@ read_sim = function(name, noise_sd=0) {
     )
 }
 
+
 make_fixations = function(df) {
+    print("WARNING: USING FULL MULTI IN make_fixations")
+    breaks = quantile(abs(multi$rel_strength), c(0, .5, .75, 1),  na.rm = T)
+    breaks[4] = Inf
     df %>% 
         ungroup() %>% 
         filter(n_pres >= 1) %>% 
         select(name, wid, rel_strength, presentation_times, n_pres, trial_id) %>% 
         mutate(
-            strength_diff = cut(abs(rel_strength), 
-                                c(0, 0.35, 1.25, 10),
-                                # quantile(abs(rel_strength), c(0, 0.2, 1.),  na.rm = T),
+            strength_diff = cut(abs(rel_strength), breaks,
                                 labels=c("small", "moderate", "large"),
                                 ordered=T)
         ) %>% 
@@ -159,6 +175,7 @@ if (DROP_ACC) {
     N_total = multi %>% with(length(unique(wid)))
     N_drop_acc = N_total - length(keep_acc)
     multi = multi %>% filter(wid %in% keep_acc)
+    simple = simple %>% filter(wid %in% keep_acc)
     info(glue('Dropping {N_drop_acc} participants with less than 50% accuracy in critical trials'))
 }
 if (DROP_HALF) {
@@ -168,17 +185,22 @@ if (DROP_HALF) {
 
 # %% --------
 df = raw_df = bind_rows(
-    read_sim(OPTIMAL_VERSION, noise_sd=1),
+    read_sim("new_optimal", noise_sd=1),
     # read_sim("empirical_commitment", noise_sd=1),
     # read_sim("rand_fit", noise_sd=0),
-    read_sim("empirical", noise_sd=1),
-    multi %>% mutate(name = "human", wid = factor(wid))
+    multi %>% mutate(name = "human", wid = factor(wid)),
+    read_sim("new_random", noise_sd=1),
+    # read_sim("empirical", noise_sd=1),
 ) %>% mutate(
     name = recode_factor(name, .ordered=T,
+        "sanity_optimal" = "Optimal",
         "optimal" = "Optimal",
         "optimal_prior" = "Optimal",
+        "new_optimal" = "Optimal",
         "human" = "Human",
+        "sanity_rand" = "Random",
         "empirical" = "Random",
+        "new_random" = "Random",
         "empirical_commitment" = "Random Commitment",
         "rand_fit" = "Random Fit"
         # "rand_gamma" = "Random",
@@ -189,20 +211,20 @@ df = raw_df = bind_rows(
 )
 
 if (DROP_ERROR) {
-info("Dropping error trials")
-df = raw_df %>% 
-    filter(
-        response_type == "correct",
-        # response_type %in% c("correct", "timeout"),
-        # response_type != "intrusion",
-    )
+    info("Dropping error trials")
+    df = raw_df %>% 
+        filter(
+            response_type == "correct",
+            # response_type %in% c("correct", "timeout"),
+            # response_type != "intrusion",
+        )
 } else {
-info("_Including_ error trials")
+    info("_Including_ error trials")
 }
 
 long = df %>% 
     # group_by(name) %>%
-    # slice_sample(n=10000) %>% 
+    # slice_sample(n=1000) %>% 
     make_fixations
 
 if (NORMALIZE_FIXATIONS) {
@@ -216,9 +238,11 @@ if (NORMALIZE_FIXATIONS) {
             first_pres_time_raw = first_pres_time,
             second_pres_time_raw = second_pres_time,
             third_pres_time_raw = third_pres_time,
+            fourth_pres_time_raw = fourth_pres_time,
             first_pres_time = (first_pres_time_raw - duration_mean)/duration_sd,
             second_pres_time = (second_pres_time_raw - duration_mean)/duration_sd,
             third_pres_time = (third_pres_time_raw - duration_mean)/duration_sd,
+            fourth_pres_time = (fourth_pres_time_raw - duration_mean)/duration_sd,
         )
 }
 

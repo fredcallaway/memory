@@ -1,5 +1,6 @@
 using Parameters
 using Distributions
+using StatsFuns
 
 """Notation
 
@@ -151,4 +152,18 @@ function act(pol::OptimalPolicy, b::Belief)
     f, e1, e2, t1, t2 = belief2index(pol.m, b)
     q = @view pol.B.Q[:, f, e1, e2, t1, t2]
     argmax(q)
+end
+
+struct SoftOptimalPolicy
+    m::MetaMDP
+    B::BackwardsInduction
+    β::Float64
+end    
+
+SoftOptimalPolicy(m::MetaMDP, β) = SoftOptimalPolicy(m, BackwardsInduction(m), β)
+
+function act(pol::SoftOptimalPolicy, b::Belief)
+    f, e1, e2, t1, t2 = belief2index(pol.m, b)
+    q = @view pol.B.Q[:, f, e1, e2, t1, t2]
+    sample(Weights(softmax(pol.β .* q)))
 end

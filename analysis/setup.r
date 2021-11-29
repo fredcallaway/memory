@@ -13,6 +13,8 @@ library(ggeffects)
 library(rlang)
 library(knitr)
 library(ggside)
+library(broom.mixed)
+library(lmerTest)
 
 
 options(
@@ -41,8 +43,9 @@ theme_update(
     panel.grid.major.y = element_blank(),
     strip.background = element_blank(),
     strip.text.x = element_text(size=12),
-    legend.position="top",
-    panel.spacing = unit(0.6, "lines"),
+    strip.text.y = element_text(size=12),
+    legend.position="right",
+    panel.spacing = unit(1, "lines"),
 )
 
 update_geom_defaults("line", list(size = 1.2))
@@ -82,9 +85,50 @@ ensure_column <- function(data, col) {
 
 zscore = function(x) as.vector(scale(x))
 
+midbins = function(x, breaks) {
+    bin_ids = cut(x, breaks, labels=FALSE)
+    left = breaks[-length(breaks)]
+    right = breaks[-1]
+    ((left + right) / 2)[bin_ids]
+}
+# %% ==================== Saving results ====================
+
+sprintf_transformer <- function(text, envir) {
+  m <- regexpr(":.+$", text)
+  if (m != -1) {
+    format <- substring(regmatches(text, m), 2)
+    regmatches(text, m) <- ""
+    res <- eval(parse(text = text, keep.source = FALSE), envir)
+    do.call(sprintf, list(glue("%{format}f"), res))
+  } else {
+    eval(parse(text = text, keep.source = FALSE), envir)
+  }
+}
+
+fmt <- function(..., .envir = parent.frame()) {
+  glue(..., .transformer = sprintf_transformer, .envir = .envir)
+}
+
+pval = function(p) {
+  # if (p < .001) "p < .001" else glue("p = {str_sub(format(round(p, 3)), 2)}")
+  if (p < .001) "p < .001" else glue("p = {str_sub(format(round(p, 3), nsmall=3), 2)}")
+}
+
+tex_writer = function(path) {
+  # dir.create(path, recursive=TRUE, showWarnings=FALSE)
+  function(name, tex) {
+    name = glue(name, .envir=parent.frame()) %>% str_replace("[:*]", "-")
+    tex = fmt(tex, .envir=parent.frame())
+    file = glue("{path}/{name}.tex")
+    dir.create(dirname(file), recursive=TRUE, showWarnings=FALSE)
+    print(paste0(file, ": ", tex))
+    writeLines(paste0(tex, "\\unskip"), file)
+  }
+}
+
 system('mkdir -p figs')
 system('mkdir -p .fighist')
-fig = function(name="tmp", w=4, h=4, dpi=320, ...) {
+fig = function(name="tmp", w=4, h=4, dpi=320, pdf=FALSE, ...) {
     if (isTRUE(getOption('knitr.in.progress'))) {
         show(last_plot())
         return()
@@ -94,9 +138,12 @@ fig = function(name="tmp", w=4, h=4, dpi=320, ...) {
     p = glue('.fighist/{name}-{stamp}.png')
     system(glue('mv /tmp/fig.png {p}'))
     system(glue('cp {p} figs/{name}.png'))
+    if (pdf) ggsave(glue("figs/{name}.pdf"), width=w, height=h, ...)
     # invisible(dev.off())
     # knitr::include_graphics(p)
 }
+
+# %% ==================== Tidy regressions ====================
 
 smart_print = function(x, ...) {
     if (isTRUE(getOption('knitr.in.progress'))) {
@@ -251,7 +298,6 @@ regress_interaction = function(data, xvar, cvar, yvar, bins=6, bin_range=0.95) {
             breaks=seq(xmin, xmax, length.out=bins),
         ) +
         facet_grid(~name) +
-        theme(legend.position="top") +
         labs(x=pretty_name(x), y=pretty_name(y), color=pretty_name(c)) +
         coord_cartesian(xlim=c(xmin, xmax))
 }

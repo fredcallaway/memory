@@ -1,8 +1,179 @@
 
+compute_strength(block == max(block), 5 * correct - log(rt)) %>% 
+    ggplot(aes(raw_strength)) +
+    geom_density()
+fig()
+
+# %% --------
+mean(random$second_pres_time, na.rm=T)
+
+# %% --------
+raw_df %>%
+    filter(name=="Human") %>% 
+    filter(response_type == "other") %>% 
+    select(word, response) %>% print(n=100)
+
+raw_df %>%
+    filter(name=="Human") %>% 
+    filter(response == "no fucking idea")
+
+# %% --------
+raw_df %>% 
+    filter(name == "Human") %>% 
+    group_by(wid) %>% 
+    summarise(tibble(rt=quantile(rt, c(0.5, 0.95), na.rm=T), q=c("q50", "q95"))) %>% 
+    pivot_wider(names_from=q, values_from=rt) %>% 
+    ungroup() %>% 
+    mutate(wid = fct_reorder(wid, q50)) %>%
+    pivot_longer(c(q50, q95), names_to="name", values_to="value", names_prefix="") %>% 
+    ggplot(aes(wid, value, color=name)) +
+    geom_point() + scale_x_discrete(breaks=NULL)
+
+fig()
+
+hraw = raw_df %>% filter(name=="Human")
+
+human %>% filter(n_pres <= 6) %>%
+    ggplot(aes(rt, color=factor(n_pres))) + geom_density()
+fig()
+
+# %% ==================== intrusion by other cue ====================
+
+
+
+hraw %>% 
+    filter(response_type=="intrusion") %>% 
+    filter(n_pres>=2) %>% 
+    transmute(
+        wid,
+        trial_num,
+        chosen_word = if_else(choose_first, first_word, second_word),
+        unchosen_word = if_else(choose_first, second_word, first_word),
+        response
+    ) %>% 
+    filter(unchosen_word == response)
+
+
+
+# %% ==================== Altenrative time courses ====================
+
+
+unroll_time = function(long) {
+    long %>% 
+        group_by(trial_id) %>%
+        mutate(n_step = diff(c(0, round(cumsum(duration)/100)))) %>% 
+        uncount(n_step) %>%
+        group_by(trial_id) %>% 
+        mutate(time = 100*row_number())
+}
+
+long %>% 
+    filter(name == 'Human') %>% 
+    filter(n_pres < 5) %>% 
+    left_join(select(human, trial_id, first_primed, n_pres)) %>% 
+    unroll_time %>% 
+    drop_na(strength_diff) %>% 
+    filter(strength_diff != "small") %>% 
+    ggplot(aes(time, fix_stronger, color=as_factor(n_pres))) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    # facet_grid(~name) +
+    labs(x="Time in Trial", y="Probability Fixate Primed Cue") +
+    geom_hline(yintercept=0.5) +
+    geom_vline(xintercept=1-.707) +
+    theme(legend.position="top")
+
+fig()
+
+# %% --------
+
+human %>%
+    filter(response_type == "correct") %>% 
+    mutate(choose_first = int(choose_first)) %>% 
+    regress(strength_first, choose_first, logistic=TRUE) +
+    ylab("Prob Select First Cue") + ylim(0, 1) + xlab("First Cue Strength")
+
+fig(w=2.5, h=2.5)
+
+# %% --------
+
+human %>% 
+    filter(n_pres >= 2) %>% 
+    regress(rel_strength, prop_first) + ylim(0,1)
+
+fig(w=2.5, h=2.5)
+
+# %% --------
+
+human %>% 
+    filter(n_pres >= 3) %>% 
+    regress(rel_strength, second_pres_time)
+
+fig(w=2.5, h=2.5)
+
+# %% --------
+
+human %>% 
+    filter(n_pres >= 4) %>% 
+    regress(rel_strength, third_pres_time)
+
+fig(w=2.5, h=2.5)
+
+
+# %% ==================== Fixation by n fix ====================
+
+long %>% 
+    filter(between(n_pres, 2, 5)) %>% 
+    left_join(select(human, trial_id, n_pres)) %>% 
+    normalized_timestep %>% 
+    # drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_stronger, color = factor(n_pres))) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_grid(~name) +
+    labs(x="Normalized Time", y="Probability Fixate\nStronger Cue") +
+    geom_hline(yintercept=0.5) + 
+    theme(legend.position="top") + 
+    scale_colour_manual(values=c(
+        "#F3F1DD", "#F7DAAF", "#F7AF9D", "#C08497"
+    ), aesthetics=c("fill", "colour"), name="")
+
+fig(w=6)
+
+# %% --------
+
+
+long %>% 
+    filter(name == 'Human') %>% 
+    left_join(select(human, trial_id, first_primed, n_pres)) %>% 
+    mutate(fix_primed = 1*(fix_first == first_primed)) %>% 
+    filter(between(n_pres, 1, 4)) %>% 
+    normalized_timestep %>% 
+    drop_na(strength_diff) %>% 
+    ggplot(aes(normalized_timestep/100, fix_primed, color=factor(n_pres))) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    labs(x="Normalized Time", y="Probability Fixate Primed Cue") +
+    geom_hline(yintercept=0.5) +
+    theme(legend.position="top") + scale_colour_manual(values=c(
+        "#F3F1DD", "#F7DAAF", "#F7AF9D", "#C08497"
+    ), aesthetics=c("fill", "colour"), name="")
+
+
+fig(w=6)
+
+
+# %% --------
 X = long %>% 
     filter(name == 'Human') %>% 
     left_join(select(human, trial_id, first_primed, version))
 
+# %% --------
+
+long %>% 
+    filter(name == "Human") %>%
+    filter(last_fix == 0) %>% 
+    summarise(mean(duration))
 
 # %% --------
 human %>% 
@@ -13,26 +184,13 @@ human %>%
         last_pres_prop = last_pres_time / choice_rt
     ) %>% 
     ungroup() %>% 
-    filter(n_pres < 6) %>% 
-    group_by(n_pres) %>% 
-    summarise(mean(last_pres_prop))
+    # filter(n_pres < 6) %>% 
+    # group_by(n_pres) %>% 
+    summarise(median(last_pres_prop))
 
 # %% --------
 
-long %>% 
-    filter(name=="Human" & strength_diff  != "small") %>% 
-    filter(between(n_pres, 2, 5)) %>% 
-    left_join(select(human, trial_id, n_pres)) %>% 
-    normalized_timestep %>% 
-    # drop_na(strength_diff) %>% 
-    ggplot(aes(normalized_timestep/100, fix_stronger, color = as_factor(n_pres))) +
-    geom_smooth(se=F) + 
-    ylim(0, 1) +
-    facet_grid(~name) +
-    labs(x="Normalized Time", y="Probability Fixate\nStronger Cue") +
-    geom_hline(yintercept=0.5) + theme(legend.position="right")
 
-fig(w=6)
 
 # %% --------
 

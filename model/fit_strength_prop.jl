@@ -29,7 +29,7 @@ prms = grid(
 # %% --------
 
 @everywhere function random_sims(;α, β, threshold)
-    m = MetaMDP(;threshold, prior=(α, β), step_size=4, max_step=60, sample_cost=0, switch_cost=0, miss_cost=0)
+    m = MetaMDP(; threshold, prior=(α, β), step_size=4, max_step=60, sample_cost=0, switch_cost=0, miss_cost=0)
     simulate_individual_empirical(m; commitment=false)
 end
 
@@ -67,4 +67,51 @@ strength_prop_coef(df)
 # %% --------
 
 
+# %% ==================== Version 2 ====================
+
+@everywhere using GLM
+@everywhere function strength_prop_coef(df)
+    df = filter(df) do row
+        length(row.presentation_times) >= 2
+    end
+    size(df, 1) < 10 && return 0
+    df.rel_strength = zscore(collect(skipmissing(df.strength_first - df.strength_second)))
+    df.prop_first = df.duration_first ./ (df.duration_first .+ df.duration_second)
+    model = lm(@formula(prop_first ~ rel_strength), df)
+    coef(model)[2]
+end
+
+# %% --------
+@everywhere include("empirical_fixation.jl")
+strength_prop_coef(make_frame(random_policy(m)))
+
+@everywhere function random_strength(prm)
+    @chain prm begin
+        make_mdp
+        random_policy(commitment=false)
+        make_frame
+        strength_prop_coef
+    end
+end
+
+rstrength = @showprogress pmap(random_strength, prms)
+serialize("results/rstrength", rstrength)
+
+# strength_prop_coef(@rsubset df !ismissing(:strength_second) && !ismissing(:strength_first))
+
+# %% ==================== Analyze ====================
+
+rstrength = deserialize("results/rstrength")
+
+# %% --------
+
+R = rstrength(step_size=4, max_step=120)
+best = keymin(R)
+figure() do
+    R(;best.threshold, best.switch_cost) |> heatmap
+end
+
+figure() do
+    R(;best.α, best.β) |> heatmap
+end
 
