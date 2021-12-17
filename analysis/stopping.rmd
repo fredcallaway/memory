@@ -10,6 +10,9 @@ output:
 
 
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+    results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
+)
 source("setup.r")
 
 VERSIONS = c('v6.3')
@@ -74,16 +77,22 @@ all_trials = all_trials %>% left_join(strengths)
 
 # Data
 
+Here we are analyzing simple cued-recall trials where we incentivized participants
+to respond quickly and not respond incorrectly (allowing them to pass instead).
+
+As of Dec 17, 2021, this link will bring you to the test trials (but it might change later).
+https://memorygame29.herokuapp.com/?skip=4
+
 ### Exclusions
 
 ```{r}
 trials = all_trials
 # trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.25)
-trials = trials %>%
-    filter(rt > 50) %>%
-    group_by(wid) %>% 
-    filter(n() >= 35) %>% 
-    filter(between(mean(response_type == "empty"), .2, .8))
+# trials = trials %>%
+#     filter(rt > 50) %>%
+#     group_by(wid) %>% 
+#     filter(n() >= 35) %>% 
+#     filter(between(mean(response_type == "empty"), .2, .8))
 
 
 n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
@@ -102,81 +111,76 @@ n_drop_rt = nt - n_trial
 # )
 
 trials$name = "Human"
+
+trials = trials %>% 
+    group_by(wid) %>% 
+    mutate(rt_z = zscore(rt)) %>% 
+    ungroup()
+
 # trials %>% select(wid, rt, correct, afc_rt, afc_accuracy) %>% write_csv("../model/tofit/simple.csv")
 ```
 
 - Excluding `r n_exclude` participants who gave orrect resonses on fewer than 25% of recall trials or responded in under 50ms on more than one trial (indicating a recording error), leaving `r N` participants in the analysis.
-<!-- - Excluding `r sum(afc_drop_rt)` AFC reaction times more than 5 sds from the mean. -->
-<!-- - Dropping `r n_drop_rt` recall trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis. -->
 
 
-## Foo
 
+## Response types
 
 ```{r}
 trials %>% 
     count(wid, response_type) %>% 
-    pivot_wider(names_from=response_type, values_from=n)
+    pivot_wider(names_from=response_type, values_from=n) %>% 
+    replace(is.na(.), 0) %>% 
+    select(wid, correct, empty, timeout, intrusion, other) %>% 
+    arrange(correct) %>% kable
+```
 
+- there are very few errors (incorrect responses)
+- most participants provide empty responses frequently
+- some provide empty responses almost all the time
+- two out of ten never give an empty response and time out frequently,
+  suggesting that they didn't understand the instructions
+
+## Reaction time on success trials
+
+```{r}
+trials %>% 
+    filter(response_type == "correct") %>% 
+    regress(strength, rt_z) #plot
+```
+
+- faster correct responses with higher strength, as we've seen before
+
+## Reaction time on empty trials (FOK)
+
+```{r}
 trials %>% 
     filter(response_type == "empty") %>% 
-    regress(strength, rt) #plot
-
-trials %>% 
-    filter(response_type == "empty") %>% 
-    ggplot(aes(strength, rt, group=wid)) +
-    geom_smooth(method="lm")
-
-trials %>% 
-    mutate(empty=1 * (response_type == "empty")) %>% 
-    regress(strength, empty) #plot
-
+    regress(strength, rt_z) #plot
 ```
 
-```{r}
-trials %>% 
-    ggplot(aes(response_type)) +
-    geom_bar()
+- slower empty responses with higher strength! (trending)
+- NOTE: I had previously analyzed raw (non-zscore) RT and there was nothing (small negative effect)
 
+## Split by participant
+
+```{r,fig.width=WIDTH, fig.height=HEIGHT}
 trials %>% 
     group_by(wid) %>% 
-    summarise(n_empty = sum(response_type == "empty"))trials %>% 
-
-trials %>% 
-    group_by(wid) %>% 
-    count(response_type) %>% 
-    pivot_wider(names_from=response_type, values_from=n)
+    mutate(
+        rt_z = zscore(rt), 
+        mean_correct = mean(response_type == "empty"),
+        participant = glue("{100*round(mean_correct, 2)}% empty({wid})")
+    ) %>% 
+    ungroup() %>% 
+    mutate(participant=fct_reorder(participant, mean_correct)) %>% 
+    filter(response_type %in% c("correct", "empty")) %>% 
+    ggplot(aes(strength, rt_z, color=participant)) + 
+    geom_smooth(method="lm", level=0) +
+    facet_wrap(~response_type) +
+    labs(x="Memory Strength", y="Reaction Time (z-scored)")
 ```
 
-
-# Model Prediction()
-```{r}
-df = read_csv("../model/results/stopping_sim.csv")
-
-df %>% 
-    filter(give_up) %>% 
-    ggplot(aes(p, n_step, color=as.factor(miss_cost))) +
-    stat_summary(fun=mean, geom="line") +
-    labs(x="Memory Strength", y="Time of Giving up", color="Error Cost")
-```
-
-```{r}
-df %>% 
-    ggplot(aes(p, as.numeric(give_up), color=as.factor(miss_cost))) +
-    stat_summary(fun=mean, geom="line") +
-    theme(legend.position="top") + 
-    labs(x="Memory Strength", y="Probability of Giving up", color="Error Cost")
-
-```
-
-```{r,fig.width=7.5, fig.height=2.5}
-df %>% 
-    filter(p %in% c(.05, .1, .2)) %>% 
-    filter(miss_cost == 100) %>% 
-    filter(give_up) %>% 
-    ggplot(aes(n_step)) + 
-    geom_bar(aes(y=..count../sum(..count..)), position="identity")  +
-    facet_wrap(~p, labeller=label_glue("p = {p}")) + 
-    labs(x="Time", y="Proportion Giving Up") + 
-    xlim(0, 15)
-```
+- the effect for correct trials is pretty reliable
+- the effect for empty trials only comes out in participants who give empty responses between 
+  40% and 75% of the time

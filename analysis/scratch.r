@@ -1,3 +1,283 @@
+# %% ==================== Individual regressions ====================
+
+fixdata %>% 
+    filter(name == "Human") %>% 
+    group_by(presentation, wid) %>% 
+    summarise(model = list(lm(duration ~ strength, data=cur_data())))
+
+# %% --------
+
+regs = human %>% 
+    filter(n_pres > 1) %>% 
+    group_by(wid) %>% 
+    filter(n() > 10) %>% 
+    summarise(tidy(lm(first_pres_time ~ strength_first, data=cur_data())))
+
+
+regs %>% 
+    filter(term == "strength_first") %>% 
+    ggplot(aes(estimate)) + geom_density()
+fig()
+
+
+# %% --------
+regs = human %>% 
+    filter(n_pres > 2) %>% 
+    group_by(wid) %>% 
+    filter(n() > 10) %>% 
+    summarise(tidy(lm(second_pres_time ~ rel_strength, data=cur_data())))
+
+regs %>% 
+    filter(term == "rel_strength") %>% 
+    ggplot(aes(estimate)) + geom_density()
+fig()
+
+# %% --------
+
+
+# %% ==================== Fixation Durations ====================
+
+p1 = df %>%
+    filter(n_pres >= 2) %>% 
+    simple_regression(strength_first, first_pres_time)
+
+p2 = df %>% 
+    filter(n_pres >= 3) %>% 
+    mutate(inv_rel_strength = -rel_strength)  %>% 
+    simple_regression(inv_rel_strength, second_pres_time) +
+    xlab("Second Cue Memory Strength - First Cue Memory Strength") + theme(
+      strip.text.x =  element_text(colour = 'white', size=8),
+    )
+
+p3 = df %>% 
+    filter(n_pres >= 4) %>% 
+    simple_regression(rel_strength, third_pres_time) + 
+    xlab("First Cue Memory Strength - Second Cue Memory Strength") + theme(
+      strip.text.x =  element_text(colour = 'white', size=8),
+    )
+
+
+# %% --------
+(
+    (p1 + theme(plot.margin= margin(5.5, 5.5, 0, 5.5))) / 
+    (p2 + theme(plot.margin= margin(0, 5.5, 0, 5.5))) / 
+    (p3 + theme(plot.margin= margin(0, 5.5, 5.5, 5.5)))
+) + plot_annotation(tag_levels = 'A') & 
+    expand_limits(y=c(-1, 2)) & theme(plot.tag.position = c(0, 1))
+
+fig("fixation_durations_nonrelative", WIDTH, 2.7*HEIGHT, pdf=T)
+
+# %% --------
+
+# 2 and 3 only
+prep = . %>% filter(cue == "relative" & between(x, -2.5, 2.5) & presentation > 1)
+
+ggplot(prep(preds), aes(x, predicted)) +
+    geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
+    geom_line() +
+    geom_pointrange(aes(y=y, ymin=ymin, ymax=ymax), prep(bindata), size=.2) +
+    facet_grid(presentation~name, labeller=labeller(presentation=c("1"="First", "2"="Second", "3"="Third"))) +
+    labs(x="Relative Strength of Fixated Cue", y="Fixation Duration")
+
+fig("fixation_durations_relative", WIDTH, 1.6*HEIGHT, pdf=T)
+# %% ==================== Heatmaps ====================
+
+
+# p1 = preds %>% filter(cue == "fixated") %>% group_by(name, presentation) %>% transmute(x1=x, y1=predicted)
+# p2 = preds %>% filter(cue == "nonfixated") %>% group_by(name, presentation) %>% transmute(x2=x, y2=predicted)
+
+# %% --------
+data = long %>% 
+    ungroup() %>% 
+    filter(presentation < 4 & last_fix == 0) %>% 
+    left_join(avg_ptime) %>% 
+    mutate(duration = (duration - duration_mean) / duration_sd) %>% 
+    left_join(select(df, trial_id, strength_first, strength_second)) %>% 
+    mutate(
+        fixated = if_else(fix_first==1, strength_first, strength_second),
+        nonfixated = if_else(fix_first==1, strength_second, strength_first),
+        relative = if_else(fix_first==1, rel_strength, -rel_strength)
+    )
+
+# %% --------
+
+models = data %>% group_by(name, presentation) %>% 
+    group_modify(function(data, grp) {
+        model = lm(duration ~ fixated + nonfixated, data=data)
+        tibble(model=list(model))
+    })
+
+preds = models %>% rowwise() %>% summarise(
+    tibble(ggpredict(model, c("fixated [-2:2]", "nonfixated [-2:2]")))
+)
+
+
+# %% --------
+
+preds %>% 
+    transmute(fixated=x, nonfixated=group, duration=predicted) %>% 
+    ggplot(aes(fixated, nonfixated, fill=duration)) + 
+    geom_tile() +
+    facet_grid(presentation~name, labeller=labeller(presentation=c("1"="First", "2"="Second", "3"="Third")))
+
+fig("fixation_durations_heat2", WIDTH+1, 2*HEIGHT)
+
+
+# %% --------
+models %>% 
+    filter(name=="Human" & presentation == 3 & cue == "nonfixated")  %>% 
+    with(first(model)) %>% summ
+
+# %% --------
+data %>% 
+    filter(name=="Human" & presentation == 3) %>% 
+    lmer(duration ~ nonfixated + (nonfixated|wid), data=.) %>% summ
+
+data %>% 
+    filter(name=="Human" & presentation == 3) %>% 
+    lm(duration ~ nonfixated, data=.) %>% summ
+
+# %% ==================== Heatmap with raw data ====================
+
+data %>% 
+    mutate(
+        fixated = midbins(fixated, seq(-3, 3, 3)),
+        nonfixated = midbins(nonfixated, seq(-3, 3, 3))
+        # fixated = midbins(fixated, seq(-2.5, 2.5, 1)),
+        # nonfixated = midbins(nonfixated, seq(-2.5, 2.5, 1))
+    ) %>% 
+    filter(between(duration, -3, 3)) %>% 
+    group_by(name, presentation, fixated, nonfixated) %>% 
+    filter(n() > 10) %>% 
+    summarise(duration=mean(duration)) %>%
+    ggplot(aes(fixated, nonfixated, fill=duration)) +
+    geom_tile() + 
+    facet_grid(presentation~name, labeller=labeller(presentation=c("1"="First", "2"="Second", "3"="Third")))
+
+fig("fixation_durations_heat_raw", WIDTH+1, 2*HEIGHT)
+
+
+# %% --------
+summ(model)
+model = lm(duration ~ fixated * nonfixated, data=data)
+pred = ggpredict(model, terms=c("fixated [-2:2]", "nonfixated [-2:2]")) %>% tibble %>% 
+    transmute(fixated=x, nonfixated=group, duration=predicted)
+
+pred %>% ggplot(aes(fixated, nonfixated, fill=duration)) + geom_tile()
+fig()
+
+# %% --------
+models = data %>% 
+    group_modify(function(data, grp) {
+        # print(grp)
+        model = if (grp$name == "Human") {
+            lmer(duration ~ strength + (strength|wid), data=data)
+        } else {
+            lm(duration ~ strength, data=data)
+        }
+        tibble(model=list(model))
+    })
+
+fixdata
+
+
+# %% --------
+
+preds %>% 
+    filter(cue != "relative") %>% 
+    filter(mod(x, 1) == 0) %>% 
+    group_by(name, presentation) %>% 
+    select(cue, x, predicted) %>% 
+    filter(name == "Optimal") %>% print(n=100)
+
+     %>% 
+    pivot_wider(names_from=cue, values_from=c(x, predicted))
+
+
+left_join(p1, p2) %>% 
+    mutate(y = y1 + y2) %>% 
+    filter(name == "Human" & presentation == 1) %>% 
+    ggplot(aes(x1, x2, fill=y)) +
+    geom_tile() +
+
+fig()
+
+# %% --------
+
+
+
+model = models %>% with(first(model))
+
+ggpredict(model, "strength [-2.5:2.5 by=.1]") %>% tibble
+
+# %% --------
+
+left_join(p1, p2) %>% 
+    filter(between(x1, -3, 3) & between(x2, -3, 3)) %>% 
+    mutate(y = y1 + y2) %>% 
+    filter(name == "Human") %>% 
+    ggplot(aes(x1, x2, fill=y)) +
+    facet_grid(name ~ presentation) +
+    geom_tile()
+
+fig()
+
+# %% --------
+
+X = long %>% 
+    filter(presentation < 4 & last_fix == 0) %>% 
+    left_join(avg_ptime) %>% 
+    mutate(duration = (duration - duration_mean) / duration_sd) %>% 
+    left_join(select(df, trial_id, strength_first, strength_second)) %>% 
+    mutate(
+        fixated = if_else(fix_first==1, strength_first, strength_second),
+        nonfixated = if_else(fix_first==1, strength_second, strength_first),
+    ) %>% 
+    group_by(name, presentation) %>% 
+    select(fixated, nonfixated, duration)
+
+X
+
+# %% --------
+X %>% 
+    filter(name == "Human") %>% 
+    filter(presentation == 2) %>% 
+    mutate(
+        fixated = midbins(fixated, seq(-2.5, 2.5, 1)),
+        nonfixated = midbins(nonfixated, seq(-2.5, 2.5, 1))
+    ) %>% 
+    group_by(fixated, nonfixated) %>% 
+    summarise(duration=mean(duration)) %>%
+    ggplot(aes(fixated, nonfixated, fill=duration)) +
+    geom_tile()
+
+fig()
+# %% --------
+     %>% 
+    mutate(
+        # fixated = midbins(fixated, seq(-2.5, 2.5, 1)),
+        # nonfixated = midbins(nonfixated, seq(-2.5, 2.5, 1))
+    )
+
+     %>% 
+
+    group_by(fixated, nonfixated) %>% 
+    summarise(duration=mean(duration)) %>% 
+    ggplot(aes(fixated, nonfixated, fill=duration)) +
+    geom_tile()
+
+fig()
+
+
+
+# %% --------
+df %>%
+    filter(name=="Human") %>% 
+    filter(n_pres >= 2) %>% 
+    filter(trial_num >= 10) %>% 
+    simple_regression(strength_first, first_pres_time)
+
+# %% --------
 
 compute_strength(block == max(block), 5 * correct - log(rt)) %>% 
     ggplot(aes(raw_strength)) +

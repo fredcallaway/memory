@@ -1,0 +1,415 @@
+---
+title: Giving up (v6.0 - v6.1)
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+---
+
+
+```{r setup, include=FALSE}
+source("setup.r")
+
+VERSIONS = c('v6.0', 'v6.1')
+# VERSIONS = c('v4.0')
+# VERSIONS = c('v2.0', 'v2.0B')
+
+load_data = function(type) {
+    VERSIONS %>% 
+    map(~ read_csv(glue('../data/{.x}/{type}.csv'))) %>% 
+    bind_rows
+}
+
+all_trials = load_data('simple-recall') %>% 
+    filter(!practice) %>% 
+    mutate(
+        response_type = factor(response_type, 
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
+        word_type = factor(word_type, 
+            levels=c("low", "high"), labels=c("Low", "High")),
+        total_time = rt + type_time,
+        correct = response_type == "correct"
+    ) %>% mutate(
+        base_rt = rt,
+        rt = typing_rt
+    )
+
+afc = load_data('afc') %>% 
+    group_by(wid) %>% 
+    mutate(
+        trial_num = seq(1:n()),
+        log_afc_rt = log(rt),
+        presentation = (trial_num-1) %/% 40 + 1
+    ) %>% 
+    filter(rt > 100) %>%   # mispresses or recording errors
+    filter(!practice) %>% select(-practice)
+
+
+max_afc_rt = with(afc, mean(rt) + 5 * sd(rt))
+afc_drop_rt = afc$rt > max_afc_rt
+afc$rt[afc_drop_rt] = NaN
+
+afc_scores = afc %>% 
+    filter(block > 1) %>% 
+    mutate(score =  5 * correct - log(rt)) %>%
+    group_by(wid, word) %>% 
+    summarise(score = mean(score)) %>%
+    group_by(wid) %>%
+    mutate(strength = scale(raw_strength))zz
+
+all_trials = left_join(all_trials, afc_scores)
+
+# x1 = afc %>% 
+#     group_by(wid, word) %>% 
+#     summarise(afc_accuracy = mean(correct))
+
+# x2 = afc %>% 
+#     filter(correct) %>% 
+#     group_by(wid, word) %>% 
+#     summarise(afc_rt = mean(rt))
+
+# all_trials = inner_join(all_trials, inner_join(x1, x2))
+```
+
+# Model Prediction()
+```{r}
+df = read_csv("../model/results/stopping_sim.csv")
+
+df %>% 
+    filter(give_up) %>% 
+    ggplot(aes(p, n_step, color=as.factor(miss_cost))) +
+    stat_summary(fun=mean, geom="line") +
+    labs(x="Memory Strength", y="Time of Giving up", color="Error Cost")
+```
+
+```{r}
+df %>% 
+    ggplot(aes(p, as.numeric(give_up), color=as.factor(miss_cost))) +
+    stat_summary(fun=mean, geom="line") +
+    theme(legend.position="top") + 
+    labs(x="Memory Strength", y="Probability of Giving up", color="Error Cost")
+
+```
+
+```{r,fig.width=7.5, fig.height=2.5}
+df %>% 
+    filter(p %in% c(.05, .1, .2)) %>% 
+    filter(miss_cost == 100) %>% 
+    filter(give_up) %>% 
+    ggplot(aes(n_step)) + 
+    geom_bar(aes(y=..count../sum(..count..)), position="identity")  +
+    facet_wrap(~p, labeller=label_glue("p = {p}")) + 
+    labs(x="Time", y="Proportion Giving Up") + 
+    xlim(0, 15)
+```
+
+# Data
+
+### Exclusions
+
+```{r}
+trials = all_trials
+# trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.25)
+trials = trials %>% filter(rt > 50) %>% filter(n() >= 35)
+
+n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
+N = length(unique(trials$wid))
+
+nt = nrow(trials)
+max_rt = with(trials, mean(rt, na.rm=TRUE) + 5 * sd(rt, na.rm=TRUE))
+# trials = filter(trials, rt < max_rt)
+n_trial = nrow(trials)
+n_drop_rt = nt - n_trial
+
+# trials %<>% mutate(
+#     log_afc_rt = log(afc_rt),
+#     recall_rt = rt,
+#     log_recall_rt = log(rt)
+# )
+
+
+# trials %>% select(wid, rt, correct, afc_rt, afc_accuracy) %>% write_csv("../model/tofit/simple.csv")
+```
+
+- Excluding `r n_exclude` participants who gave orrect resonses on fewer than 25% of recall trials or responded in under 50ms on more than one trial (indicating a recording error), leaving `r N` participants in the analysis.
+<!-- - Excluding `r sum(afc_drop_rt)` AFC reaction times more than 5 sds from the mean. -->
+<!-- - Dropping `r n_drop_rt` recall trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis. -->
+
+
+## Foo
+
+
+```{r}
+trials %>% 
+    filter(response_type == "empty") %>% 
+    regress(strength, rt) #plot
+
+trials %>% 
+    mutate(empty=1 * (response_type == "empty")) %>% 
+    regress(strength, empty) #plot
+```
+
+```{r}
+trials %>% 
+    ggplot(aes(response_type)) +
+    geom_bar()
+
+trials %>% 
+    group_by(wid) %>% 
+    summarise(n_empty = sum(response_type == "empty"))trials %>% 
+
+trials %>% 
+    group_by(wid) %>% 
+    count(response_type) %>% 
+    pivot_wider(names_from=response_type, values_from=n)
+```
+
+
+## Does 2-AFC RT predict cue-recall RT?
+
+Is the reaction time on 2AFC trials for a given word predictive of reaction time for the same word in the recall task? Critically, we need to see the effect within individuals, so we plot linear fits for each participant and run a mixed effects model with random intercepts.
+
+```{r}
+trials %>% 
+    filter(response_type == "empty") %>% 
+    ggplot(aes(strength, rt, group=wid)) + 
+    geom_point(alpha=0.2) +
+    geom_smooth(method=lm, se=F)
+
+trials %>% 
+    filter(response_type == "empty") %>%
+    with(lmer(rt ~ strength + (1|wid))) %>% summ
+```
+
+```{r}
+ggplot(trials, aes(afc_rt/1000, recall_rt/1000, group=wid)) + 
+    geom_point(alpha=0.2) +
+    geom_smooth(method=lm, se=F) +
+    xlim(0, 5) + ylim(0, 5) + 
+    labs(x="2AFC RT (s)", y="Cued Recall RT (s)")
+```
+
+Looks like we have a consistent effect and reasonably sized effect!
+We can visualize the individual effects more clearly by 
+clearly by applying participant-wise mean centering:
+
+```{r}
+trials %<>% group_by(wid) %>% mutate(
+    centered_log_recall_rt = log_recall_rt - mean(log_recall_rt),
+    centered_log_afc_rt = log_afc_rt - mean(log_afc_rt),
+) %>% ungroup()
+
+ggplot(trials, aes(centered_log_afc_rt, centered_log_recall_rt, group=wid)) + 
+    geom_smooth(method=lm, se=F)
+```
+
+And here is the distribution of slopes (with 95% confidence intervals) and correlations
+for each participant.
+
+```{r, fig.width=7.5, fig.height=5}
+effects = trials %>% 
+    nest(-wid) %>% 
+    mutate(
+        fit = map(data, ~ 
+            lm(log_recall_rt ~ log_afc_rt, data=.) %>% 
+            tidy(conf.int = T)
+        )
+    ) %>% 
+    unnest(fit) %>% 
+    filter(term == 'log_afc_rt') %>% 
+    arrange(estimate)
+
+notick = theme(
+  axis.text.x = element_blank(),
+  axis.text.y = element_blank(),
+  axis.ticks = element_blank())
+
+corrs = trials %>%
+    group_by(wid) %>% 
+    summarise(cor=cor(log_recall_rt, log_afc_rt, use="complete"))
+
+effects = left_join(effects, corrs)
+
+p1 = ggplot(effects, aes(reorder(wid, estimate), estimate)) + 
+    geom_point() +
+    geom_errorbar(aes(ymin=conf.low , ymax=conf.high)) +
+    geom_hline(yintercept=0, color="red") +
+    labs(y="slope", x="participant") +
+    coord_flip() + notick
+
+
+p2 = ggplot(effects, aes(reorder(wid, estimate), cor)) + 
+        geom_point() +
+        geom_hline(yintercept=0, color="red") + 
+        labs(y="correlation", x="participant") +
+        coord_flip() + notick
+
+prop_slope_positive = with(effects, mean(estimate > 0))
+
+p1 | p2
+```
+
+## Non-parametric GAM fit
+
+```{r}
+library(mgcv)
+# trials$wid = factor(trials$wid)
+trials = trials %>% mutate(
+    log_recall_rt = log(rt),
+)
+
+lmer(log_recall_rt ~ strength + (1|wid), data=trials) %>% summ
+
+X = trials %>% 
+    select(log_recall_rt, strength, wid) %>% 
+    drop_na()
+
+m = gam(log_recall_rt ~ s(strength, bs = "cs", k = 10) +
+        s(wid, strength, bs='re'), data=X, method="REML")
+
+m = gam(log_recall_rt ~ s(strength, bs = "cs", k = 10) +
+                        s(wid, strength, bs='re'),
+        data=X, method="REML")
+
+# bounds = trials %>% summarise(lo=quantile(afc_rt, .05), hi=quantile(afc_rt, .95))
+bounds = trials %>% summarise(lo=min(afc_rt), hi=max(afc_rt))
+
+preds = expand.grid(
+    wid = unique(trials$wid), 
+    strength = seq(4.5, 9, .05)  
+) %>% mutate(
+    log_recall_rt=predict(m, newdata=.),
+    recall_rt=exp(log_recall_rt),
+    afc_rt=exp(strength)
+) %>% left_join(bounds) %>% filter(afc_rt > lo & afc_rt < hi)
+
+preds %>% group_by(wid) %>% summarise(mrr = mean(recall_rt)) %>% filter(mrr < 1000)
+
+preds %>% ggplot(aes(strength, log_recall_rt, group=wid)) + 
+    geom_line(size=.5) + theme_classic()
+
+```
+
+`r round(100 * prop_slope_positive)`% of participants have a positive slope.
+
+## Simulated pairings
+
+Another way to analyze this data is to look at what the RT differences would have been if we had paired the items as we plan to do in the critical experiment: slowest with fastest, second slowest with second fastest, and so on. After much exploration, we found that we get the best results when we ignore the AFC accuracy and throw out the first round (leaving just two RT measurements per word).
+
+```{r, fig.width=7.5, fig.height=4}
+n_pair = 20
+
+make_pairs = function(filt, score) {
+    afc %>%
+        filter({{ filt }}) %>% 
+        mutate(score={{ score }}) %>% 
+        group_by(wid, word) %>% 
+        summarise(score=mean(score)) %>% 
+        group_by(wid) %>% 
+        mutate(score  = score - median(score)) %>% 
+        arrange(score, .by_group=T) %>% 
+        mutate(kind=rep(c('easy', 'hard'), each=n_pair), pair=c(n_pair:1, 1:n_pair)) %>% 
+        left_join(select(trials, wid, word, recall_rt=rt))
+}
+
+make_diff = function(pairs) {
+    pairs %>% 
+        pivot_wider(c(wid, pair), values_from=recall_rt, names_from=kind) %>%
+        mutate(diff = log(hard) - log(easy), raw_diff = hard - easy)
+}
+
+plot_diff = function(dif) {
+    ggplot(dif, aes(pair, diff)) + 
+    stat_summary() + 
+    labs(y="log(hard RT) - log(easy RT)") +
+    geom_smooth(method='lm') + 
+    coord_cartesian(ylim=c(-1, 1)) +
+    geom_hline(yintercept=0)
+}
+
+
+pairs = make_pairs(round > 1, log(rt))
+p1 = ggplot(pairs, aes(pair, log(recall_rt), color=kind)) +
+    stat_summary(position=position_dodge2(.2)) +
+    geom_smooth(method='lm', se=F)
+
+dif = make_diff(pairs)
+p2 = plot_diff(dif)
+
+p1 | p2
+dif %>% with(lm(diff ~ pair)) %>% summ(scale=TRUE)
+```
+
+There's a clear difference between the easy (fast 2AFC RT) and hard (slow 2AFC RT) trials. And the
+effect grows with the extremity of the difference (pair 10 has the slowest and fastest words).
+
+### Other scoring approaches
+
+
+```{r}
+try_strategy = function(filt, score) {
+    d = make_pairs({{filt}}, {{score}}) %>% make_diff 
+    print(d %>% plot_diff)
+    d %>% lm(diff ~ pair, data=.) %>% summ(scale=TRUE)
+}
+```
+
+#### Exclude first round, sort by log(rt).
+The chosen way (same as above but replicated for easier comparison). 
+```{r}
+try_strategy(round > 1, log(rt)) # plot
+```
+
+#### Use raw (non-log) rt.
+```{r}
+try_strategy(round > 1, rt) # plot
+```
+
+#### Don't exclude first round.
+```{r}
+# No exclusion
+try_strategy(TRUE, log(rt)) # plot
+```
+
+#### Sort by accuracy, then log(rt).
+```{r}
+try_strategy(round > 1, 1000*(1-correct) + log(rt)) # plot
+```
+
+
+## Plot best measure
+
+```{r}
+X = afc %>%
+    filter(round > 1) %>% 
+    mutate(score=log(rt)) %>% 
+    group_by(wid, word) %>% 
+    summarise(score=mean(score)) %>% 
+    group_by(wid) %>% 
+    right_join(select(trials, wid, word, recall_rt=rt)) %>% 
+    drop_na
+
+stopifnot(nrow(X) == nrow(trials))
+
+X %>% ggplot(aes(score, log(recall_rt), group=wid)) + 
+    geom_point(alpha=0.2) +
+    geom_smooth(method=lm, se=F) + 
+    labs(x="2AFC Log RT", y="Cued Recall Log RT")
+```
+
+## Check response coding
+
+### Responses classified as "other" (incorrect but not intrusion)
+```{r}
+trials %>% filter(word == response)  %>% with(all(correct)) %>% stopifnot
+trials %>% filter(response_type == "other") %>% select(word, response) %>% kable
+```
+
+### Non-exact matches classified as correct
+```{r}
+trials %>% filter(correct & word != response) %>% select(word, response) %>% kable
+```

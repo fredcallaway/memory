@@ -126,7 +126,7 @@ read_sim = function(name, noise_sd=0) {
         choose_first = outcome == 1,
         n_pres = lengths(presentation_times),
         odd_pres = mod(n_pres, 2) == 1,
-        rel_strength = strength_first - strength_second,
+        rel_strength = (strength_first - strength_second) / sqrt(2),
         chosen_strength = if_else(choose_first, strength_first, strength_second),
         # strength_first_bin = cut(strength_first, 5, ordered=T),
         # strength_second_bin = cut(strength_second, 5, ordered=T),

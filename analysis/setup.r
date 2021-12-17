@@ -182,6 +182,7 @@ pretty_names = list(
     rel_strength = "Relative Memory Strength",
     prop_first = "Proportion Fixate First",
     rt = "Reaction Time",
+    rt_z = "Reaction Time (z-scored)",
     last_strength = "Last Fixated Strength"
 )
 
