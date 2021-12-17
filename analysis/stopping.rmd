@@ -1,5 +1,5 @@
 ---
-title: Giving up (v6.0 - v6.1)
+title: Optimal giving up in single-cue recall
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
@@ -82,6 +82,8 @@ to respond quickly and not respond incorrectly (allowing them to pass instead).
 
 As of Dec 17, 2021, this link will bring you to the test trials (but it might change later).
 https://memorygame29.herokuapp.com/?skip=4
+
+Version(s): `r paste(VERSIONS)`
 
 ### Exclusions
 
