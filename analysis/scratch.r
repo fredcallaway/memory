@@ -1,3 +1,19 @@
+# %% ==================== Choose strength ====================
+
+multi = multi %>% add_strength(
+    block == max(block), 
+    if_else(correct, -log(rt), -10)
+)
+
+# multi = multi %>% add_strength(block == max(block), 5 * correct - log(rt))
+
+multi %>% 
+    # filter(n_pres == 1) %>% 
+    lmer(rt ~ chosen_strength + (chosen_strength|wid), data=.) %>% 
+    summ
+
+
+
 # %% ==================== Individual regressions ====================
 
 fixdata %>% 

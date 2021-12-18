@@ -92,14 +92,11 @@ add_strength = function(multi, filt, strength) {
         )
 }
 
-simple %>% 
-    filter(block == max(block)) %>% 
-    mutate(raw_strength = 5 * correct - log(rt)) %>% 
-    group_by(wid, word) %>% 
-    summarise(raw_strength = mean(raw_strength))
+multi = multi %>% add_strength(
+    block == max(block), 
+    if_else(correct, -log(rt), -log(15000))
+)
 
-
-multi = multi %>% add_strength(block == max(block), 5 * correct - log(rt))
 
 # %% ==================== Model ====================
 

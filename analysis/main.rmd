@@ -16,6 +16,10 @@ knitr::opts_chunk$set(
 )
 ```
 
+::: {.alert .alert-info}
+This analysis uses a new strength definition that doesn't include RT on error trials.
+:::
+
 ## Experiment
 - Two rounds of training and pre-test
 - No feedback in any pre-test trials
@@ -26,7 +30,6 @@ knitr::opts_chunk$set(
 
 ## Analysis
 ```{r setup, echo=FALSE}
-OPTIMAL_VERSION = "new_optimal"
 DROP_HALF = FALSE
 DROP_ACC = TRUE
 DROP_ERROR = TRUE

@@ -59,7 +59,7 @@ afc_scores = afc %>%
     group_by(wid, word) %>% 
     summarise(score = mean(score)) %>%
     group_by(wid) %>%
-    mutate(strength = scale(raw_strength))zz
+    mutate(strength = scale(score))
 
 all_trials = left_join(all_trials, afc_scores)
 
@@ -74,6 +74,73 @@ all_trials = left_join(all_trials, afc_scores)
 
 # all_trials = inner_join(all_trials, inner_join(x1, x2))
 ```
+
+# Data
+
+### Exclusions
+
+```{r}
+trials = all_trials
+# trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.25)
+trials = trials %>% filter(rt > 50) %>% filter(n() >= 35)
+
+n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
+N = length(unique(trials$wid))
+
+nt = nrow(trials)
+max_rt = with(trials, mean(rt, na.rm=TRUE) + 5 * sd(rt, na.rm=TRUE))
+# trials = filter(trials, rt < max_rt)
+n_trial = nrow(trials)
+n_drop_rt = nt - n_trial
+
+# trials %<>% mutate(
+#     log_afc_rt = log(afc_rt),
+#     recall_rt = rt,
+#     log_recall_rt = log(rt)
+# )
+
+
+# trials %>% select(wid, rt, correct, afc_rt, afc_accuracy) %>% write_csv("../model/tofit/simple.csv")
+trials$name = "Human"
+trials = trials %>% 
+    group_by(wid) %>% 
+    mutate(rt_z = zscore(rt)) %>% 
+    ungroup()
+```
+
+- Excluding `r n_exclude` participants who gave orrect resonses on fewer than 25% of recall trials or responded in under 50ms on more than one trial (indicating a recording error), leaving `r N` participants in the analysis.
+<!-- - Excluding `r sum(afc_drop_rt)` AFC reaction times more than 5 sds from the mean. -->
+<!-- - Dropping `r n_drop_rt` recall trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis. -->
+
+
+## Foo
+
+
+```{r}
+trials %>%
+    filter(response_type == "empty") %>% 
+    regress(strength, rt_z) #plot
+
+trials %>% 
+    mutate(empty=1 * (response_type == "empty")) %>% 
+    regress(strength, empty) #plot
+```
+
+```{r}
+trials %>% 
+    ggplot(aes(response_type)) +
+    geom_bar()
+
+trials %>% 
+    group_by(wid) %>% 
+    summarise(n_empty = sum(response_type == "empty"))trials %>% 
+
+trials %>% 
+    group_by(wid) %>% 
+    count(response_type) %>% 
+    pivot_wider(names_from=response_type, values_from=n)
+```
+
 
 # Model Prediction()
 ```{r}
@@ -106,68 +173,6 @@ df %>%
     labs(x="Time", y="Proportion Giving Up") + 
     xlim(0, 15)
 ```
-
-# Data
-
-### Exclusions
-
-```{r}
-trials = all_trials
-# trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.25)
-trials = trials %>% filter(rt > 50) %>% filter(n() >= 35)
-
-n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
-N = length(unique(trials$wid))
-
-nt = nrow(trials)
-max_rt = with(trials, mean(rt, na.rm=TRUE) + 5 * sd(rt, na.rm=TRUE))
-# trials = filter(trials, rt < max_rt)
-n_trial = nrow(trials)
-n_drop_rt = nt - n_trial
-
-# trials %<>% mutate(
-#     log_afc_rt = log(afc_rt),
-#     recall_rt = rt,
-#     log_recall_rt = log(rt)
-# )
-
-
-# trials %>% select(wid, rt, correct, afc_rt, afc_accuracy) %>% write_csv("../model/tofit/simple.csv")
-```
-
-- Excluding `r n_exclude` participants who gave orrect resonses on fewer than 25% of recall trials or responded in under 50ms on more than one trial (indicating a recording error), leaving `r N` participants in the analysis.
-<!-- - Excluding `r sum(afc_drop_rt)` AFC reaction times more than 5 sds from the mean. -->
-<!-- - Dropping `r n_drop_rt` recall trials with reaction times over more than 3 sds above the mean (more than `r round(max_rt/1000, 1)` seconds), leaving `r n_trial` trials in the analysis. -->
-
-
-## Foo
-
-
-```{r}
-trials %>% 
-    filter(response_type == "empty") %>% 
-    regress(strength, rt) #plot
-
-trials %>% 
-    mutate(empty=1 * (response_type == "empty")) %>% 
-    regress(strength, empty) #plot
-```
-
-```{r}
-trials %>% 
-    ggplot(aes(response_type)) +
-    geom_bar()
-
-trials %>% 
-    group_by(wid) %>% 
-    summarise(n_empty = sum(response_type == "empty"))trials %>% 
-
-trials %>% 
-    group_by(wid) %>% 
-    count(response_type) %>% 
-    pivot_wider(names_from=response_type, values_from=n)
-```
-
 
 ## Does 2-AFC RT predict cue-recall RT?
 
