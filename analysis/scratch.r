@@ -1,3 +1,53 @@
+
+
+fig()
+# %% ==================== Stopping ====================
+
+pretest %>%
+    filter(block==max(block)) %>% 
+    group_by(version) %>% 
+    count(response_type) %>% 
+    mutate(n = n/sum(n)) %>% 
+    ggplot(aes(response_type, n, fill=version)) +
+    geom_bar(stat="identity", position=position_dodge())
+
+fig()
+
+
+# %% --------
+simple %>% 
+    filter(block==3) %>% 
+    count(response_type) %>% 
+    pivot_wider(names_from=response_type, values_from=n) %>% 
+    replace(is.na(.), 0) %>% 
+    # select(wid,correct, empty, timeout, intrusion, other) %>% 
+    arrange(correct) %>% kable
+
+# %% ==================== Stopping exclusions ====================
+
+
+# trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.25)
+# trials = trials %>%
+#     filter(rt > 50) %>%
+#     group_by(wid) %>% 
+#     filter(n() >= 35) %>% 
+#     filter(between(mean(response_type == "empty"), .2, .8))
+
+
+# n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
+# N = length(unique(trials$wid))
+
+# nt = nrow(trials)
+# max_rt = with(trials, mean(rt, na.rm=TRUE) + 5 * sd(rt, na.rm=TRUE))
+# # trials = filter(trials, rt < max_rt)
+# n_trial = nrow(trials)
+# n_drop_rt = nt - n_trial
+
+# trials %<>% mutate(
+#     log_afc_rt = log(afc_rt),
+#     recall_rt = rt,
+#     log_recall_rt = log(rt)
+# )
 # %% ==================== Choose strength ====================
 
 multi = multi %>% add_strength(

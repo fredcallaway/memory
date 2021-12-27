@@ -15,25 +15,29 @@ knitr::opts_chunk$set(
 )
 source("setup.r")
 
-VERSIONS = c('v6.3')
-# VERSIONS = c('v4.0')
-# VERSIONS = c('v2.0', 'v2.0B')
+# VERSIONS = c('v6.5C')
+# VERSIONS = c('v6.4', 'v6.5', 'v6.5B', 'v6.5C', 'v6.6', 'v6.7', 'v6.8')
+VERSIONS = c('v6.5', 'v6.5B', 'v6.5C')
 
 load_data = function(type) {
     VERSIONS %>% 
-    map(~ read_csv(glue('../data/{.x}/{type}.csv'))) %>% 
+    map(~ 
+        read_csv(glue('../data/{.x}/{type}.csv'), col_types = cols()) %>% 
+        mutate(version = .x)
+    ) %>% 
     bind_rows
 }
 
 pretest = load_data('simple-recall') %>% 
     filter(!practice) %>% 
+    group_by(wid) %>% filter(n() == 74) %>% ungroup %>%
     mutate(
         response_type = factor(response_type, 
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
             # labels=c("Correct", "Intrusion", "Other")
         ),
         total_time = rt + type_time,
-        correct = response_type == "correct"
+        correct = response_type == "correct",
     ) %>% mutate(
         base_rt = rt,
         rt = typing_rt
@@ -47,32 +51,13 @@ all_trials = load_data('simple-recall-penalized') %>%
             # labels=c("Correct", "Intrusion", "Other")
         ),
         total_time = rt + type_time,
-        correct = response_type == "correct"
+        correct = response_type == "correct",
+        skip = response_type == "empty"
     ) %>% mutate(
         base_rt = rt,
         rt = typing_rt
     )
 
-strengths = pretest %>% 
-    filter(block == max(block)) %>% 
-    mutate(strength =  5 * correct - log(rt)) %>%
-    group_by(wid, word) %>% 
-    summarise(strength = mean(strength)) %>%
-    group_by(wid) %>%
-    mutate(strength = zscore(strength))
-
-all_trials = all_trials %>% left_join(strengths)
-
-# x1 = afc %>% 
-#     group_by(wid, word) %>% 
-#     summarise(afc_accuracy = mean(correct))
-
-# x2 = afc %>% 
-#     filter(correct) %>% 
-#     group_by(wid, word) %>% 
-#     summarise(afc_rt = mean(rt))
-
-# all_trials = inner_join(all_trials, inner_join(x1, x2))
 ```
 
 # Data
@@ -89,41 +74,38 @@ Version(s): `r paste(VERSIONS)`
 
 ```{r}
 trials = all_trials
-# trials = all_trials %>% group_by(wid) %>% filter(mean(correct) > 0.25)
-# trials = trials %>%
-#     filter(rt > 50) %>%
-#     group_by(wid) %>% 
-#     filter(n() >= 35) %>% 
-#     filter(between(mean(response_type == "empty"), .2, .8))
+c1 = pretest %>% 
+    group_by(wid) %>% 
+    summarise(accuracy=mean(correct))
 
+c2 = all_trials %>% 
+    group_by(wid) %>%
+    filter(n() == 37) %>% 
+    summarise(n_empty = sum(response_type == "empty")) %>% 
+    filter(between(n_empty, 3, 34))
 
-n_exclude = length(unique(all_trials$wid)) - length(unique(trials$wid))
-N = length(unique(trials$wid))
-
-nt = nrow(trials)
-max_rt = with(trials, mean(rt, na.rm=TRUE) + 5 * sd(rt, na.rm=TRUE))
-# trials = filter(trials, rt < max_rt)
-n_trial = nrow(trials)
-n_drop_rt = nt - n_trial
-
-# trials %<>% mutate(
-#     log_afc_rt = log(afc_rt),
-#     recall_rt = rt,
-#     log_recall_rt = log(rt)
-# )
+keep = inner_join(c1, c2) %>% with(wid)
 
 trials$name = "Human"
 
 trials = trials %>% 
+    filter(wid %in% keep) %>% 
     group_by(wid) %>% 
     mutate(rt_z = zscore(rt)) %>% 
     ungroup()
 
-# trials %>% select(wid, rt, correct, afc_rt, afc_accuracy) %>% write_csv("../model/tofit/simple.csv")
+pretest %>% 
+    filter(block == max(block)) %>% 
+    rename(pre_correct = correct) %>% 
+    mutate(pre_logrt = if_else(pre_correct, log(rt), 0)) %>% 
+    group_by(wid, word) %>% 
+    summarise(across(c(pre_correct, pre_logrt), mean)) %>%
+    group_by(wid) %>%
+    mutate(across(c(pre_correct, pre_logrt), zscore, .names="{.col}_z")) %>% 
+    mutate(strength = -zscore((1-pre_correct) * log(15000) + pre_logrt)) %>% 
+    right_join(trials) -> trials
+
 ```
-
-- Excluding `r n_exclude` participants who gave orrect resonses on fewer than 25% of recall trials or responded in under 50ms on more than one trial (indicating a recording error), leaving `r N` participants in the analysis.
-
 
 
 ## Response types
@@ -133,7 +115,7 @@ trials %>%
     count(wid, response_type) %>% 
     pivot_wider(names_from=response_type, values_from=n) %>% 
     replace(is.na(.), 0) %>% 
-    select(wid, correct, empty, timeout, intrusion, other) %>% 
+    select(any_of(c("wid", "correct", "empty", "intrusion", "other", "timeout"))) %>% 
     arrange(correct) %>% kable
 ```
 
@@ -143,6 +125,7 @@ trials %>%
 - two out of ten never give an empty response and time out frequently,
   suggesting that they didn't understand the instructions
 
+
 ## Reaction time on success trials
 
 ```{r}
@@ -151,38 +134,202 @@ trials %>%
     regress(strength, rt_z) #plot
 ```
 
-- faster correct responses with higher strength, as we've seen before
+```{r}
+trials %>% 
+    filter(response_type == "correct") %>% 
+    regress(judgement, rt_z, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot) +
+    xlab("Confidence Judgement") #plot
+```
 
-## Reaction time on empty trials (FOK)
+- faster correct responses with higher strength, as we've seen before
+- slower responses for non-max confidence, no discrimination within
+  other confidence values
+
+## Reaction time on empty trials
 
 ```{r}
 trials %>% 
     filter(response_type == "empty") %>% 
+    # group_by(wid) %>% 
+    # mutate(strength=zscore(strength)) %>% 
+    regress(strength, rt_z, bin_range=.9) #plot
+```
+
+```{r}
+trials %>% 
+    filter(response_type == "empty") %>% 
+    group_by(wid) %>% 
+    mutate(strength=zscore(strength)) %>% 
     regress(strength, rt_z) #plot
 ```
 
-- slower empty responses with higher strength! (trending)
-- NOTE: I had previously analyzed raw (non-zscore) RT and there was nothing (small negative effect)
+```{r}
+trials %>% 
+    filter(response_type == "empty") %>% 
+    regress(judgement, rt_z, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot) +
+    xlab("Feeling of Knowing Judgement") #plot
+
+```
 
 ## Split by participant
 
 ```{r,fig.width=WIDTH, fig.height=HEIGHT}
 trials %>% 
+    # filter(version == "v6.5C") %>% 
+    filter(response_type %in% c("correct", "empty")) %>% 
     group_by(wid) %>% 
     mutate(
         rt_z = zscore(rt), 
-        mean_correct = mean(response_type == "empty"),
-        participant = glue("{100*round(mean_correct, 2)}% empty({wid})")
+        mean_empty = mean(response_type == "empty"),
+        participant = glue("{100*round(mean_empty, 2)}% empty({wid})")
     ) %>% 
+    group_by(wid, response_type) %>% 
+    mutate(strength = zscore(strength)) %>% 
     ungroup() %>% 
-    mutate(participant=fct_reorder(participant, mean_correct)) %>% 
-    filter(response_type %in% c("correct", "empty")) %>% 
-    ggplot(aes(strength, rt_z, color=participant)) + 
-    geom_smooth(method="lm", level=0) +
+    mutate(participant=fct_reorder(participant, mean_empty)) %>% 
+    ggplot(aes(strength, rt_z, color=mean_empty, group=wid)) + 
+    geom_smooth(method="lm", level=0, size=.5) +
     facet_wrap(~response_type) +
     labs(x="Memory Strength", y="Reaction Time (z-scored)")
+
 ```
 
 - the effect for correct trials is pretty reliable
 - the effect for empty trials only comes out in participants who give empty responses between 
-  40% and 75% of the time
+  40% and 75% of the timer
+
+
+## Metacognitive accuracy
+
+```{r}
+trials %>%
+    ggplot(aes(judgement, strength, color=judgement_type)) +
+    stat_summary(fun.data=mean_cl_boot)
+```
+
+```{r, fig.width=5, fig.height=HEIGHT}
+trials %>% 
+    ggplot(aes(judgement)) +
+    facet_wrap(~judgement_type) +
+    geom_bar()
+```
+
+```{r, fig.width=5, fig.height=HEIGHT}
+trials %>% 
+    filter(response_type == "empty") %>%
+    count(wid, judgement) %>% 
+    pivot_wider(names_from=judgement, values_from=n) %>% 
+    replace(is.na(.), 0) %>% 
+    arrange(`1`) %>% kable
+```
+
+## Any participants with accurate FOK?
+
+Doesn't look like it!
+
+```{r}
+fok = trials %>% 
+    filter(judgement_type == "fok") %>%
+    group_by(wid) %>% 
+    # filter(n() >= 5) %>% 
+    filter(sum(judgement>1)>=2)
+
+fok %>% 
+    group_modify(function(data, grp) {
+        lm(strength ~ judgement, data=data) %>% tidy
+    }) %>% 
+    filter(term == "judgement") %>% 
+    arrange(estimate) %>% 
+    ungroup() %>% 
+    mutate(wid=fct_reorder(wid, estimate)) %>% 
+    ggplot(aes(estimate, wid)) +
+    geom_point() + geom_vline(xintercept=0)
+```
+
+```{r}
+trials %>% 
+    filter(response_type == "empty") %>% 
+    filter(wid == "w7e03059") %>% 
+    ggplot(aes(strength, rt_z)) +
+    geom_point()
+```
+
+```{r}
+fok %>% 
+    ggplot(aes(judgement, strength, color=wid)) +
+    stat_summary(fun=mean, geom="line", size=.3) +
+    theme(legend.position="none")
+```
+
+```{r}
+fok %>% 
+    group_by(wid, judgement_type) %>%
+    mutate(judgement.z=zscore(judgement)) %>% 
+    ggplot(aes(judgement.z, strength, group=wid)) +
+    geom_smooth(se=F, method="lm")
+```
+
+
+## Reaction time by response type
+
+```{r,fig.width=WIDTH, fig.height=HEIGHT}
+trials %>% 
+    ggplot(aes(wid, rt, color=response_type)) +
+    geom_quasirandom(size=.1) +
+    scale_x_discrete(labels = NULL, breaks = NULL) + 
+    labs(x="Participant", y="Reaction Time")
+```
+
+## Pretest accuracy
+
+```{r}
+pretest %>% 
+    group_by(wid) %>%
+    summarise(accuracy=mean(correct)) %>% 
+    ggplot(aes(accuracy)) + stat_ecdf(geom="point")
+```
+
+```{r}
+pretest %>% 
+    group_by(wid,word) %>%
+    summarise(accuracy=mean(correct)) %>% 
+    group_by(wid) %>% 
+    mutate(acc=mean(accuracy)) %>% 
+    ungroup() %>% 
+    mutate(wid=fct_reorder(wid, acc)) %>% 
+    ggplot(aes(wid,fill=factor(accuracy))) + geom_bar()
+    # count(wid, accuracy) %>% 
+    # ggplot(aes(accuracy, n, group=wid)) +
+    # geom_line(size=.5)
+    # pivot_wider(names_from=accuracy, values_from=n)
+```
+
+## Strength predicts skipping?
+
+```{r}
+trials %>% 
+    mutate(skip=response_type=="empty") %>% 
+    regress(strength,skip)
+```
+
+## Comparison of versions
+
+```{r}
+trials %>% 
+    filter(response_type == "empty") %>% 
+    group_by(wid) %>% 
+    # filter(sd(strength) != 0) %>% 
+    mutate(strength=zscore(strength)) %>% 
+    group_by(version) %>% 
+    group_modify(function(data, grp) {
+        lmer(rt_z ~ strength + (strength|wid), data=data) %>% tidy
+        # lmer(rt_z ~ strength + (strength|wid), data=data) %>% tidy
+    }) %>% 
+    filter(term == "strength") %>% 
+    left_join(
+        load_data('participants') %>% count(version)
+    )
+```
+

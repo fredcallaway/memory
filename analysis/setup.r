@@ -47,6 +47,10 @@ theme_update(
     legend.position="right",
     panel.spacing = unit(1, "lines"),
 )
+gridlines = theme(
+    panel.grid.major.x = element_line(color="gray"),
+    panel.grid.major.y = element_line(color="gray"),
+)
 
 update_geom_defaults("line", list(size = 1.2))
 
@@ -183,9 +187,10 @@ pretty_names = list(
     prop_first = "Proportion Fixate First",
     rt = "Reaction Time",
     rt_z = "Reaction Time (z-scored)",
+    strength_z = "Strength (z-scored)",
     last_strength = "Last Fixated Strength"
 )
-
+pretty_labs = function(x, y) labs(x=pretty_name(x), y=pretty_name(y))
 
 def_breaks = list(
     strength_first = seq(-3.5, 3.5),
@@ -198,7 +203,8 @@ pretty_name = function(x) {
     x %>% 
         str_replace_all("_", " ") %>% 
         str_replace_all("pres", "fixation") %>% 
-        str_to_title
+        str_to_title %>% 
+        gsub("(?!^)\\b(Of|In|The)\\b", "\\L\\1", ., perl=TRUE)
 }
 
 geom_xdensity = list(
@@ -256,13 +262,13 @@ regress = function(data, xvar, yvar, bins=6, bin_range=0.95, mixed=TRUE, logisti
             }
         })
 
-    preds %>% 
-        filter(between(x, xmin, xmax)) %>% 
-        ggplot(aes(x, predicted)) +
-        geom_line() +
-        geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
-        stat_summary_bin(aes({{xvar}}, {{yvar}}), 
-            data=data, fun.data=mean_se, bins=5, size=.2, 
+    pp = preds %>% filter(between(x, xmin, xmax)) 
+
+    ggplot(data, aes({{xvar}}, {{yvar}})) +
+        geom_line(aes(x, predicted), pp) +
+        geom_ribbon(aes(x, predicted, ymin=conf.low, ymax=conf.high), pp, alpha=0.1) +
+        stat_summary_bin(, 
+            fun.data=mean_cl_normal, size=.2, 
             breaks=seq(xmin, xmax, length.out=bins),
         ) +
         facet_grid(~name) +
@@ -295,7 +301,7 @@ regress_interaction = function(data, xvar, cvar, yvar, bins=6, bin_range=0.95) {
         geom_line(aes(color=group)) +
         geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
         stat_summary_bin(aes({{xvar}}, {{yvar}}, color={{cvar}}, group={{cvar}}), 
-            data=data, fun.data=mean_se, bins=5, size=.2, 
+            data=data, fun.data=mean_cl_normal, bins=5, size=.2, 
             breaks=seq(xmin, xmax, length.out=bins),
         ) +
         facet_grid(~name) +

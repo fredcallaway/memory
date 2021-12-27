@@ -1,0 +1,116 @@
+
+# Z-scoring
+
+Here is what we get when we z-score RT and judgements within
+participants (within correct responses only).
+
+```{r}
+trials %>% #plot
+    filter(response_type == "correct") %>% 
+    group_by(wid) %>% 
+    filter(sd(judgement) != 0) %>% 
+    mutate(judgement=zscore(judgement), rt_z=zscore(rt)) %>% 
+    regress(judgement, rt_z) +
+    xlab("Confidence Judgement (z-scored)") +
+    coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5))
+```
+
+Again, a much larger effect when speed is not
+incentivized, although less so when z-scoring:
+
+```{r}
+trials %>% #plot
+    filter(skip) %>% 
+    group_by(wid) %>% 
+    filter(sd(judgement) != 0) %>% 
+    mutate(judgement=zscore(judgement), rt_z=zscore(rt)) %>% 
+    regress(judgement, rt_z) +
+    xlab("Feeling of Knowing Judgement (z-scored)") +
+    coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5))
+```
+
+
+```{r}
+trials %>% 
+    filter(response_type == "correct") %>% 
+    group_by(wid) %>% 
+    mutate(strength_z=zscore(strength), rt_z=zscore(rt)) %>% 
+    regress(strength, rt_z) +
+    coord_cartesian(ylim=c(-1.5, 1.5))
+    #plot
+```
+
+## RT KDE
+
+```{r}
+trials %>% 
+    mutate(response_type = case_when(
+        response_type == "correct" ~ "correct",
+        response_type == "empty" ~ "empty",
+        TRUE ~ "error"
+    )) %>% 
+    ggplot(aes(rt, color=response_type)) +
+    geom_density() +
+    facet_wrap(~pilot) +
+    coord_cartesian(xlim=c(0,5000), ylim=c(NULL)) +
+    scale_colour_manual(values=c(
+        "springgreen4",
+        "gray", 
+        "deeppink3"
+    ), aesthetics=c("color"), name="") +
+    scale_x_continuous(n.breaks=3)
+```
+
+
+## Strength 
+
+
+```{r}
+trials %>% 
+    mutate(pre_logrt = if_else(pre_correct == 0.5))
+    ggplot(aes(pre_logrt, 1*correct, color=factor(pre_correct))) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method="lm")
+```
+
+```{r}
+glm(skip ~ strength, family=binomial, data=trials) %>% summ(scale=T)
+glm(skip ~ pre_correct + pre_logrt, family=binomial, data=trials)
+glm(skip ~ pre_correct_z + pre_logrt_z, family=binomial, data=trials)
+glm(skip ~ pre_correct + pre_logrt, family=binomial, data=trials)
+
+
+glmer(skip ~ pre_correct + pre_logrt + (pre_correct + pre_logrt | wid), family=binomial, data=trials) %>% 
+    summ(model.fit=T)
+lmer(skip ~ pre_correct + pre_logrt + (pre_correct + pre_logrt | wid), data=trials) %>% 
+    summ(model.fit=T)
+
+glm(skip ~ pre_correct + pre_logrt, family=binomial, data=trials) %>% 
+    summ(model.fit=T)
+lm(skip ~ pre_correct + pre_logrt, data=trials) %>% 
+    summ(model.fit=T)
+```
+
+```{r}
+trials %>%
+    filter(response_type=="empty") %>%
+    group_by(wid, judgement_type) %>%
+    mutate(judgement=zscore(judgement)) %>% 
+    ggplot(aes(judgement, strength, color=version)) +
+    geom_smooth(se=F)
+```
+
+
+Here is the full distribution, as empirical CDFs:
+```{r}
+trials %>% 
+    group_by(pilot, wid) %>% 
+    filter(skip) %>% 
+    summarise(x=mean(pre_correct==0)) %>% 
+    ggplot(aes(x)) + 
+    stat_ecdf(geom="point") +
+    labs(x="Proportion of skip trials\nwith minimum strength",
+         y="Proportion of participants (CDF)") +
+    coord_flip() +
+    facet_wrap(~pilot)
+```
