@@ -140,6 +140,10 @@ function value(B::BackwardsInduction, b::Belief)
     B.V[belief2index(m, b)...]
 end
 
+function value(B::BackwardsInduction, b::Belief, f::Int)
+    B.Q[f, belief2index(m, b)...]
+end
+
 
 struct OptimalPolicy
     m::MetaMDP
