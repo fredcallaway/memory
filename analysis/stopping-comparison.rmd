@@ -43,7 +43,6 @@ pretest = load_data('simple-recall') %>%
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
             # labels=c("Correct", "Intrusion", "Other")
         ),
-        total_time = rt + type_time,
         correct = response_type == "correct",
     ) %>% mutate(
         base_rt = rt,
@@ -51,17 +50,19 @@ pretest = load_data('simple-recall') %>%
     )
 
 all_trials = load_data('simple-recall-penalized') %>% 
+    group_by(wid) %>% 
+    mutate(trial_number = row_number()) %>% 
+    ungroup() %>% 
     filter(!practice) %>% 
     mutate(
         response_type = factor(response_type, 
             levels=c("correct", "empty", "intrusion", "other", "timeout"),
             # labels=c("Correct", "Intrusion", "Other")
         ),
-        total_time = rt + type_time,
         correct = response_type == "correct",
         skip = response_type == "empty",
         base_rt = rt,
-        rt = typing_rt,
+        rt = if_else(response_type == "empty", base_rt, typing_rt),
     )
 ```
 
@@ -92,6 +93,11 @@ changes don't seem to make as much of a difference.
 
 Below are the distribution of response types in the critical trials, in aggregate
 and by participant. This is before any exclusions.
+
+```{r}
+all_trials %>% 
+    filter(judgement_type == "confidence" & skip) %>% select(version, response, judgement,trial_number) %>% print(n=100)
+```
 
 ```{r,fig.height=2}
 all_trials %>% 
@@ -416,10 +422,8 @@ A secondary question we can ask is to what extent the metacognitive judgement
 correlates with the objective memory strength measure. Overall, it looks like
 it does.
 
-
 ```{r}
 trials %>% 
-    filter(skip | correct) %>% 
     group_by(wid) %>% 
     filter(sd(judgement) != 0) %>% 
     mutate(judgement=zscore(judgement), strength=zscore(strength)) %>% 

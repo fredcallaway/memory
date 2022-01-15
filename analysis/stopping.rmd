@@ -73,26 +73,22 @@ Version(s): `r paste(VERSIONS)`
 ### Exclusions
 
 ```{r}
-trials = all_trials
-c1 = pretest %>% 
-    group_by(wid) %>% 
-    summarise(accuracy=mean(correct))
+all_trials$name = 'Human'
 
-c2 = all_trials %>% 
+excl = all_trials %>% 
     group_by(wid) %>%
-    filter(n() == 37) %>% 
-    summarise(n_empty = sum(response_type == "empty")) %>% 
-    filter(between(n_empty, 3, 34))
+    summarise(n_skip = sum(skip)) %>% 
+    mutate(keep=between(n_skip, 4, 33))
 
-keep = inner_join(c1, c2) %>% with(wid)
+keep = excl %>% filter(keep) %>% with(wid)
 
-trials$name = "Human"
-
-trials = trials %>% 
+trials = all_trials %>% 
     filter(wid %in% keep) %>% 
     group_by(wid) %>% 
     mutate(rt_z = zscore(rt)) %>% 
     ungroup()
+
+pretest = pretest %>% filter(wid %in% keep)
 
 pretest %>% 
     filter(block == max(block)) %>% 
@@ -102,234 +98,179 @@ pretest %>%
     summarise(across(c(pre_correct, pre_logrt), mean)) %>%
     group_by(wid) %>%
     mutate(across(c(pre_correct, pre_logrt), zscore, .names="{.col}_z")) %>% 
-    mutate(strength = -zscore((1-pre_correct) * log(15000) + pre_logrt)) %>% 
+    mutate(
+        raw_strength = -((1-pre_correct) * log(15000) + pre_logrt),
+        strength = zscore(raw_strength)
+    ) %>% 
     right_join(trials) -> trials
 
 ```
 
 
-## Response types
+
+# Subjective judgements
+
+The most direct replication of Costermans et al.: How does reaction time depend
+on explicit reports of confidence and feeling of knowing, given after a
+response is made?
+
+## Confidence for correct responses
+
+<blockquote>
+    <h4>How confident are you in your response?</h4>
+    <p>Press a number between 1 and 5.</p>
+
+    <b>1</b>&nbsp;&nbsp; I am not at all sure my response is correct<br>
+    <b>2</b>&nbsp;&nbsp; I am not so sure my response is correct<br>
+    <b>3</b>&nbsp;&nbsp; I am more or less sure my response is correct<br>
+    <b>4</b>&nbsp;&nbsp; I am nearly sure my response is correct<br>
+    <b>5</b>&nbsp;&nbsp; I am absolutely sure my response is correct<br>
+</blockquote>
+
+No z-scoring
 
 ```{r}
-trials %>% 
-    count(wid, response_type) %>% 
-    pivot_wider(names_from=response_type, values_from=n) %>% 
-    replace(is.na(.), 0) %>% 
-    select(any_of(c("wid", "correct", "empty", "intrusion", "other", "timeout"))) %>% 
-    arrange(correct) %>% kable
-```
-
-- there are very few errors (incorrect responses)
-- most participants provide empty responses frequently
-- some provide empty responses almost all the time
-- two out of ten never give an empty response and time out frequently,
-  suggesting that they didn't understand the instructions
-
-
-## Reaction time on success trials
-
-```{r}
-trials %>% 
+trials %>%  #plot
     filter(response_type == "correct") %>% 
-    regress(strength, rt_z) #plot
+    regress(judgement, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Confidence Judgement")
 ```
 
+Z-score RT
+
 ```{r}
-trials %>% 
+trials %>%  #plot
     filter(response_type == "correct") %>% 
-    regress(judgement, rt_z, bins=0, bin_range=1) +
-    stat_summary(fun.data=mean_cl_boot) +
-    xlab("Confidence Judgement") #plot
+    mutate(rt=zscore(rt)) %>% 
+    regress(judgement, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Confidence Judgement")
 ```
 
-- faster correct responses with higher strength, as we've seen before
-- slower responses for non-max confidence, no discrimination within
-  other confidence values
-
-## Reaction time on empty trials
+Z-score both
 
 ```{r}
-trials %>% 
+trials %>% #plot
+    filter(response_type == "correct") %>% 
+    mutate(judgement=zscore(judgement), rt=zscore(rt)) %>% 
+    regress(judgement, rt) +
+    xlab("Confidence Judgement")
+```
+
+
+## FOK for empty responses
+
+<blockquote>
+    <h4>How much do you feel that you know the word?</h4>
+    <p>Press a number between 1 and 5.</p>
+
+    <b>1</b>&nbsp;&nbsp; I am absolutely sure I do not know the word<br>
+    <b>2</b>&nbsp;&nbsp; I am rather sure I do not know the word<br>
+    <b>3</b>&nbsp;&nbsp; I have a vague impression I know the word<br>
+    <b>4</b>&nbsp;&nbsp; I am rather sure I know the word<br>
+    <b>5</b>&nbsp;&nbsp; I am absolutely sure I know the word<br>
+</blockquote>
+
+No z-scoring
+```{r}
+trials %>%  #plot
     filter(response_type == "empty") %>% 
-    # group_by(wid) %>% 
-    # mutate(strength=zscore(strength)) %>% 
-    regress(strength, rt_z, bin_range=.9) #plot
+    regress(judgement, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("FOK Judgement")
 ```
 
+Z-score RT
 ```{r}
-trials %>% 
+trials %>%  #plot
     filter(response_type == "empty") %>% 
-    group_by(wid) %>% 
-    mutate(strength=zscore(strength)) %>% 
-    regress(strength, rt_z) #plot
+    mutate(rt=zscore(rt)) %>% 
+    regress(judgement, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("FOK Judgement")
 ```
 
+Z-score both
 ```{r}
-trials %>% 
+trials %>% #plot
     filter(response_type == "empty") %>% 
-    regress(judgement, rt_z, bins=0, bin_range=1) +
-    stat_summary(fun.data=mean_cl_boot) +
-    xlab("Feeling of Knowing Judgement") #plot
-
+    mutate(judgement=zscore(judgement), rt=zscore(rt)) %>% 
+    regress(judgement, rt) +
+    xlab("FOK Judgement")
 ```
 
-## Split by participant
 
-```{r,fig.width=WIDTH, fig.height=HEIGHT}
-trials %>% 
-    # filter(version == "v6.5C") %>% 
-    filter(response_type %in% c("correct", "empty")) %>% 
-    group_by(wid) %>% 
-    mutate(
-        rt_z = zscore(rt), 
-        mean_empty = mean(response_type == "empty"),
-        participant = glue("{100*round(mean_empty, 2)}% empty({wid})")
-    ) %>% 
-    group_by(wid, response_type) %>% 
-    mutate(strength = zscore(strength)) %>% 
-    ungroup() %>% 
-    mutate(participant=fct_reorder(participant, mean_empty)) %>% 
-    ggplot(aes(strength, rt_z, color=mean_empty, group=wid)) + 
-    geom_smooth(method="lm", level=0, size=.5) +
-    facet_wrap(~response_type) +
-    labs(x="Memory Strength", y="Reaction Time (z-scored)")
+# Objective memory strength measure
 
-```
+We can now ask the same thing, using performance on the pretest as an
+objective measure of the strength of each memory. The strength of each pair is
+defined as the negative average log reaction time on the two pretest
+exposures, where an inaccurate response counts as the maximum reaction time.
 
-- the effect for correct trials is pretty reliable
-- the effect for empty trials only comes out in participants who give empty responses between 
-  40% and 75% of the timer
-
-
-## Metacognitive accuracy
+No z-scoring at all ("raw strength")
 
 ```{r}
-trials %>%
-    ggplot(aes(judgement, strength, color=judgement_type)) +
-    stat_summary(fun.data=mean_cl_boot)
+trials %>% #plot
+    filter(response_type == "correct") %>% 
+    regress(raw_strength, rt)
 ```
 
-```{r, fig.width=5, fig.height=HEIGHT}
-trials %>% 
-    ggplot(aes(judgement)) +
-    facet_wrap(~judgement_type) +
-    geom_bar()
+Z-score strength across all trials (as in Experiment 2)
+```{r}
+trials %>% #plot
+    filter(response_type == "correct") %>% 
+    regress(strength, rt)
 ```
 
-```{r, fig.width=5, fig.height=HEIGHT}
-trials %>% 
-    filter(response_type == "empty") %>%
-    count(wid, judgement) %>% 
-    pivot_wider(names_from=judgement, values_from=n) %>% 
-    replace(is.na(.), 0) %>% 
-    arrange(`1`) %>% kable
+Z-score RT
+```{r}
+trials %>% #plot
+    filter(response_type == "correct") %>% 
+    mutate(rt_z = zscore(rt)) %>% 
+    regress(strength, rt_z)
 ```
 
-## Any participants with accurate FOK?
+Z-score both within correct responses
+```{r}
+trials %>% #plot
+    filter(response_type == "correct") %>% 
+    mutate(strength=zscore(strength), rt_z = zscore(rt)) %>% 
+    regress(strength, rt_z)
+```
 
-Doesn't look like it!
+We consistently see faster responses for higher-strength cues. This is unsurprising.
+
+## Reaction time on skips
+
+
+No z-scoring at all ("raw strength")
 
 ```{r}
-fok = trials %>% 
-    filter(judgement_type == "fok") %>%
-    group_by(wid) %>% 
-    # filter(n() >= 5) %>% 
-    filter(sum(judgement>1)>=2)
-
-fok %>% 
-    group_modify(function(data, grp) {
-        lm(strength ~ judgement, data=data) %>% tidy
-    }) %>% 
-    filter(term == "judgement") %>% 
-    arrange(estimate) %>% 
-    ungroup() %>% 
-    mutate(wid=fct_reorder(wid, estimate)) %>% 
-    ggplot(aes(estimate, wid)) +
-    geom_point() + geom_vline(xintercept=0)
+trials %>% #plot
+    filter(skip) %>% 
+    regress(raw_strength, rt)
 ```
 
+Z-score strength across all trials (as in Experiment 2)
 ```{r}
-trials %>% 
-    filter(response_type == "empty") %>% 
-    filter(wid == "w7e03059") %>% 
-    ggplot(aes(strength, rt_z)) +
-    geom_point()
+trials %>% #plot
+    filter(skip) %>% 
+    regress(strength, rt)
 ```
 
+Z-score RT
 ```{r}
-fok %>% 
-    ggplot(aes(judgement, strength, color=wid)) +
-    stat_summary(fun=mean, geom="line", size=.3) +
-    theme(legend.position="none")
+trials %>% #plot
+    filter(skip) %>% 
+    mutate(rt_z = zscore(rt)) %>% 
+    regress(strength, rt_z)
 ```
 
+Z-score both within correct responses
 ```{r}
-fok %>% 
-    group_by(wid, judgement_type) %>%
-    mutate(judgement.z=zscore(judgement)) %>% 
-    ggplot(aes(judgement.z, strength, group=wid)) +
-    geom_smooth(se=F, method="lm")
+trials %>% #plot
+    filter(skip) %>% 
+    mutate(strength=zscore(strength), rt_z = zscore(rt)) %>% 
+    regress(strength, rt_z)
 ```
-
-
-## Reaction time by response type
-
-```{r,fig.width=WIDTH, fig.height=HEIGHT}
-trials %>% 
-    ggplot(aes(wid, rt, color=response_type)) +
-    geom_quasirandom(size=.1) +
-    scale_x_discrete(labels = NULL, breaks = NULL) + 
-    labs(x="Participant", y="Reaction Time")
-```
-
-## Pretest accuracy
-
-```{r}
-pretest %>% 
-    group_by(wid) %>%
-    summarise(accuracy=mean(correct)) %>% 
-    ggplot(aes(accuracy)) + stat_ecdf(geom="point")
-```
-
-```{r}
-pretest %>% 
-    group_by(wid,word) %>%
-    summarise(accuracy=mean(correct)) %>% 
-    group_by(wid) %>% 
-    mutate(acc=mean(accuracy)) %>% 
-    ungroup() %>% 
-    mutate(wid=fct_reorder(wid, acc)) %>% 
-    ggplot(aes(wid,fill=factor(accuracy))) + geom_bar()
-    # count(wid, accuracy) %>% 
-    # ggplot(aes(accuracy, n, group=wid)) +
-    # geom_line(size=.5)
-    # pivot_wider(names_from=accuracy, values_from=n)
-```
-
-## Strength predicts skipping?
-
-```{r}
-trials %>% 
-    mutate(skip=response_type=="empty") %>% 
-    regress(strength,skip)
-```
-
-## Comparison of versions
-
-```{r}
-trials %>% 
-    filter(response_type == "empty") %>% 
-    group_by(wid) %>% 
-    # filter(sd(strength) != 0) %>% 
-    mutate(strength=zscore(strength)) %>% 
-    group_by(version) %>% 
-    group_modify(function(data, grp) {
-        lmer(rt_z ~ strength + (strength|wid), data=data) %>% tidy
-        # lmer(rt_z ~ strength + (strength|wid), data=data) %>% tidy
-    }) %>% 
-    filter(term == "strength") %>% 
-    left_join(
-        load_data('participants') %>% count(version)
-    )
-```
-
