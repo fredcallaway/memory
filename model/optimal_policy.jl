@@ -10,25 +10,29 @@ e1: total evidence for item 1
 t1: total time on item 1
 """
 
-@with_kw struct BackwardsInduction
-    step_size::Int = 1
-    α0::Float64 = 1
-    β0::Float64 = 1
+struct BackwardsInduction{N,N2,N3}
+    m::MetaMDP{N}
+    T::Array{Float64,3}
+    V::Array{Float64,N2}  # 1+2N
+    Q::Array{Float64,N3}  # 2+2N
+end
 
-    threshold::Int = 10
-    sample_cost::Float64 = .001
-    switch_cost::Float64 = 0.
-    miss_cost::Float64 = 0.
-    max_step::Int = 100
-
-    # time and evidence begin at zero but we need indices, so they get shifted +1
-    # note e, t, and x are always in index space.
-    t_max::Int = max_step + 1
-    e_max::Int = threshold + 1
-
-    T::Array{Float64,3} = beta_binomial_pdf(step_size, α0, β0, t_max, e_max)  # x, e, t
-    V::Array{Float64,5} = fill(NaN, 2, e_max, e_max, t_max, t_max)  # last_action, e1, e2, t1, t2
-    Q::Array{Float64,6} = fill(NaN, 2, 2, e_max, e_max, t_max, t_max)  # action, last_action, e1, e2, t1, t2
+function BackwardsInduction(m::MetaMDP{N}) where {N}
+    t_max = m.max_step + 1
+    e_max = m.threshold + 1
+    T = beta_binomial_pdf(m.step_size, m.prior[1], m.prior[2], t_max, e_max)
+    sz = if N == 1
+        (e_max, t_max)
+    elseif N == 2
+        (e_max, e_max, t_max, t_max)
+    else
+        error("Not implemented")
+    end
+    V = fill(NaN, N, sz...)  # last_action, e1, (e2), t1, (t2)
+    Q = fill(NaN, N, N, sz...)  # action, last_action, e1, (e2), t1, (t2)
+    b = BackwardsInduction(m, T, V, Q)
+    compute_value_functions!(b)
+    b
 end
 
 function beta_binomial_pdf(step_size, α0, β0, t_max, e_max)
@@ -45,14 +49,14 @@ function beta_binomial_pdf(step_size, α0, β0, t_max, e_max)
 end
 
 function Base.show(io::IO, model::BackwardsInduction)
-    println(io, "BackwardsInduction")
-    for k in [:step_size, :α0, :β0, :sample_cost, :switch_cost, :miss_cost, :max_step]
-        println(io, "  $k: ", getfield(model, k))
-    end
+    print(io, "BackwardsInduction for ", model.m)
 end
 
-function compute_value_functions!(model::BackwardsInduction)
-    @unpack step_size, sample_cost, switch_cost, miss_cost, e_max, t_max, T, V, Q = model
+function compute_value_functions!(model::BackwardsInduction{2})
+    @unpack T, V, Q = model
+    @unpack step_size, sample_cost, switch_cost, miss_cost = model.m
+    t_max = model.m.max_step + 1
+    e_max = model.m.threshold + 1
 
     # shift everything to index space
     # initialize value function in terminal states
@@ -120,15 +124,7 @@ function compute_value_functions!(model::BackwardsInduction)
     end
 end
 
-
-function BackwardsInduction(m::MetaMDP)
-    α0, β0 = m.prior
-    b = BackwardsInduction(; m.step_size, α0, β0, m.threshold, m.sample_cost, m.switch_cost, m.miss_cost, m.max_step)
-    compute_value_functions!(b)
-    b
-end
-
-function belief2index(m::MetaMDP, b::Belief)
+function belief2index(m::MetaMDP{2}, b::Belief{2})
     e1 = b.heads[1] + 1
     t1 = (b.heads[1] + b.tails[1]) ÷ m.step_size + 1
     e2 = b.heads[2] + 1
@@ -145,16 +141,15 @@ function value(B::BackwardsInduction, b::Belief, f::Int)
 end
 
 
-struct OptimalPolicy
-    m::MetaMDP
-    B::BackwardsInduction
+struct OptimalPolicy{N}
+    m::MetaMDP{N}
+    B::BackwardsInduction{N}
 end    
 
 OptimalPolicy(m::MetaMDP) = OptimalPolicy(m, BackwardsInduction(m))
 
 function act(pol::OptimalPolicy, b::Belief)
-    f, e1, e2, t1, t2 = belief2index(pol.m, b)
-    q = @view pol.B.Q[:, f, e1, e2, t1, t2]
+    q = @view pol.B.Q[:, belief2index(pol.m, b)...]
     argmax(q)
 end
 
@@ -167,7 +162,6 @@ end
 SoftOptimalPolicy(m::MetaMDP, β) = SoftOptimalPolicy(m, BackwardsInduction(m), β)
 
 function act(pol::SoftOptimalPolicy, b::Belief)
-    f, e1, e2, t1, t2 = belief2index(pol.m, b)
-    q = @view pol.B.Q[:, f, e1, e2, t1, t2]
+    q = @view pol.B.Q[:, belief2index(pol.m, b)...]
     sample(Weights(softmax(pol.β .* q)))
 end

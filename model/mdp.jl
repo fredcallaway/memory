@@ -4,7 +4,7 @@ using Distributions
 #using StatsBase
 #using StatsFuns
 
-@with_kw struct MetaMDP
+@with_kw struct MetaMDP{N}
     threshold::Int = 100
     sample_cost::Float64 = 1.
     switch_cost::Float64 = 0.
@@ -18,19 +18,23 @@ end
 getfields(x) = (getfield(x, f) for f in fieldnames(typeof(x)))
 id(m::MetaMDP) = join(getfields(m), "-")
 
-State = Tuple{Float64, Float64}
-function sample_state(m::MetaMDP)::State
-    Tuple(rand(Beta(m.prior...), 2))
+State{N} = NTuple{N,Float64}
+function sample_state(m::MetaMDP{N})::State{N} where N
+    Tuple(rand(Beta(m.prior...), N))
 end
 
-mutable struct Belief
+mutable struct Belief{N}
     n_step::Int
     focused::Int
     heads::Vector{Int}
     tails::Vector{Int}
 end
 
-function Base.show(io::IO, b::Belief)
+function Base.show(io::IO, b::Belief{1})
+    print(io, "($(b.heads[1]), $(b.tails[1])) $(b.n_step)")
+end
+
+function Base.show(io::IO, b::Belief{2})
     h1, h2 = b.heads
     t1, t2 = b.tails
     print("Belief(")
@@ -44,8 +48,8 @@ function Base.show(io::IO, b::Belief)
     print(")")
 end
 
-function initial_belief(m::MetaMDP)::Belief
-    Belief(0, 1, [0, 0], [0, 0])
+function initial_belief(m::MetaMDP{N})::Belief{N} where N
+    Belief{N}(0, 1, zeros(Int, N), zeros(Int, N))
 end
 is_terminal(b) = b.n_step == -1
 
