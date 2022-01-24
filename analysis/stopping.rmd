@@ -57,9 +57,7 @@ all_trials = load_data('simple-recall-penalized') %>%
         base_rt = rt,
         rt = typing_rt
     )
-
 ```
-
 # Data
 
 Here we are analyzing simple cued-recall trials where we incentivized participants
@@ -243,11 +241,11 @@ We consistently see faster responses for higher-strength cues. This is unsurpris
 
 ## Reaction time on skips
 
-
 No z-scoring at all ("raw strength")
 
 ```{r}
 trials %>% #plot
+    # filter(pre_correct>0) %>% 
     filter(skip) %>% 
     regress(raw_strength, rt)
 ```

@@ -1,0 +1,90 @@
+
+
+
+
+```{r}
+model = read_csv('../model/results/stopping_sim.csv') %>% 
+    transmute(
+        strength=zscore(zscore(log(strength)) + rnorm(n(), sd=1)), 
+        rt,
+        skip=outcome == -1
+    )
+
+model %>%
+    filter(skip) %>% 
+    filter(strength<1.9) %>% 
+    ggplot(aes(strength, rt)) +
+    stat_summary_bin(fun.data=mean_cl_normal, bins=5) +
+    stat_smooth(method="lm") +
+    facet_wrap(~skip)
+```
+
+```{r}
+trials %>%
+    # filter(skip) %>% 
+    ggplot(aes(strength, rt)) +
+    stat_summary_bin(fun.data=mean_cl_normal, bins=5) +
+    stat_smooth(method="lm") +
+    facet_wrap(~skip)
+```
+
+```{r}
+model$name = "Optimal"
+df = bind_rows(model, 
+    trials %>% filter(response_type %in% c("correct", "empty"))
+)
+```
+
+```{r}
+df %>% 
+    group_by(name, skip) %>%
+    summarise(rt=mean(rt)) %>%
+    mutate(skip = if_else(skip, "skip", "correct")) %>% 
+    pivot_wider(names_from=skip, values_from=rt) %>% kable(digits=0)
+
+```
+
+```{r}
+tibble(x=c("one", "two"), y=c(1,2)) %>% spread(x, y)
+```
+
+```{r}
+model %>%
+    filter(skip) %>% 
+    ggplot(aes(strength, rt)) +
+    stat_summary_bin(fun.data=mean_cl_normal, bins=5) +
+    stat_smooth(method="lm") +
+    facet_wrap(~skip)
+```
+
+```{r}
+cut2 = Hmisc::cut2
+model %>%
+    mutate(strength = cut2(strength, g=4)) %>% 
+    filter(skip) %>% 
+    ggplot(aes(rt, ..ncount.., group=strength)) +
+    geom_histogram() +
+    facet_wrap(~strength, ncol=1)
+```
+
+Z-score strength across all trials (as in Experiment 2)
+```{r}
+trials %>% #plot
+    filter(skip) %>% 
+    regress(strength, rt)
+
+model %>% 
+    group_by(skip) %>% 
+    summarise(mean(rt))
+
+
+```
+
+```{r}
+trials %>%
+    # filter(skip) %>% 
+    ggplot(aes(strength, rt)) +
+    stat_summary_bin(fun.data=mean_cl_normal, bins=5) +
+    stat_smooth(method="lm") +
+    facet_wrap(~skip)
+```

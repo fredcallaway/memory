@@ -1,14 +1,21 @@
 
+# %% ==================== Debugging  ====================
 
-fig()
+trials %>% filter(!is.na(response) & str_length(response)==1)  %>% select(version,wid,word,response,judgement)
+
+
+with(trials, mean(str_length(response)==1, na.rm=T))
+
+
+
 # %% ==================== Stopping ====================
 
 pretest %>%
     filter(block==max(block)) %>% 
     group_by(version) %>% 
     count(response_type) %>% 
-    mutate(n = n/sum(n)) %>% 
     ggplot(aes(response_type, n, fill=version)) +
+    mutate(n = n/sum(n)) %>% 
     geom_bar(stat="identity", position=position_dodge())
 
 fig()
