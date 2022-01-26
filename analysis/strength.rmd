@@ -57,6 +57,13 @@ all_trials = load_data('simple-recall-penalized') %>%
         base_rt = rt,
         rt = typing_rt
     )
+
+pal = scale_colour_manual(values=c(
+    `0`="brown1",
+    `0.5`="darkgoldenrod1",
+    `1`="limegreen"
+), aesthetics=c("fill", "colour"))
+
 ```
 
 
@@ -125,12 +132,6 @@ trials (we don't use error RTs). For critical trials, z-scoring is done separate
 on correct and skip trials (we throw out other trials).
 
 ```{r, fig.width=6, fig.height=3}
-pal = scale_colour_manual(values=c(
-    `0`="brown1",
-    `0.5`="darkgoldenrod1",
-    `1`="limegreen"
-), aesthetics=c("fill", "colour"))
-
 p1 = trials %>% 
     ggplot(aes(pre_correct, 1*correct, color=factor(pre_correct))) +
     stat_summary(fun.data=mean_cl_boot) +
@@ -246,6 +247,56 @@ trials %>%
     # lm(logrt_z ~ pre_logrt_z + pre_correct + no_prelogrt, data=.) %>% 
     lmer(logrt_z ~ pre_logrt_z + pre_correct + no_prelogrt + (pre_logrt_z + pre_correct |wid), data=.) %>% 
     summ
+```
+
+# Predicting confidence on correct
+
+```{r, fig.width=6, fig.height=3}
+p1 = trials %>% 
+    filter(correct) %>% 
+    group_by(wid) %>% 
+    mutate(y = zscore(judgement)) %>% 
+    ggplot(aes(pre_correct, y, color=factor(pre_correct))) +
+    stat_summary(fun.data=mean_cl_boot) +
+    theme(legend.position="none") + pal +
+    labs(x='Pretest Accuracy', y='Confidence Judgement')
+
+p2 = trials %>% 
+    filter(correct) %>% 
+    group_by(wid) %>% 
+    mutate(y = zscore(judgement)) %>%  
+    # mutate(pre_logrt_z = zscore(pre_logrt)) %>% 
+    ggplot(aes(pre_logrt_z, y, color=factor(pre_correct))) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method="lm", alpha=0.15) +
+    labs(x='Pretest RT', y='Confidence Judgement') + pal
+
+(p1 + p2) & theme(legend.position='none') & coord_cartesian(xlim=c(NULL), ylim=c(-2, 1))
+```
+
+# Predicting FOK on skips
+
+```{r, fig.width=6, fig.height=3}
+p1 = trials %>% 
+    filter(skip) %>% 
+    group_by(wid) %>% 
+    mutate(y = zscore(judgement)) %>% 
+    ggplot(aes(pre_correct, y, color=factor(pre_correct))) +
+    stat_summary(fun.data=mean_cl_boot) +
+    theme(legend.position="none") + pal +
+    labs(x='Pretest Accuracy', y='FOK Judgement')
+
+p2 = trials %>% 
+    filter(skip) %>% 
+    group_by(wid) %>% 
+    mutate(y = zscore(judgement)) %>%  
+    # mutate(pre_logrt_z = zscore(pre_logrt)) %>% 
+    ggplot(aes(pre_logrt_z, y, color=factor(pre_correct))) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method="lm", alpha=0.15) +
+    labs(x='Pretest RT', y='FOK Judgement') + pal
+
+(p1 + p2) & theme(legend.position='none') & coord_cartesian(xlim=c(NULL), ylim=c(-1.3, 2))
 ```
 
 # Conclusion

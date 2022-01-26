@@ -33,7 +33,7 @@ This analysis uses a new strength definition that doesn't include RT on error tr
 DROP_HALF = FALSE
 DROP_ACC = TRUE
 DROP_ERROR = TRUE
-NORMALIZE_FIXATIONS = TRUE
+NORMALIZE_FIXATIONS = FALSE
 MIXED_DURATIONS = TRUE
 source("setup.r")
 source("load_data.r")
@@ -75,6 +75,7 @@ long %>%
 ```{r first, fig.width=WIDTH, fig.height=HEIGHT}
 df %>%
     filter(n_pres >= 2) %>% 
+    # group_by(wid) %>% mutate(first_pres_time = zscore(first_pres_time)) %>% ungroup() %>% 
     regress(strength_first, first_pres_time, mixed=MIXED_DURATIONS)
 ```
 

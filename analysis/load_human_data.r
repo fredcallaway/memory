@@ -92,21 +92,21 @@ add_strength = function(multi, filt, strength) {
         )
 }
 
-simple %>% 
-    filter(block == max(block)) %>% 
-    mutate(raw_strength = 5 * correct - log(rt)) %>% 
-    group_by(wid, word) %>% 
-    summarise(raw_strength = mean(raw_strength))
+multi = multi %>% add_strength(
+    block == max(block), 
+    if_else(correct, -log(rt), -log(15000))
+)
 
-human = multi %>% filter(response_type == "correct") %>% add_strength(block == max(block), 5 * correct - log(rt))
+multi$name = "Human"
 
 make_fixations = function(df) {
-    breaks = quantile(abs(human$rel_strength), c(0, .5, .75, 1),  na.rm = T)
+    print("WARNING: USING FULL MULTI IN make_fixations")
+    breaks = quantile(abs(multi$rel_strength), c(0, .5, .75, 1),  na.rm = T)
     breaks[4] = Inf
     df %>% 
         ungroup() %>% 
         filter(n_pres >= 1) %>% 
-        select(name, wid, rel_strength, presentation_times, n_pres, trial_id) %>% 
+        select(name, wid, rel_strength, presentation_times, n_pres) %>% 
         mutate(
             strength_diff = cut(abs(rel_strength), breaks,
                                 labels=c("small", "moderate", "large"),
@@ -121,3 +121,34 @@ make_fixations = function(df) {
         )
 }
 
+long = multi %>% make_fixations
+
+df = multi %>%
+    filter(
+        response_type == "correct",
+        # response_type %in% c("correct", "timeout"),
+        # response_type != "intrusion",
+    )
+
+keep_acc = multi %>% 
+    group_by(wid) %>% 
+    summarise(accuracy=mean(correct)) %>% 
+    filter(accuracy > 0.5) %>% 
+    with(wid)
+
+df = df %>% filter(wid %in% keep_acc)
+
+
+avg_ptime = long %>% group_by(name,wid) %>% 
+    filter(last_fix == 0) %>% 
+    # filter(presentation == 1) %>% 
+    summarise(duration_mean=mean(duration), duration_sd=sd(duration))
+
+df = df %>% 
+    left_join(avg_ptime) %>% 
+    mutate(
+        first_pres_time_z = (first_pres_time - duration_mean)/duration_sd,
+        second_pres_time_z = (second_pres_time - duration_mean)/duration_sd,
+        third_pres_time_z = (third_pres_time - duration_mean)/duration_sd,
+        fourth_pres_time_z = (fourth_pres_time - duration_mean)/duration_sd,
+    )
