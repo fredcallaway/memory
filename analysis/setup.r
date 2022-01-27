@@ -249,8 +249,8 @@ regress = function(data, xvar, yvar, bins=6, bin_range=0.95, mixed=TRUE, logisti
                         model = inject(lm(!!y ~ !!x, data=data))
                     }
                 }
-                print(glue("N = {nrow(data)}"))
-                smart_print(summ(model))
+                # print(glue("N = {nrow(data)}"))
+                # smart_print(summ(model))
                 tibble(ggpredict(model, terms = glue("{x} [n=100]}")))
             } else {
                 if (logistic) {

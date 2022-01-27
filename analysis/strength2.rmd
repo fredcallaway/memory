@@ -16,8 +16,8 @@ knitr::opts_chunk$set(
 )
 source("setup.r")
 
-WIDTH = 3
-HEIGHT = 3
+WIDTH = 7
+HEIGHT = 7
 ```
 
 ```{r}
@@ -189,89 +189,84 @@ long %>%
 
 # Fixation durations
 
-## First fixation
+## Choice
+
+For each fixation number, we have relative (fixated vs. non-fixated), fixated, non-fixated
+except the first which only has fixated.
 
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
+p1 = df %>% 
     filter(n_pres >= 2) %>% 
     regress(pre_correct_first, first_pres_time) # plot
-```
-
-```{r, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    # filter(response_type == "correct") %>% 
-    filter(n_pres >= 2) %>% 
-    regress(pre_logrt_z_first, first_pres_time) #plot
-```
-
-## Second fixation
-
-```{r, fig.width=3*WIDTH, fig.height=HEIGHT}
-p1 = df %>% 
-    filter(n_pres >= 3) %>% 
-    regress(rel_pre_correct, second_pres_time) # plot
 
 p2 = df %>% 
     filter(n_pres >= 3) %>% 
-    regress(pre_correct_first, second_pres_time) # plot
+    mutate(rel_pre_correct = -rel_pre_correct) %>% 
+    regress(rel_pre_correct, second_pres_time) # plot
 
 p3 = df %>% 
     filter(n_pres >= 3) %>% 
     regress(pre_correct_second, second_pres_time) # plot
 
-p1 | p2 | p3
+p4 = df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(pre_correct_first, second_pres_time) # plot
+
+p5 = df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(rel_pre_correct, third_pres_time) # plot
+
+p6 = df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(pre_correct_first, third_pres_time) # plot
+
+p7 = df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(pre_correct_second, third_pres_time) # plot
+
+sp = plot_spacer()
+
+(sp + p1 + sp) / (p2 + p3 + p4) / (p5 + p6 + p7)
 ```
 
-```{r, fig.width=3*WIDTH, fig.height=HEIGHT}
+## Reaction Time
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
 p1 = df %>% 
-    filter(n_pres >= 3) %>% 
-    regress(rel_pre_logrt_z, second_pres_time) # plot
+    # filter(response_type == "correct") %>% 
+    filter(n_pres >= 2) %>% 
+    regress(pre_logrt_z_first, first_pres_time) #plot
 
 p2 = df %>% 
     filter(n_pres >= 3) %>% 
-    regress(pre_logrt_z_first, second_pres_time) # plot
+    mutate(rel_pre_logrt_z = -rel_pre_logrt_z) %>% 
+    regress(rel_pre_logrt_z, second_pres_time) # plot
 
 p3 = df %>% 
     filter(n_pres >= 3) %>% 
     regress(pre_logrt_z_second, second_pres_time) # plot
 
-p1 | p2 | p3
-```
+p4 = df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(pre_logrt_z_first, second_pres_time) # plot
 
-## Third fixation
-
-
-```{r, fig.width=3*WIDTH, fig.height=HEIGHT}
-p1 = df %>% 
-    filter(n_pres >= 4) %>% 
-    regress(rel_pre_correct, third_pres_time) # plot
-
-p2 = df %>% 
-    filter(n_pres >= 4) %>% 
-    regress(pre_correct_first, third_pres_time) # plot
-
-p3 = df %>% 
-    filter(n_pres >= 4) %>% 
-    regress(pre_correct_second, third_pres_time) # plot
-
-p1 | p2 | p3
-```
-
-```{r, fig.width=3*WIDTH, fig.height=HEIGHT}
-p1 = df %>% 
+p5 = df %>% 
     filter(n_pres >= 4) %>% 
     regress(rel_pre_logrt_z, third_pres_time) # plot
 
-p2 = df %>% 
+p6 = df %>% 
     filter(n_pres >= 4) %>% 
     regress(pre_logrt_z_first, third_pres_time) # plot
 
-p3 = df %>% 
+p7 = df %>% 
     filter(n_pres >= 4) %>% 
     regress(pre_logrt_z_second, third_pres_time) # plot
 
-p1 | p2 | p3
+sp = plot_spacer()
+
+(sp + p1 + sp) / (p2 + p3 + p4) / (p5 + p6 + p7)
 ```
+
 
 
 # Sanity checks for evidence accumulation
