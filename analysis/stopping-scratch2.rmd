@@ -2,6 +2,22 @@
 
 
 
+
+# Predicting FOK on skips
+
+```{r}
+trials %>% 
+    filter(skip) %>% 
+    group_by(wid) %>% 
+    mutate(y = zscore(judgement), rt=zscore(rt)) %>%  
+    # mutate(pre_logrt_z = zscore(pre_logrt)) %>% 
+    ggplot(aes(rt, y, color=factor(pre_correct))) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
+    geom_smooth(method="lm", alpha=0.15) +
+    labs(x='Trial RT', y='FOK Judgement') + pal
+```
+
+
 ```{r}
 model = read_csv('../model/results/stopping_sim.csv') %>% 
     transmute(
@@ -11,8 +27,9 @@ model = read_csv('../model/results/stopping_sim.csv') %>%
     )
 
 model %>%
-    filter(skip) %>% 
-    filter(strength<1.9) %>% 
+    # filter(skip) %>% 
+    # filter(strength<1.9) %>% 
+    group_by(skip) %>% mutate(rt=zscore(rt)) %>% 
     ggplot(aes(strength, rt)) +
     stat_summary_bin(fun.data=mean_cl_normal, bins=5) +
     stat_smooth(method="lm") +
@@ -22,6 +39,7 @@ model %>%
 ```{r}
 trials %>%
     # filter(skip) %>% 
+    group_by(skip) %>% mutate(rt=zscore(rt)) %>% 
     ggplot(aes(strength, rt)) +
     stat_summary_bin(fun.data=mean_cl_normal, bins=5) +
     stat_smooth(method="lm") +

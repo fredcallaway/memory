@@ -15,6 +15,9 @@ knitr::opts_chunk$set(
     results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
 )
 source("setup.r")
+
+WIDTH = 3
+HEIGHT = 3
 ```
 
 ```{r}
@@ -81,10 +84,6 @@ simple_raw = simple = load_data('simple-recall') %>%
         logrtz = zscore(log(rt))
     ) %>% 
     rowwise() %>% mutate(rt = min(rt, 15000)) %>% ungroup()
-```
-
-
-```{r}
 
 pretest = simple %>% 
     filter(block == max(block)) %>% 
@@ -97,7 +96,7 @@ pretest = simple %>%
     mutate(across(c(pre_correct, pre_logrt, raw_strength), zscore, .names="{.col}_z")) %>% 
     rename(strength = raw_strength_z)
 
-df = multi %>% 
+multi_strength = multi %>% 
     select(-contains("strength")) %>% 
     left_join(pretest, c("wid", "first_word" = "word")) %>% 
     left_join(pretest, c("wid", "second_word" = "word"), suffix=c("_first", "_second")) %>% 
@@ -105,248 +104,212 @@ df = multi %>%
         name = "Human",
         rel_pre_correct = pre_correct_first - pre_correct_second,
         rel_pre_logrt = pre_logrt_first - pre_logrt_second,
+        rel_pre_logrt_z = (pre_logrt_z_first - pre_logrt_z_second) / sqrt(2),
         rel_strength = (strength_first - strength_second) / sqrt(2),  # keep it standardized
         chosen_strength = if_else(choose_first, strength_first, strength_second),
-    )
-# df = multi %>% left_join(pretest)
-```
+        chosen_pre_correct = if_else(choose_first, pre_correct_first, pre_correct_second),
+        chosen_pre_logrt_z = if_else(choose_first, pre_logrt_z_first, pre_logrt_z_second),
+    ) %>% ungroup() %>% 
+    mutate(trial_id = row_number())
 
-```{r}
-avg_ptime = long %>% group_by(name,wid) %>% 
-    filter(last_fix == 0) %>% 
-    # filter(presentation == 1) %>% 
-    summarise(duration_mean=mean(duration), duration_sd=sd(duration))
-
-df = df %>% 
-    left_join(avg_ptime) %>% 
-    mutate(
-        first_pres_time_z = (first_pres_time - duration_mean)/duration_sd,
-        second_pres_time_z = (second_pres_time - duration_mean)/duration_sd,
-        third_pres_time_z = (third_pres_time - duration_mean)/duration_sd,
-        fourth_pres_time_z = (fourth_pres_time - duration_mean)/duration_sd,
-    )
-
-
-keep_acc = multi %>% 
+keep_acc = multi_strength %>% 
     group_by(wid) %>% 
     summarise(accuracy=mean(correct)) %>% 
     filter(accuracy > 0.5) %>% 
     with(wid)
 
-df = df %>% filter(wid %in% keep_acc)
-df = df %>% filter(response_type == "correct")
+multi_strength = multi_strength %>% filter(wid %in% keep_acc)
+multi_strength = multi_strength %>% filter(response_type == "correct")
 ```
 
+
+```{r}
+make_fixations = function(df) {
+    df %>% 
+        ungroup() %>% 
+        filter(n_pres >= 1) %>% 
+        select(wid, trial_id, presentation_times, n_pres, rel_pre_correct) %>% 
+        unnest_longer(presentation_times, "duration", indices_to="presentation") %>% 
+        mutate(
+            last_fix = as.numeric(presentation == n_pres),
+            fix_first = presentation %% 2,
+            fix_stronger = as.numeric(fix_first == (rel_pre_correct > 0)),
+
+            # duration = if_else(name == "Human", as.integer(duration), as.integer(duration * 250)),
+        )
+}
+
+long = multi_strength %>% make_fixations
+long$name = "Human"
+
+avg_ptime = long %>% group_by(name,wid) %>% 
+    filter(last_fix == 0) %>% 
+    # filter(presentation == 1) %>% 
+    summarise(duration_mean=mean(duration), duration_sd=sd(duration))
+
+df = multi_strength %>% 
+    left_join(avg_ptime) %>% 
+    mutate(
+        first_pres_time = (first_pres_time - duration_mean)/duration_sd,
+        second_pres_time = (second_pres_time - duration_mean)/duration_sd,
+        third_pres_time = (third_pres_time - duration_mean)/duration_sd,
+        fourth_pres_time = (fourth_pres_time - duration_mean)/duration_sd,
+    )
+df$name = "Human"
+# df = multi %>% left_join(pretest)
+```
+
+# Normalized Timecourse
+
+```{r}
+normalized_timestep = function(long) {
+    long %>% 
+        group_by(trial_id) %>%
+        # this somewhat complex method ensures that all trials have exactly 100 steps
+        # (this isn't true if you just round duration, as I did initially)
+        mutate(percentage_complete = round(100*cumsum(duration / sum(duration)))) %>% 
+        mutate(n_step = diff(c(0, percentage_complete))) %>% 
+        uncount(n_step) %>% 
+        group_by(trial_id) %>% 
+        mutate(normalized_timestep = row_number())
+}
+
+long %>% 
+    filter(rel_pre_correct != 0) %>% 
+    normalized_timestep %>% 
+    drop_na(rel_pre_correct) %>% 
+    ggplot(aes(normalized_timestep/100, fix_stronger, group = abs(rel_pre_correct), color=factor(abs(rel_pre_correct)))) +
+    geom_smooth(se=F) + 
+    ylim(0, 1) +
+    facet_grid(~name) +
+    labs(x="Trial Completion", y="Probability Fixate\nStronger Cue", color="Pretest\nAccuracy\nDifference") +
+    geom_hline(yintercept=0.5) +
+    scale_x_continuous(labels = scales::percent, n.breaks=3)
+```
 
 # Fixation durations
 
 ## First fixation
 
-```{r first, fig.width=WIDTH, fig.height=HEIGHT}
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
-    # filter(response_type == "correct") %>% 
     filter(n_pres >= 2) %>% 
-    regress(pre_correct_first, first_pres_time_z) #plot
+    regress(pre_correct_first, first_pres_time) # plot
 ```
 
-```{r first, fig.width=WIDTH, fig.height=HEIGHT}
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
 df %>% 
     # filter(response_type == "correct") %>% 
     filter(n_pres >= 2) %>% 
-    regress(pre_logrt_first, first_pres_time_z) #plot
+    regress(pre_logrt_z_first, first_pres_time) #plot
 ```
 
 ## Second fixation
 
-```{r second, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
+```{r, fig.width=3*WIDTH, fig.height=HEIGHT}
+p1 = df %>% 
     filter(n_pres >= 3) %>% 
-    regress(pre_correct_first, second_pres_time_z) # plot
+    regress(rel_pre_correct, second_pres_time) # plot
+
+p2 = df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(pre_correct_first, second_pres_time) # plot
+
+p3 = df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(pre_correct_second, second_pres_time) # plot
+
+p1 | p2 | p3
 ```
 
-```{r second, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
+```{r, fig.width=3*WIDTH, fig.height=HEIGHT}
+p1 = df %>% 
     filter(n_pres >= 3) %>% 
-    regress(pre_logrt_first, second_pres_time_z) # plot
+    regress(rel_pre_logrt_z, second_pres_time) # plot
+
+p2 = df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(pre_logrt_z_first, second_pres_time) # plot
+
+p3 = df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(pre_logrt_z_second, second_pres_time) # plot
+
+p1 | p2 | p3
 ```
 
 ## Third fixation
 
-```{r third, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    # group_by(wid) %>% mutate(third_pres_time_z = zscore(third_pres_time_z)) %>% ungroup() %>% 
+
+```{r, fig.width=3*WIDTH, fig.height=HEIGHT}
+p1 = df %>% 
     filter(n_pres >= 4) %>% 
-    regress(rel_pre_correct, third_pres_time_z, mixed=MIXED_DURATIONS) # plot
-```
+    regress(rel_pre_correct, third_pres_time) # plot
 
-```{r third, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    # group_by(wid) %>% mutate(third_pres_time_z = zscore(third_pres_time_z)) %>% ungroup() %>% 
+p2 = df %>% 
     filter(n_pres >= 4) %>% 
-    regress(pre_logrt_second, third_pres_time_z, mixed=MIXED_DURATIONS) # plot
+    regress(pre_correct_first, third_pres_time) # plot
+
+p3 = df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(pre_correct_second, third_pres_time) # plot
+
+p1 | p2 | p3
 ```
 
-# Choice
+```{r, fig.width=3*WIDTH, fig.height=HEIGHT}
+p1 = df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(rel_pre_logrt_z, third_pres_time) # plot
 
-```{r first, fig.width=WIDTH, fig.height=HEIGHT}
-df %>%
-    ggplot(aes(rel_pre_correct, 1*choose_first)) +
-    stat_summary(fun.data=mean_cl_boot)
+p2 = df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(pre_logrt_z_first, third_pres_time) # plot
+
+p3 = df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(pre_logrt_z_second, third_pres_time) # plot
+
+p1 | p2 | p3
 ```
 
-```{r first, fig.width=WIDTH, fig.height=HEIGHT}
-df %>%
-    ggplot(aes(rel_pre_logrt, 1*choose_first)) +
-    stat_summary_bin(fun.data=mean_cl_boot)
-```
-
-# Overall fixation proportion
-
-```{r fix-prop, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    filter(n_pres >= 2) %>% 
-    regress(rel_strength, prop_first) + ylim(0,1)
-```
-
-## Last-fixation effect
-
-```{r last-confound, fig.width=WIDTH, fig.height=3}
-df %>% 
-    filter(n_pres >= 2) %>% 
-    regress_interaction(rel_strength, last_pres, prop_first)
-```
-
-## Strength predicts last fixation 
-
-```{r last-strength, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    mutate(last_pres_first = as.numeric(last_pres == "first")) %>% 
-    regress(rel_strength, last_pres_first)
-```
-
-## Last fixations are longer
-
-```{r fix-by-final, fig.width=WIDTH, fig.height=HEIGHT}
-long %>% 
-    # filter(name == "Human") %>% 
-    ggplot(aes(last_fix==1, duration)) + 
-    stat_summary(fun.data=mean_cl_boot, geom="bar", fill="white", color="black") +
-    stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=0.2) +
-    facet_grid(~name) + 
-    scale_x_discrete(name="Fixation Type", labels=c("Non-final", "Final")) +
-    ylab("Duration")
-
-last_diff = long %>% 
-    filter(name == "Human") %>% 
-    with(tapply(duration, last_fix, mean)) %>% 
-    diff
-
-long %>% 
-    filter(name == "Human") %>% 
-    mutate(is_last = int(last_fix==1)) %>% 
-    lmer(duration ~ is_last + (is_last|wid), data=.) %>% 
-    summ
-
-```
 
 # Sanity checks for evidence accumulation
 
 These plots test basic predictions of the evidence
 accumulation model, that is, effects that come out in the random model. 
 
-These plots only include correct trials.
-
 ## Probability of remembering first word
 
-```{r remember-first, fig.width=WIDTH, fig.height=HEIGHT}
-df %>%
-    filter(response_type == "correct") %>% 
+```{r}
+df %>% #plot
     mutate(choose_first = int(choose_first)) %>% 
-    regress(strength_first, choose_first, logistic=TRUE) +
-    ylab("Prob Select First Cue") + ylim(0, 1)
-```
-
-## Reaction time by chosen strength
-
-```{r rt-strength, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    filter(response_type == "correct") %>% 
-    regress(chosen_strength, rt)
+    regress(pre_correct_first, choose_first, logistic=TRUE) +
+    ylab("Prob Select First Cue")
 ```
 
 ```{r}
-human %>%
-    filter(response_type == "correct") %>% 
-    # glmer(rt ~ chosen_strength + (chosen_strength|wid), data=., family=gaussian) %>% 
-    lm(rt ~ chosen_strength, data=.) %>% 
-    summ
+df %>% #plot
+    mutate(choose_first = int(choose_first)) %>% 
+    regress(pre_logrt_z_first, choose_first, logistic=TRUE) +
+    ylab("Prob Select First Cue")
 ```
 
 ## Last fixation duration by strength
 
-```{r last-duration-strength, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    filter(response_type == "correct") %>% 
+```{r }
+X = df %>% 
     filter(n_pres > 0) %>% 
+    left_join(avg_ptime) %>% 
     mutate(
-        last_pres_time = map_dbl(presentation_times, last),
+        last_pres_time = (map_dbl(presentation_times, last) - duration_mean) / duration_sd,
         last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
-        last_strength = if_else(last_pres == "first", strength_first, strength_second)
-    ) %>% 
-    regress(last_strength, last_pres_time)
+        last_pre_correct = if_else(last_pres == "first", pre_correct_first, pre_correct_second),
+        last_pre_logrt_z = if_else(last_pres == "first", pre_logrt_z_first, pre_logrt_z_second)
+    )
+
+X %>% regress(last_pre_correct, last_pres_time) #plot
+X %>% regress(last_pre_logrt_z, last_pres_time) #plot
 ```
-
-```{r}
-long %>% filter(name == "Human") %>% 
-    mutate(rel_strength_fixated = if_else(fix_first==1, rel_strength, -rel_strength)) %>% 
-    mutate(last_fix = factor(last_fix)) %>% 
-    regress_interaction(rel_strength_fixated, last_fix, duration) #plot
-```
-
-# Miscellaneous
-
-## Response types
-
-Note: The model can only predict correct answers and timeouts.
-
-```{r responses, fig.width=WIDTH, fig.height=HEIGHT}
-raw_df %>% 
-    with((proportions(table(name, response_type), margin=1))) %>% 
-    kable(digits=2)
-
-```
-
-## Reaction time
-
-```{r rt, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    ggplot(aes(rt)) +
-    geom_density() +
-    facet_grid(~name) +
-    labs(x="Reaction Time", y="Density")
-```
-
-
-## Number of fixations
-
-```{r nfix, fig.width=WIDTH, fig.height=HEIGHT}
-df %>% 
-    filter(n_pres < 10) %>% 
-    ggplot(aes(n_pres, ..prop..)) +
-    geom_bar() +
-    facet_grid(~name) +
-    labs(x="Number of Fixations", y="Proportion of Trials")
-```
-
-## All fixation duration
-
-```{r all-fix, fig.width=WIDTH, fig.height=HEIGHT}
-long %>% 
-    filter(presentation < 6) %>% 
-    ggplot(aes(presentation, duration, color=as_factor(last_fix))) +
-    stat_summary(fun.data=mean_cl_boot) +
-    facet_grid(~name)
-```
-
 
 r
