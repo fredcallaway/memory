@@ -1,9 +1,6 @@
 library(simr)
 
-# %% ==================== Aug 4 ====================
-
-VERSIONS = c('v5.5')
-OPTIMAL_VERSION = "optimal_prior"
+VERSIONS = c('v5.6')
 DROP_HALF = FALSE
 DROP_ACC = TRUE
 DROP_ERROR = TRUE

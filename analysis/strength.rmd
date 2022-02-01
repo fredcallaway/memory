@@ -97,6 +97,7 @@ pretest = all_pretest %>%
 
 trials = left_join(trials, pretest) %>% filter(response_type %in% c("correct","empty"))
 
+pretest %>% ungroup() %>% count(pre_correct)  %>% mutate(n=n/sum(n))
 ```
 
 This notebook is taking a closer look at our measure of memory strength. We

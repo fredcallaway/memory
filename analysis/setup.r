@@ -224,7 +224,7 @@ make_breaks = function(x, n=7, q=.025) {
     seq(xmin, xmax, length.out=n)
 }
 
-regress = function(data, xvar, yvar, bins=6, bin_range=0.95, mixed=TRUE, logistic=FALSE) {
+regress = function(data, xvar, yvar, bins=6, bin_range=0.95, mixed=TRUE, logistic=FALSE, show_reg=TRUE) {
     x = ensym(xvar); y = ensym(yvar)
 
     xx = filter(data, name == "Human")[[x]]
@@ -249,8 +249,10 @@ regress = function(data, xvar, yvar, bins=6, bin_range=0.95, mixed=TRUE, logisti
                         model = inject(lm(!!y ~ !!x, data=data))
                     }
                 }
-                # print(glue("N = {nrow(data)}"))
-                # smart_print(summ(model))
+                if(show_reg) {
+                    print(glue("N = {nrow(data)}"))
+                    smart_print(summ(model))
+                }
                 tibble(ggpredict(model, terms = glue("{x} [n=100]}")))
             } else {
                 if (logistic) {

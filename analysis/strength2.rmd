@@ -9,7 +9,8 @@ output:
 ---
 
 ```{r, include=FALSE}
-VERSIONS = c('v5.6')
+VERSIONS = c('v5.5')
+# VERSIONS = c('v5.6')
 knitr::opts_chunk$set(
     fig.path="figs/",
     results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
@@ -33,7 +34,7 @@ multi_raw = load_data('multi-recall')
 multi = multi_raw %>% 
     filter(!practice) %>%
     group_by(wid) %>% 
-    filter(n() == 19) %>% 
+    # filter(n() == 19) %>% 
     left_join(select(participants, wid, version)) %>% 
     ensure_column(c("primed", "primed_word")) %>% 
     mutate(
@@ -86,6 +87,7 @@ simple_raw = simple = load_data('simple-recall') %>%
     rowwise() %>% mutate(rt = min(rt, 15000)) %>% ungroup()
 
 pretest = simple %>% 
+    # filter(trial_num > 20) %>% 
     filter(block == max(block)) %>% 
     rename(pre_correct = correct) %>% 
     mutate(pre_logrt = if_else(pre_correct, log(rt), NaN)) %>% 
@@ -150,6 +152,10 @@ avg_ptime = long %>% group_by(name,wid) %>%
 df = multi_strength %>% 
     left_join(avg_ptime) %>% 
     mutate(
+        first_pres_time_raw = first_pres_time,
+        second_pres_time_raw = second_pres_time,
+        third_pres_time_raw = third_pres_time,
+        fourth_pres_time_raw = fourth_pres_time,
         first_pres_time = (first_pres_time - duration_mean)/duration_sd,
         second_pres_time = (second_pres_time - duration_mean)/duration_sd,
         third_pres_time = (third_pres_time - duration_mean)/duration_sd,
@@ -158,6 +164,8 @@ df = multi_strength %>%
 df$name = "Human"
 # df = multi %>% left_join(pretest)
 ```
+
+
 
 # Normalized Timecourse
 
@@ -187,6 +195,7 @@ long %>%
     scale_x_continuous(labels = scales::percent, n.breaks=3)
 ```
 
+
 # Fixation durations
 
 ## Choice
@@ -194,13 +203,19 @@ long %>%
 For each fixation number, we have relative (fixated vs. non-fixated), fixated, non-fixated
 except the first which only has fixated.
 
+
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
-p1 = df %>% 
+
+p1 = df %>% #plot
     filter(n_pres >= 2) %>% 
-    regress(pre_correct_first, first_pres_time) # plot
+    filter(pre_correct_first != 0.5) %>% 
+    regress(pre_correct_first, first_pres_time, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2)
 
 p2 = df %>% 
     filter(n_pres >= 3) %>% 
+    # filter(pre_correct_first != 0.5) %>% 
+    # filter(pre_correct_second != 0.5) %>% 
     mutate(rel_pre_correct = -rel_pre_correct) %>% 
     regress(rel_pre_correct, second_pres_time) # plot
 
@@ -214,6 +229,8 @@ p4 = df %>%
 
 p5 = df %>% 
     filter(n_pres >= 4) %>% 
+    filter(pre_correct_first != 0.5) %>% 
+    filter(pre_correct_second != 0.5) %>% 
     regress(rel_pre_correct, third_pres_time) # plot
 
 p6 = df %>% 
@@ -267,6 +284,89 @@ sp = plot_spacer()
 (sp + p1 + sp) / (p2 + p3 + p4) / (p5 + p6 + p7)
 ```
 
+## RT no conditioning
+
+```{r}
+df %>% 
+    mutate(is_final=1*(n_pres == 1)) %>% 
+    regress_interaction(pre_logrt_z_first, is_final, first_pres_time)
+
+df %>% 
+    mutate(is_final=1*(n_pres == 2)) %>% 
+    regress_interaction(pre_logrt_z_second, is_final, second_pres_time)
+
+df %>% 
+    mutate(is_final=1*(n_pres == 3)) %>% 
+    regress_interaction(pre_logrt_z_first, is_final, third_pres_time)
+
+df %>% 
+    filter(n_pres > 1) %>% 
+    regress(pre_logrt_z_first, first_pres_time)
+
+df %>% 
+    filter(n_pres > 2) %>% 
+    regress(pre_logrt_z_second, second_pres_time)
+
+df %>% 
+    filter(n_pres > 3) %>% 
+    regress(pre_logrt_z_first, third_pres_time)
+
+
+df %>% 
+    mutate(is_final=n_pres == 2) %>% 
+    ggplot(aes(pre_logrt_z_second, second_pres_time, color=is_final)) +
+    stat_summary_bin(fun.data=mean_cl_boot, bins=5)
+
+
+```
+
+# Power analysis
+
+```{r}
+library(simr)
+
+groups = df %>% nest_by(wid, .keep=TRUE) %>% with(data)
+
+sample_p = function(N, run_model) {
+    data = sample(groups, N, replace=T) %>% 
+        map(~ mutate(.x, wid=round(1e10 * runif(1)))) %>%
+        bind_rows
+    tryCatch(run_model(data), error=function(c) NaN)
+}
+
+power_analysis = function(N, n_sim, run_model) {
+    results = map(N, ~ replicate(n_sim, sample_p(.x, run_model))) %>% unlist
+    expand.grid(
+        sim_i = 1:n_sim,
+        N = N
+    ) %>% 
+    rowwise() %>% 
+    mutate(
+        p = sample_p(N, run_model)
+    ) %>% ungroup()
+}
+
+N = c(200,300,400)
+n_sim = 300
+
+pwr1 = power_analysis(N, n_sim, . %>% 
+    filter(n_pres >= 2) %>% 
+    lmer(first_pres_time ~ pre_correct_first + (pre_correct_first|wid), data=.) %>% 
+    summ %>% with(coeftable[2, "p"])
+)
+```
+
+```{r}
+pwr1 %>% ggplot(aes(p, alpha=0.1)) +
+    geom_histogram(position="identity") + facet_grid(N ~ .) + coord_cartesian(xlim=c(0, 0.25), ylim=c(NULL))
+```
+
+```{r}
+pwr1 %>% 
+    group_by(N) %>%
+    summarise(power=mean(p<.05, na.rm=T)) %>% 
+    ggplot(aes(N, power)) + geom_line() + ylim(0.5, 1)
+```
 
 
 # Sanity checks for evidence accumulation

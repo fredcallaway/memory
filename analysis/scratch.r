@@ -1,4 +1,38 @@
+# debug practice trial
 
+
+all_pretest %>% 
+    group_by(wid) %>% 
+    summarise(sum(practice))
+
+
+all_pretest
+
+# %% --------
+# Strength distribution
+
+pretest %>% 
+    ggplot(aes(pre_correct)) +
+    geom_bar()
+fig()
+# %% --------
+all_pretest %>% 
+    group_by(wid, word) %>% 
+    mutate(presentation = row_number()) %>% 
+    left_join(select(pretest, word, pre_correct)) %>% 
+    filter(pre_correct == 0.5) %>% 
+    ggplot(aes(presentation, 1*correct)) +
+    stat_summary(fun.data=mean_cl_boot)
+fig()
+
+# %% --------
+opt = read_sim("new_optimal", noise_sd=0)
+# %% --------
+opt %>% 
+    filter(n_pres > 1) %>% 
+    ggplot(aes(strength_first, duration_first)) +
+    stat_summary_bin(fun.data=mean_cl_normal, bins=10)
+fig()
 # %% ==================== Debugging  ====================
 
 trials %>% filter(!is.na(response) & str_length(response)==1)  %>% select(version,wid,word,response,judgement)
