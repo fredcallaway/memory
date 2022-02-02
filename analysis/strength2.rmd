@@ -9,8 +9,8 @@ output:
 ---
 
 ```{r, include=FALSE}
-VERSIONS = c('v5.5')
-# VERSIONS = c('v5.6')
+# VERSIONS = c('v5.5')
+VERSIONS = c('v5.6')
 knitr::opts_chunk$set(
     fig.path="figs/",
     results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
@@ -105,6 +105,7 @@ multi_strength = multi %>%
     mutate(
         name = "Human",
         rel_pre_correct = pre_correct_first - pre_correct_second,
+        rel_pre_correct_z = (pre_correct_z_first - pre_correct_z_second) / sqrt(2),
         rel_pre_logrt = pre_logrt_first - pre_logrt_second,
         rel_pre_logrt_z = (pre_logrt_z_first - pre_logrt_z_second) / sqrt(2),
         rel_strength = (strength_first - strength_second) / sqrt(2),  # keep it standardized
@@ -203,19 +204,14 @@ long %>%
 For each fixation number, we have relative (fixated vs. non-fixated), fixated, non-fixated
 except the first which only has fixated.
 
-
 ```{r, fig.width=WIDTH, fig.height=HEIGHT}
-
 p1 = df %>% #plot
     filter(n_pres >= 2) %>% 
-    filter(pre_correct_first != 0.5) %>% 
     regress(pre_correct_first, first_pres_time, bins=0, bin_range=1) +
     stat_summary(fun.data=mean_cl_boot, size=.2)
 
 p2 = df %>% 
     filter(n_pres >= 3) %>% 
-    # filter(pre_correct_first != 0.5) %>% 
-    # filter(pre_correct_second != 0.5) %>% 
     mutate(rel_pre_correct = -rel_pre_correct) %>% 
     regress(rel_pre_correct, second_pres_time) # plot
 
@@ -240,6 +236,45 @@ p6 = df %>%
 p7 = df %>% 
     filter(n_pres >= 4) %>% 
     regress(pre_correct_second, third_pres_time) # plot
+
+sp = plot_spacer()
+
+(sp + p1 + sp) / (p2 + p3 + p4) / (p5 + p6 + p7)
+```
+
+
+```{r, fig.width=WIDTH, fig.height=HEIGHT}
+
+p1 = df %>% #plot
+    filter(n_pres >= 2) %>% 
+    regress(pre_correct_z_first, first_pres_time)
+
+p2 = df %>% 
+    filter(n_pres >= 3) %>% 
+    mutate(rel_pre_correct_z = -rel_pre_correct_z) %>% 
+    regress(rel_pre_correct_z, second_pres_time) # plot
+
+p3 = df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(pre_correct_z_second, second_pres_time) # plot
+
+p4 = df %>% 
+    filter(n_pres >= 3) %>% 
+    regress(pre_correct_z_first, second_pres_time) # plot
+
+p5 = df %>% 
+    filter(n_pres >= 4) %>% 
+    filter(pre_correct_z_first != 0.5) %>% 
+    filter(pre_correct_z_second != 0.5) %>% 
+    regress(rel_pre_correct_z, third_pres_time) # plot
+
+p6 = df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(pre_correct_z_first, third_pres_time) # plot
+
+p7 = df %>% 
+    filter(n_pres >= 4) %>% 
+    regress(pre_correct_z_second, third_pres_time) # plot
 
 sp = plot_spacer()
 

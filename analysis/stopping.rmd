@@ -1,5 +1,5 @@
 ---
-title: Optimal giving up in single-cue recall
+title: Optimal giving up in single-cue recall (final pilot)
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
@@ -10,13 +10,13 @@ output:
 
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(
     results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
 )
 source("setup.r")
 
-# VERSIONS = c('v6.5C')
-# VERSIONS = c('v6.4', 'v6.5', 'v6.5B', 'v6.5C', 'v6.6', 'v6.7', 'v6.8')
+# VERSIONS = c('v6.5', 'v6.5B', 'v6.5C', 'v6.6', 'v6.7', 'v6.8')
 VERSIONS = c('v6.5', 'v6.5B', 'v6.5C')
 
 load_data = function(type) {
@@ -28,9 +28,9 @@ load_data = function(type) {
     bind_rows
 }
 
-pretest = load_data('simple-recall') %>% 
-    filter(!practice) %>% 
-    group_by(wid) %>% filter(n() == 74) %>% ungroup %>%
+all_pretest = load_data('simple-recall') %>% 
+    # filter(!practice) %>% 
+    # group_by(wid) %>% filter(n() == 74) %>% ungroup %>%
     mutate(
         response_type = factor(response_type, 
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
@@ -44,7 +44,7 @@ pretest = load_data('simple-recall') %>%
     )
 
 all_trials = load_data('simple-recall-penalized') %>% 
-    filter(!practice) %>% 
+    # filter(!practice) %>% 
     mutate(
         response_type = factor(response_type, 
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
@@ -57,13 +57,20 @@ all_trials = load_data('simple-recall-penalized') %>%
         base_rt = rt,
         rt = typing_rt
     )
+
+pal = scale_colour_manual(values=c(
+    `0`="brown1",
+    `0.5`="darkgoldenrod1",
+    `1`="limegreen"
+), aesthetics=c("fill", "colour"))
+
 ```
 # Data
 
 Here we are analyzing simple cued-recall trials where we incentivized participants
 to respond quickly and not respond incorrectly (allowing them to pass instead).
 
-As of Dec 17, 2021, this link will bring you to the test trials (but it might change later).
+As of Feb 2, 2022, this link will bring you to the test trials (but it might change later).
 https://memorygame29.herokuapp.com/?skip=4
 
 Version(s): `r paste(VERSIONS)`
@@ -75,36 +82,33 @@ all_trials$name = 'Human'
 
 excl = all_trials %>% 
     group_by(wid) %>%
-    summarise(n_skip = sum(skip)) %>% 
-    mutate(keep=between(n_skip, 4, 33))
+    summarise(correct_rate=mean(correct), skip_rate=mean(skip)) %>% 
+    mutate(keep=skip_rate < .9)
 
 keep = excl %>% filter(keep) %>% with(wid)
 
-trials = all_trials %>% 
+trials = all_trials %>% filter(wid %in% keep)
+
+pretest = all_pretest %>% 
     filter(wid %in% keep) %>% 
-    group_by(wid) %>% 
-    mutate(rt_z = zscore(rt)) %>% 
-    ungroup()
-
-pretest = pretest %>% filter(wid %in% keep)
-
-pretest %>% 
     filter(block == max(block)) %>% 
     rename(pre_correct = correct) %>% 
-    mutate(pre_logrt = if_else(pre_correct, log(rt), 0)) %>% 
+    mutate(pre_logrt = if_else(pre_correct, log(rt), NaN)) %>% 
+    mutate(raw_strength = -if_else(pre_correct, log(rt), log(15000))) %>% 
     group_by(wid, word) %>% 
-    summarise(across(c(pre_correct, pre_logrt), mean)) %>%
+    summarise(across(c(pre_correct, pre_logrt, raw_strength), mean, na.rm=T)) %>%
     group_by(wid) %>%
-    mutate(across(c(pre_correct, pre_logrt), zscore, .names="{.col}_z")) %>% 
-    mutate(
-        raw_strength = -((1-pre_correct) * log(15000) + pre_logrt),
-        strength = zscore(raw_strength)
-    ) %>% 
-    right_join(trials) -> trials
+    mutate(across(c(pre_correct, pre_logrt, raw_strength), zscore, .names="{.col}_z"))
 
+trials = left_join(trials, pretest) %>% 
+    filter(response_type %in% c("correct","empty")) %>% 
+    group_by(wid, response_type) %>% 
+    mutate(rt_z=zscore(rt)) %>% 
+    group_by(wid)
 ```
 
-
+- Dropping `r sum(!excl$keep)` participants who skipped more than 90% of critical trials.
+- This leaves `r length(keep)` participants in the analysis.
 
 # Subjective judgements
 
@@ -125,37 +129,14 @@ response is made?
     <b>5</b>&nbsp;&nbsp; I am absolutely sure my response is correct<br>
 </blockquote>
 
-No z-scoring
 
 ```{r}
 trials %>%  #plot
-    filter(response_type == "correct") %>% 
-    regress(judgement, rt, bins=0, bin_range=1) +
+    filter(correct) %>% 
+    regress(judgement, rt_z, bins=0, bin_range=1) +
     stat_summary(fun.data=mean_cl_boot, size=.2) +
     xlab("Confidence Judgement")
 ```
-
-Z-score RT
-
-```{r}
-trials %>%  #plot
-    filter(response_type == "correct") %>% 
-    mutate(rt=zscore(rt)) %>% 
-    regress(judgement, rt, bins=0, bin_range=1) +
-    stat_summary(fun.data=mean_cl_boot, size=.2) +
-    xlab("Confidence Judgement")
-```
-
-Z-score both
-
-```{r}
-trials %>% #plot
-    filter(response_type == "correct") %>% 
-    mutate(judgement=zscore(judgement), rt=zscore(rt)) %>% 
-    regress(judgement, rt) +
-    xlab("Confidence Judgement")
-```
-
 
 ## FOK for empty responses
 
@@ -170,105 +151,35 @@ trials %>% #plot
     <b>5</b>&nbsp;&nbsp; I am absolutely sure I know the word<br>
 </blockquote>
 
-No z-scoring
 ```{r}
 trials %>%  #plot
-    filter(response_type == "empty") %>% 
-    regress(judgement, rt, bins=0, bin_range=1) +
+    filter(skip) %>% 
+    regress(judgement, rt_z, bins=0, bin_range=1) +
     stat_summary(fun.data=mean_cl_boot, size=.2) +
     xlab("FOK Judgement")
 ```
-
-Z-score RT
-```{r}
-trials %>%  #plot
-    filter(response_type == "empty") %>% 
-    mutate(rt=zscore(rt)) %>% 
-    regress(judgement, rt, bins=0, bin_range=1) +
-    stat_summary(fun.data=mean_cl_boot, size=.2) +
-    xlab("FOK Judgement")
-```
-
-Z-score both
-```{r}
-trials %>% #plot
-    filter(response_type == "empty") %>% 
-    mutate(judgement=zscore(judgement), rt=zscore(rt)) %>% 
-    regress(judgement, rt) +
-    xlab("FOK Judgement")
-```
-
 
 # Objective memory strength measure
 
 We can now ask the same thing, using performance on the pretest as an
-objective measure of the strength of each memory. The strength of each pair is
-defined as the negative average log reaction time on the two pretest
-exposures, where an inaccurate response counts as the maximum reaction time.
-
-No z-scoring at all ("raw strength")
+objective measure of the strength of each memory.
 
 ```{r}
 trials %>% #plot
-    filter(response_type == "correct") %>% 
-    regress(raw_strength, rt)
-```
-
-Z-score strength across all trials (as in Experiment 2)
-```{r}
-trials %>% #plot
-    filter(response_type == "correct") %>% 
-    regress(strength, rt)
-```
-
-Z-score RT
-```{r}
-trials %>% #plot
-    filter(response_type == "correct") %>% 
-    mutate(rt_z = zscore(rt)) %>% 
-    regress(strength, rt_z)
-```
-
-Z-score both within correct responses
-```{r}
-trials %>% #plot
-    filter(response_type == "correct") %>% 
-    mutate(strength=zscore(strength), rt_z = zscore(rt)) %>% 
-    regress(strength, rt_z)
+    filter(correct) %>% 
+    regress(pre_correct, rt_z, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Pretest Accuracy")
 ```
 
 We consistently see faster responses for higher-strength cues. This is unsurprising.
 
 ## Reaction time on skips
 
-No z-scoring at all ("raw strength")
-
-```{r}
-trials %>% #plot
-    # filter(pre_correct>0) %>% 
-    filter(skip) %>% 
-    regress(raw_strength, rt)
-```
-
-Z-score strength across all trials (as in Experiment 2)
 ```{r}
 trials %>% #plot
     filter(skip) %>% 
-    regress(strength, rt)
-```
-
-Z-score RT
-```{r}
-trials %>% #plot
-    filter(skip) %>% 
-    mutate(rt_z = zscore(rt)) %>% 
-    regress(strength, rt_z)
-```
-
-Z-score both within correct responses
-```{r}
-trials %>% #plot
-    filter(skip) %>% 
-    mutate(strength=zscore(strength), rt_z = zscore(rt)) %>% 
-    regress(strength, rt_z)
+    regress(pre_correct, rt_z, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Pretest Accuracy")
 ```
