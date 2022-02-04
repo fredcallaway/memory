@@ -1,5 +1,5 @@
 ---
-title: Optimal giving up in single-cue recall (final pilot)
+title: Optimal giving up in single-cue recall (pre-registered dataset)
 date: "`r Sys.Date()`"
 author: "fredcallaway"
 output:
@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 source("setup.r")
 
 # VERSIONS = c('v6.5', 'v6.5B', 'v6.5C', 'v6.6', 'v6.7', 'v6.8')
-VERSIONS = c('v6.5', 'v6.5B', 'v6.5C')
+VERSIONS = c('v6.5D')
 
 load_data = function(type) {
     VERSIONS %>% 
@@ -44,7 +44,7 @@ all_pretest = load_data('simple-recall') %>%
     )
 
 all_trials = load_data('simple-recall-penalized') %>% 
-    # filter(!practice) %>% 
+    filter(!practice) %>% 
     mutate(
         response_type = factor(response_type, 
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
@@ -91,6 +91,7 @@ trials = all_trials %>% filter(wid %in% keep)
 
 pretest = all_pretest %>% 
     filter(wid %in% keep) %>% 
+    filter(!practice) %>% 
     filter(block == max(block)) %>% 
     rename(pre_correct = correct) %>% 
     mutate(pre_logrt = if_else(pre_correct, log(rt), NaN)) %>% 
@@ -183,3 +184,81 @@ trials %>% #plot
     stat_summary(fun.data=mean_cl_boot, size=.2) +
     xlab("Pretest Accuracy")
 ```
+
+### What happened?
+
+As you can tell from the error bars, part of the problem is that there just
+aren't enough cases where people skip a cue they had answered correctly in the
+pre-test. More generally, people's decision about whether to skip or not
+almost perfectly aligns with pretest accuracy.
+
+```{r}
+trials %>%
+    ungroup() %>% 
+    mutate(x=if_else(skip, "skip", "correct")) %>% 
+    with(table(pre_correct, x)) %>% kable
+```
+
+However, we also see that the effect comes out strongly if we don't z-score
+reaction time.
+
+```{r}
+trials %>% #plot
+    filter(skip) %>% 
+    regress(pre_correct, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Pretest Accuracy")
+```
+
+```{r}
+trials %>% #plot
+    filter(skip) %>% 
+    mutate(rt=zscore(log(rt))) %>% 
+    regress(pre_correct, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Pretest Accuracy")
+```
+
+It looks like this is because the people who show the effect have
+much more variation in RT than those who don't.
+
+```{r}
+trials %>% #plot
+    filter(skip) %>% 
+    group_by(wid, pre_correct) %>% 
+    summarise(rt = mean(rt)) %>% 
+    left_join(
+        trials %>%
+        filter(skip) %>%
+        summarise(n_useful=sum(pre_correct>0))
+    ) %>% 
+    ggplot(aes(pre_correct, rt, group=wid)) +
+    geom_line(size=.5, alpha=0.2)
+```
+
+If we center the RT's within participant but don't scale them,
+we still get the effect, which suggests it's not a case of 
+Simpson's paradox.
+
+```{r}
+trials %>% #plot
+    filter(skip) %>% 
+    mutate(rt = scale(rt, scale=F)) %>% 
+    regress(pre_correct, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Pretest Accuracy")
+```
+
+What to make of this? We could just change the pre-registration to use raw
+reaction time (or maybe centered reaction time) and rerun it. This is a bit
+awkward with the other experiment, where we pre-registered z-scoring fixation
+durations. But I think it's probably fine to treat RT and fixation durations
+differently.
+
+Alternatively, we could try to adjust the design to get more informative
+cases. Supporting this strategy, it's less than ideal to have huge error bars,
+even if the regression is significant. One way we might be able to accomplish
+this is to put the pretest trials before the distractor task. This would give
+time for people to foregt a word after recalling it correctly in the pretest.
+One problem with that is it produces a discrepancy between Experiment 1 and 2,
+but I think this could be justified.
