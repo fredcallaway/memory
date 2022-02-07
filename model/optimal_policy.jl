@@ -1,6 +1,7 @@
 using Parameters
 using Distributions
 using StatsFuns
+using StatsBase
 
 """Notation
 
@@ -50,6 +51,54 @@ end
 
 function Base.show(io::IO, model::BackwardsInduction)
     print(io, "BackwardsInduction for ", model.m)
+end
+
+function compute_value_functions!(model::BackwardsInduction{1})
+    @unpack T, V, Q = model
+    @unpack step_size, sample_cost, switch_cost, miss_cost = model.m
+    t_max = model.m.max_step + 1
+    e_max = model.m.threshold + 1
+    last_a = 1 # we only have this for consistency with two-item case
+
+    @assert m.allow_stop  # only version that makes sense
+
+    # NOTE: the -1 and +1 everywhere are shifting back and forth
+    # between index space and time/evidence (which starts at 0)
+
+    # initialize value function in terminal states
+    for e1 in 1:min(e_max, (t_max-1)*step_size + 1)
+        V[last_a, e1, t_max] = e1 == e_max ? 0. : -miss_cost
+    end
+
+    # iterate backward in time
+    for tt in t_max-1:-1:1
+        t1 = tt   # all time must be on first item
+
+        # iterate over states
+        e1_max = min(e_max, (t1-1)*step_size + 1)
+        for e1 in 1:e1_max
+            if e1 == e_max
+                V[last_a, e1, t1] = 0
+                continue
+            end
+
+            # sample from 1:  Q(s, a) = sum p(s′|s,a) * V(s′) - cost
+            a = 1
+            cost = sample_cost
+            q1 = -cost
+            for x in 1:step_size+1
+                e1′ = min(e1 + x - 1, e_max)  # -1 b/c index space, min b/c can't exceed threshold
+                #@assert isfinite(V[a, e1′, e2, t1+1, t2])
+                q1 += T[x, e1, t1] * V[a, e1′, t1+1]
+            end
+            Q[a, last_a, e1, t1] = q1
+            
+            # terminate
+            q2 = -miss_cost
+
+            V[last_a, e1, t1] = max(q1, q2) # , q3
+        end
+    end
 end
 
 function compute_value_functions!(model::BackwardsInduction{2})
@@ -124,6 +173,12 @@ function compute_value_functions!(model::BackwardsInduction{2})
     end
 end
 
+function belief2index(m::MetaMDP{1}, b::Belief{1})
+    e1 = b.heads[1] + 1
+    t1 = (b.heads[1] + b.tails[1]) ÷ m.step_size + 1
+    (b.focused, e1, t1)
+end
+
 function belief2index(m::MetaMDP{2}, b::Belief{2})
     e1 = b.heads[1] + 1
     t1 = (b.heads[1] + b.tails[1]) ÷ m.step_size + 1
@@ -149,8 +204,13 @@ end
 OptimalPolicy(m::MetaMDP) = OptimalPolicy(m, BackwardsInduction(m))
 
 function act(pol::OptimalPolicy, b::Belief)
-    q = @view pol.B.Q[:, belief2index(pol.m, b)...]
-    argmax(q)
+    qs = @view pol.B.Q[:, belief2index(pol.m, b)...]
+    q, a = findmax(qs)
+    if pol.m.allow_stop && q < pol.m.miss_cost
+        0
+    else
+        a
+    end
 end
 
 struct SoftOptimalPolicy
@@ -162,6 +222,10 @@ end
 SoftOptimalPolicy(m::MetaMDP, β) = SoftOptimalPolicy(m, BackwardsInduction(m), β)
 
 function act(pol::SoftOptimalPolicy, b::Belief)
-    q = @view pol.B.Q[:, belief2index(pol.m, b)...]
-    sample(Weights(softmax(pol.β .* q)))
+    qs = @view pol.B.Q[:, belief2index(pol.m, b)...]
+    if pol.m.allow_stop
+        sample(Weights(softmax(pol.β .* [-pol.m.miss_cost; qs]))) - 1
+    else
+        sample(Weights(softmax(pol.β .* qs)))
+    end
 end
