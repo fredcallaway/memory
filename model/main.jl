@@ -81,8 +81,10 @@ df |> CSV.write("results/sim_many_optimal.csv")
 
 # %% --------
 
-m = MetaMDP(step_size=4, max_step=120, threshold=40, sample_cost=1, switch_cost=3, miss_cost=100, prior=(1, 1))
-pol = SoftOptimalPolicy(m, 1)
+m = MetaMDP{2}(step_size=4, max_step=120, threshold=40, sample_cost=1, switch_cost=3, miss_cost=100, prior=(1, 1))
+@time pol = SoftOptimalPolicy(m, 1) # 1.3 seconds
+
+value(pol.B, initial_belief(m)) # -27.3027
 df = make_frame(pol, 50000) 
 @with(df, :duration_first + :duration_second) |> mean
 

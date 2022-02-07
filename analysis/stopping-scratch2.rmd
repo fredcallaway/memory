@@ -29,7 +29,7 @@ model = read_csv('../model/results/stopping_sim.csv') %>%
 model %>%
     # filter(skip) %>% 
     # filter(strength<1.9) %>% 
-    group_by(skip) %>% mutate(rt=zscore(rt)) %>% 
+    # group_by(skip) %>% mutate(rt=zscore(rt)) %>% 
     ggplot(aes(strength, rt)) +
     stat_summary_bin(fun.data=mean_cl_normal, bins=5) +
     stat_smooth(method="lm") +

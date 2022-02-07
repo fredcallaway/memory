@@ -1,3 +1,38 @@
+## Joint plots
+
+```{r, fig.width=6, fig.height=3}
+fok = trials %>%
+    filter(skip) %>% 
+    regress(judgement, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("FOK Judgement")
+
+conf = trials %>%
+    filter(correct) %>% 
+    regress(judgement, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Confidence Judgement")
+
+(fok + conf) & coord_cartesian(xlim=c(NULL), ylim=c(0, 4000)) #plot
+```
+
+
+```{r, fig.width=6, fig.height=3}
+p1 = trials %>% #plot
+    filter(correct) %>% 
+    regress(pre_correct, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Pretest Accuracy")
+
+p2 = trials %>% #plot
+    filter(skip) %>% 
+    regress(pre_correct, rt, bins=0, bin_range=1) +
+    stat_summary(fun.data=mean_cl_boot, size=.2) +
+    xlab("Pretest Accuracy")
+
+(p1 + p2) & coord_cartesian(xlim=c(NULL), ylim=c(0, 4000))
+```
+
 
 
 ## Response types

@@ -116,6 +116,14 @@ function Base.push!(g::FullFixLog, c)
     end
 end
 
+mutable struct RTLog
+    rt::Int
+end
+RTLog() = RTLog(0)
+function Base.push!(g::RTLog, c)
+    g.rt += 1
+end
+
 function simulate(policy; b=initial_belief(policy.m), s::State=sample_state(policy.m),
                  belief_log=NoLog(), fix_log=NumFixLog())
     m = policy.m

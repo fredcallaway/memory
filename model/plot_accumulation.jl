@@ -7,19 +7,48 @@ include("utils.jl")
 include("figure.jl")
 # %% --------
 
-function plot_vec!(h, t, c)
-    scatter!([t], [h]; c, markersize=10)
-    lo, hi = (6-t) .* quantile(Beta(1+h,1+t-h), [0.1, 0.9])
-    @show lo hi
-    plot!([t, 6], [h, h+lo]; c, fillrange=[h, h+hi], fillalpha=0.3, alpha=0)
-    hline!([6], line=(:black,))
+function plot_vec!(h, t, c; max_step, threshold)
+    total = t+h
+    scatter!([total], [h]; c, markersize=5)
+    lo, hi = (1+max_step-total) .* quantile(Beta(1+h,1+t), [0.1, 0.9])
+    # hi = min(threshold, hi)
+    if h < threshold
+        plot!([total, 1+max_step], [h, h+lo]; c, fillrange=[h, h+hi], fillalpha=0.3, alpha=0)
+    end
 end
-# function plot_vec!(h, t, c)
-#     plot!([0, t], [0, h]; c)
-#     lo, hi = t .* quantile(Beta(1+h,1+t-h), [0.1, 0.9])
-#     plot!([0, t], [0, lo]; c, fillrange=[0, hi], fillalpha=0.3, alpha=0)
-# end
 
+function plot_belief(b::Belief; threshold=10, max_step=20)
+    plot(size=(200,200), dpi=500, xticks=false, yticks=false, 
+        xlim=(-.05max_step,1.05max_step), ylim=(-.05threshold,1.05threshold), 
+        framestyle = :none)
+
+    # hline!([0.001, threshold], line=(:black,), )
+    # vline!([0.001, max_step], line=(:black,), )
+
+    plot!([0, max_step, max_step], [0, 0, threshold], line=(:black,))
+    plot!([0, 0, max_step*1.005], [0, threshold, threshold], line=(:black,))
+    for i in eachindex(b.heads)
+        plot_vec!(b.heads[i], b.tails[i], i; max_step, threshold)
+    end
+    # savefig("vec-figs/$name")
+end
+
+
+to_plot = [
+    (0, 0)
+    (1, 0)
+    (4, 3)
+    (10,7)
+]
+mkpath("figs/1belief")
+for (h, t) in to_plot
+    b = Belief{1}(0, 1, [h], [t])
+    plot_belief(b)
+    savefig("figs/1belief/$h-$t.png")
+end
+
+
+# %% --------
 function plot_belief(name, h1, t1, h2, t2)
     @assert h1 ≤ t1 && h2 ≤ t2
     plot(size=(200,200), dpi=500, xticks=false, yticks=false, xlim=(-0.4,7), ylim=(-0.4,7), 
@@ -37,7 +66,6 @@ mkpath("vec-figs")
 plot_belief("one", 0,0,0,0)
 plot_belief("two", 1, 1, 0, 0)
 plot_belief("three", 1, 2, 6, 6)
-
 
 # %% --------
 

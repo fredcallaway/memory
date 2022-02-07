@@ -8,16 +8,23 @@ output:
     self_contained: true
 ---
 
+# Data
+
+Here we are analyzing simple cued-recall trials where we incentivized participants
+to respond quickly and not respond incorrectly (allowing them to pass instead).
+
+As of Feb 2, 2022, this link will bring you to the test trials (but it might change later).
+https://memorygame29.herokuapp.com/?skip=4
 
 ```{r setup, include=FALSE}
-
 knitr::opts_chunk$set(
     results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
 )
 source("setup.r")
 
 # VERSIONS = c('v6.5', 'v6.5B', 'v6.5C', 'v6.6', 'v6.7', 'v6.8')
-VERSIONS = c('v6.5D')
+VERSIONS = c('v6.5', 'v6.5B', 'v6.5C')
+# VERSIONS = c('v6.5D')
 
 load_data = function(type) {
     VERSIONS %>% 
@@ -64,20 +71,7 @@ pal = scale_colour_manual(values=c(
     `1`="limegreen"
 ), aesthetics=c("fill", "colour"))
 
-```
-# Data
 
-Here we are analyzing simple cued-recall trials where we incentivized participants
-to respond quickly and not respond incorrectly (allowing them to pass instead).
-
-As of Feb 2, 2022, this link will bring you to the test trials (but it might change later).
-https://memorygame29.herokuapp.com/?skip=4
-
-Version(s): `r paste(VERSIONS)`
-
-### Exclusions
-
-```{r}
 all_trials$name = 'Human'
 
 excl = all_trials %>% 
@@ -106,6 +100,7 @@ trials = left_join(trials, pretest) %>%
     group_by(wid, response_type) %>% 
     mutate(rt_z=zscore(rt)) %>% 
     group_by(wid)
+
 ```
 
 - Dropping `r sum(!excl$keep)` participants who skipped more than 90% of critical trials.
