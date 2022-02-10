@@ -140,6 +140,8 @@ The model judgement is comptued based on the estimated memory
 strength (drift rate) when the trial terminates. Then we bin
 by quintile (across both skip and correct) to get an ordinal judgement.
 
+Model prediction is the dashed purple line.
+
 
 ```{r, fig.width=5, fig.height=3}
 plot_both(judgement_alt, rt) +
