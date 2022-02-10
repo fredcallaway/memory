@@ -162,15 +162,15 @@ points. We could do something like this to better match the judgement
 distribution.
 
 ```{r}
-df %>% ggplot(aes(judgement_alt, fill=name)) +
+df %>% ggplot(aes(judgement_alt, ..prop.., fill=name)) +
     geom_bar(position="dodge") +
     facet_wrap(~response_type) +
     theme(legend.position="none") +
     scale_colour_manual(values=c(
         'Human'='gray10',
         'Model'='#9D6BE0'
-    ), aesthetics=c("fill", "colour"), name="") 
-
+    ), aesthetics=c("fill", "colour"), name="") +
+    labs(x="Judgement", y='Proportion')
 ```
 
 Here is an alternative version where we use quintiles within
