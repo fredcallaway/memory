@@ -23,8 +23,8 @@ knitr::opts_chunk$set(
 source("setup.r")
 
 # VERSIONS = c('v6.5', 'v6.5B', 'v6.5C', 'v6.6', 'v6.7', 'v6.8')
-VERSIONS = c('v6.5', 'v6.5B', 'v6.5C')
-# VERSIONS = c('v6.5D')
+# VERSIONS = c('v6.5', 'v6.5B', 'v6.5C')
+VERSIONS = c('v6.5D')
 
 load_data = function(type) {
     VERSIONS %>% 

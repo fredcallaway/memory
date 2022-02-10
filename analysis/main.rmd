@@ -56,6 +56,7 @@ normalized_timestep = function(long) {
         mutate(normalized_timestep = row_number())
 }
 
+long
 long %>% 
     normalized_timestep %>% 
     drop_na(strength_diff) %>% 
@@ -225,6 +226,9 @@ df %>%
 ## Number of fixations
 
 ```{r nfix, fig.width=WIDTH, fig.height=HEIGHT}
+
+df %>% count(n_pres) %>% mutate(prop=n/sum(n))
+
 df %>% 
     filter(n_pres < 10) %>% 
     ggplot(aes(n_pres, ..prop..)) +

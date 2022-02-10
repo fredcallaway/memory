@@ -105,8 +105,8 @@ read_sim = function(name, noise_sd=0) {
         name = !!name,
         # raw_strength_first = strength_first,
         # raw_strength_second = strength_second,
-        strength_first = zscore(zscore(log(strength_first)) + rnorm(n(), sd=noise_sd)),
-        strength_second = zscore(zscore(log(strength_second)) + rnorm(n(), sd=noise_sd)),
+        strength_first = zscore(strength_first + rnorm(n(), sd=noise_sd)),
+        strength_second = zscore(strength_second + rnorm(n(), sd=noise_sd)),
         response_type = factor(if_else(outcome == -1, "timeout", "correct"),
             levels=c("correct", "intrusion", "other", "timeout", "empty"),
             # labels=c("Correct", "Intrusion", "Other")
@@ -140,28 +140,21 @@ read_sim = function(name, noise_sd=0) {
     )
 }
 
-
 make_fixations = function(df) {
-    print("WARNING: USING FULL MULTI IN make_fixations")
-    breaks = quantile(abs(multi$rel_strength), c(0, .5, .75, 1),  na.rm = T)
-    breaks[4] = Inf
     df %>% 
         ungroup() %>% 
         filter(n_pres >= 1) %>% 
-        select(name, wid, rel_strength, presentation_times, n_pres, trial_id) %>% 
-        mutate(
-            strength_diff = cut(abs(rel_strength), breaks,
-                                labels=c("small", "moderate", "large"),
-                                ordered=T)
-        ) %>% 
+        select(wid, trial_id, presentation_times, n_pres, rel_pre_correct) %>% 
         unnest_longer(presentation_times, "duration", indices_to="presentation") %>% 
         mutate(
             last_fix = as.numeric(presentation == n_pres),
             fix_first = presentation %% 2,
-            fix_stronger = as.numeric(fix_first == (rel_strength > 0)),
+            fix_stronger = as.numeric(fix_first == (rel_pre_correct > 0)),
+
             # duration = if_else(name == "Human", as.integer(duration), as.integer(duration * 250)),
         )
 }
+
 
 if (DROP_ACC) {
     keep_acc = multi %>% 
@@ -182,11 +175,11 @@ if (DROP_HALF) {
 
 # %% --------
 df = raw_df = bind_rows(
-    read_sim("new_optimal", noise_sd=1),
+    # read_sim("gaussian2", noise_sd=1),
     # read_sim("empirical_commitment", noise_sd=1),
     # read_sim("rand_fit", noise_sd=0),
     multi %>% mutate(name = "human", wid = factor(wid)),
-    read_sim("new_random", noise_sd=1),
+    # read_sim("new_random", noise_sd=1),
     # read_sim("empirical", noise_sd=1),
 ) %>% mutate(
     name = recode_factor(name, .ordered=T,
@@ -194,6 +187,7 @@ df = raw_df = bind_rows(
         "optimal" = "Optimal",
         "optimal_prior" = "Optimal",
         "new_optimal" = "Optimal",
+        "gaussian2" = "Optimal",
         "human" = "Human",
         "sanity_rand" = "Random",
         "empirical" = "Random",

@@ -125,6 +125,11 @@ multi_strength = multi_strength %>% filter(wid %in% keep_acc)
 multi_strength = multi_strength %>% filter(response_type == "correct")
 ```
 
+```{r}
+model = read_csv("../model/results/sim_gaussian2.csv")
+
+```
+
 
 ```{r}
 make_fixations = function(df) {

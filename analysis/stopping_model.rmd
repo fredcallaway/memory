@@ -1,0 +1,251 @@
+---
+title: Optimal giving up new plots
+date: "`r Sys.Date()`"
+author: "fredcallaway"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+    self_contained: true
+---
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(
+    results='asis', warning=FALSE, message=FALSE, fig.width=5, fig.height=4, fig.align="center"
+)
+source("setup.r")
+
+# VERSIONS = c('v6.5', 'v6.5B', 'v6.5C', 'v6.6', 'v6.7', 'v6.8')
+VERSIONS = c('v6.5D')
+
+load_data = function(type) {
+    VERSIONS %>% 
+    map(~ 
+        read_csv(glue('../data/{.x}/{type}.csv'), col_types = cols()) %>% 
+        mutate(version = .x)
+    ) %>% 
+    bind_rows
+}
+
+all_pretest = load_data('simple-recall') %>% 
+    # filter(!practice) %>% 
+    # group_by(wid) %>% filter(n() == 74) %>% ungroup %>%
+    mutate(
+        response_type = factor(response_type, 
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
+        total_time = rt + type_time,
+        correct = response_type == "correct",
+    ) %>% mutate(
+        base_rt = rt,
+        rt = typing_rt
+    )
+
+all_trials = load_data('simple-recall-penalized') %>% 
+    filter(!practice) %>% 
+    mutate(
+        response_type = factor(response_type, 
+            levels=c("correct", "intrusion", "other", "timeout", "empty"),
+            # labels=c("Correct", "Intrusion", "Other")
+        ),
+        total_time = rt + type_time,
+        correct = response_type == "correct",
+        skip = response_type == "empty"
+    ) %>% mutate(
+        base_rt = rt,
+        rt = typing_rt
+    )
+
+excl = all_trials %>% 
+    group_by(wid) %>%
+    summarise(correct_rate=mean(correct), skip_rate=mean(skip)) %>% 
+    mutate(keep=skip_rate < .9)
+
+keep = excl %>% filter(keep) %>% with(wid)
+
+trials = all_trials %>% filter(wid %in% keep)
+
+pretest = all_pretest %>% 
+    filter(wid %in% keep) %>% 
+    filter(!practice) %>% 
+    filter(block == max(block)) %>% 
+    rename(pre_correct = correct) %>% 
+    mutate(pre_logrt = if_else(pre_correct, log(rt), NaN)) %>% 
+    mutate(raw_strength = -if_else(pre_correct, log(rt), log(15000))) %>% 
+    group_by(wid, word) %>% 
+    summarise(across(c(pre_correct, pre_logrt, raw_strength), mean, na.rm=T)) %>%
+    group_by(wid) %>%
+    mutate(across(c(pre_correct, pre_logrt, raw_strength), zscore, .names="{.col}_z"))
+
+trials = left_join(trials, pretest) %>% 
+    filter(response_type %in% c("correct","empty")) %>% 
+    group_by(wid, response_type) %>% 
+    mutate(rt_z=zscore(rt)) %>% 
+    group_by(wid)
+
+pal = scale_colour_manual(values=c(
+    `0`="brown1",
+    `0.5`="darkgoldenrod1",
+    `1`="limegreen"
+), aesthetics=c("fill", "colour"))
+
+model = read_csv('../model/results/stopping_sim.csv') %>% 
+    mutate(response_type = if_else(outcome == 1, "correct", "empty")) %>% 
+    # mutate(rt = rt / 1000) %>% 
+    mutate(judgement_alt=cut(judgement, quantile(judgement, seq(0, 1, length=6)), labels=F)) %>% 
+    group_by(response_type) %>% 
+    mutate(judgement=cut(judgement, quantile(judgement, seq(0, 1, length=6)), labels=F))
+
+trials$name = "Human"
+trials$judgement_alt = trials$judgement
+model$name = "Model"
+df = bind_rows(trials, model) %>% mutate(
+    correct = response_type == "correct",
+    skip = response_type == "empty",
+
+)
+```
+
+Now that we have dropped our arbitrary strength measure, there is the question
+of how to compare model prediction to behavior. Here are plots in which
+we do our best to simulate the full task and behavioral predictors (judgements
+and pre-test accuracy).
+
+This is a new version of the model using Gaussian samplse rather
+than Binomial. Having separate control over the mean and variance
+allowed me to get a much tighter fit than with the Binomial, where
+mean and variance are tied.
+
+```{r}
+plot_both = function(x, y) {
+    df %>%
+        ggplot(aes({{x}}, {{y}}, color=name, linetype=name)) +
+        stat_summary(fun.data=mean_cl_boot, size=.5) +
+        stat_summary(fun=mean, geom="line") +
+        facet_wrap(~response_type) +
+        theme(legend.position="none") +
+        scale_colour_manual(values=c(
+            'Human'='gray10',
+            'Model'='#9D6BE0'
+        ), aesthetics=c("fill", "colour"), name="") 
+}
+
+```
+
+## Memamemory judgements
+
+The model judgement is comptued based on the estimated memory
+strength (drift rate) when the trial terminates. Then we bin
+by quintile (across both skip and correct) to get an ordinal judgement.
+
+
+```{r, fig.width=5, fig.height=3}
+plot_both(judgement_alt, rt) +
+    facet_wrap(~response_type) +
+    labs(x="Judgement", y='Reaction Time') +
+    scale_x_continuous(n.breaks=5)
+```
+
+Two notes. First, the non-monotonic prediction for skip trials is very
+odd and I need to look into this further.
+
+Second, quintiles is not necessarily the best approach. The plot below shows
+the distribution of judgements. In the human data, the extremes are
+over-represented, which I think is typical of Likert responses. Ordinal
+regression models account for this by assuming an underlying continuous
+variable that is mapped onto the discrete variable with arbitrary cutoff
+points. We could do something like this to better match the judgement
+distribution.
+
+```{r}
+df %>% ggplot(aes(judgement_alt, fill=name)) +
+    geom_bar(position="dodge") +
+    facet_wrap(~response_type) +
+    theme(legend.position="none") +
+    scale_colour_manual(values=c(
+        'Human'='gray10',
+        'Model'='#9D6BE0'
+    ), aesthetics=c("fill", "colour"), name="") 
+
+```
+
+Here is an alternative version where we use quintiles within
+response type.
+
+```{r, fig.width=5, fig.height=3}
+plot_both(judgement, rt) +
+    facet_wrap(~response_type) +
+    labs(x="Judgement (alt)", y='Reaction Time') +
+    scale_x_continuous(n.breaks=5)
+```
+
+## Pretest-accuracy
+
+To simulate the pre-test accuracy plot, we start with 10,000 simulated pairs
+(each defined by a true memory strength). We simulate recalling each one
+twice, giving us our pre-test accuracy measure. Then we add Guassian noise to
+each strength to capture drifting memory strength, similar to [Sikstrom and
+Jonsson (2005)](https://pubmed.ncbi.nlm.nih.gov/16262474/). Finally, we
+simulate each "pair" one more time for the criticial trial.
+
+```{r, fig.width=5, fig.height=3}
+plot_both(pre_correct, rt) +
+    facet_wrap(~response_type) +
+    labs(x="Pretest Accuracy", y='Reaction Time') +
+    scale_x_continuous(n.breaks=3)
+```
+
+Not the tightest fit here, but I chose the parameters to look good
+on the pilot data, so we might be able to get a better fit. (Note:
+we might actually be able to do likelihood-based fitting with this model).
+
+A nuaance: Currently, I'm assuming the same parameters as in the critical
+trials, which doesn't really make sense because the incentives are different.
+I don't love the idea of having separate parameters though. One thing we could
+try is to ditch the pretest/posttest design and use the same incentives
+throughout (with skipping and high time penalties). We would use performance
+on the first two trials to predict performance on the third. This would
+definitely be the cleanest design. But it might reduce our sensitivity too
+much, as people will skip on trials they might have answered correctly. They
+could also remember having skipped it before and just immediately skip it.
+This might be helped by putting the distractor in between the second and third
+(critical) round of test trials.
+
+## Early skipping probability
+
+Finally, a totally new plot! The idea here is to more clearly illustrate
+the _utility_ of metamemory. The results on skip trials don't realy do this
+because ultimately the target was not recalled, so spending more time didn't
+actually help.
+
+Take all the trials in which the target wasn't recalled in the first second
+(roughly median RT). These trials can be of two type: either the person
+skipped in the first second, or they stuck with it (perhaps correctly
+recalling it after one second, perhaps not). Call the first type a "fast
+skip". Clearly, it is best to fast skip on trials where you are unlikely to
+recall, and you should definitely not fast skip on trials where you are likely
+to recall. This is exactly what we see.
+
+Note that this analysis has way more power than the RT-on-skips analysis
+because it doesn't depend on the rare cases where people skip a target they
+have a strong memory of.
+
+```{r, fig.width=3, fig.height=3}
+df %>% 
+    filter(!(correct & (rt < 1000))) %>% 
+    mutate(y = as.numeric(skip & rt < 1000)) %>%
+    # mutate(y = as.numeric(rt > 1000)) %>% 
+    ggplot(aes(pre_correct, y, color=name, linetype=name)) +
+    stat_summary(fun.data=mean_cl_boot, size=.5) +
+    stat_summary(fun=mean, geom="line") +
+    scale_colour_manual(values=c(
+        'Human'='gray10',
+        'Model'='#9D6BE0'
+    ), aesthetics=c("fill", "colour"), name="") +
+    theme(legend.position="none") +
+    coord_cartesian(xlim=c(NULL), ylim=c(0, 0.4)) +
+    labs(x="Pretest Accuracy", y="Proportion Fast Skip")
+```
+

@@ -1,3 +1,39 @@
+## FOK model only
+
+```{r, fig.width=5, fig.height=3}
+df %>%
+    filter(name == "Model") %>% 
+    mutate(response_type = if_else(response_type == "correct", "Confidence", "Feeling of Knowing")) %>% 
+    group_by(response_type, judgement) %>% 
+    summarise(rt = mean(rt)) %>% 
+    ggplot(aes(judgement, rt)) +
+    geom_line(size=.5) + geom_point(size=2) +
+    facet_wrap(~response_type) +
+    labs(x="Judgement", y="Reaction Time")
+```
+
+## Conditional stopping
+
+```{r}
+trials %>% 
+    filter(rt > 1140) %>% 
+    filter(!(correct & rt < 2000)) %>% 
+    mutate(rt2 = as.numeric(rt > 2000)) %>% 
+    ggplot(aes(pre_correct, rt2)) +
+    stat_summary(fun.data=mean_cl_boot)
+```
+
+```{r}
+trials %>% 
+    filter(!(correct & (rt < 1000))) %>% 
+    mutate(y = as.numeric(skip & rt < 1000)) %>%
+    # mutate(y = as.numeric(rt > 1000)) %>% 
+    ggplot(aes(pre_correct, y)) +
+    stat_summary(fun.data=mean_cl_boot, size=.5) +
+    stat_summary(fun=mean, geom="line") +
+    labs(x="Pretest Accuracy", y="Proportion Skip in First Second")
+```
+
 ## Joint plots
 
 ```{r, fig.width=6, fig.height=3}
@@ -33,6 +69,13 @@ p2 = trials %>% #plot
 (p1 + p2) & coord_cartesian(xlim=c(NULL), ylim=c(0, 4000))
 ```
 
+## KDE
+
+```{r}
+trials %>% 
+    ggplot(aes(rt, color=response_type)) +
+    geom_density()
+```
 
 
 ## Response types
@@ -132,8 +175,22 @@ trials %>%
 
 ```{r}
 trials %>%
-    ggplot(aes(judgement, strength, color=judgement_type)) +
+    ggplot(aes(judgement, pre_correct, color=judgement_type)) +
     stat_summary(fun.data=mean_cl_boot)
+```
+
+```{r}
+trials %>%
+    ggplot(aes(judgement, ..prop.., fill=factor(pre_correct))) +
+    geom_bar(position="dodge") +
+    facet_grid(~judgement_type, scales="free")
+```
+
+```{r}
+trials %>%
+    ggplot(aes(pre_correct, ..prop.., fill=judgement, group=judgement)) +
+    geom_bar(position="stack") +
+    facet_grid(~judgement_type, scales="free")
 ```
 
 ```{r, fig.width=5, fig.height=HEIGHT}
