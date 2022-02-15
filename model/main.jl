@@ -17,15 +17,87 @@ end
 
 Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 
+# %% ==================== Policy Heatmap ====================
 
-# %% ==================== Write simulation ====================
+# m = MetaMDP{2}(sample_cost=.1, threshold=4, noise=2, switch_cost=.1,
+#         max_step=30, prior=Normal(0.5, 2)
+# )
 
-@everywhere function make_frame(pol, N=10000; ms_per_sample=100, σ_duration=.2)
+# m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.1, threshold=4, noise=2, switch_cost=0,
+#         max_step=30, prior=Normal(0.5, 2)
+# )
+
+m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.03, 
+    threshold=10, noise=2, max_step=60, prior=Normal(0, 1)
+)
+
+B = BackwardsInduction(m; dv=0.2)
+
+countmap([simulate(OptimalPolicy(B)).b.focused for i in 1:1000])
+
+# %% --------
+Q = B.Q[:, 1, :, 41, :, 1]
+# X = Q[1, :, :] - Q[2, :, :]
+# rng = maximum(filter(!isnan, (abs.(X))))
+# figure() do
+#     heatmap(X , c=:RdBu_11, cbar=false, clims=(-rng, rng))
+# end
+
+figure() do
+    X = (Q[1, :, :] .> Q[2, :, :]) .* 2 .- 1
+    X .*= .!((Q[1, :, :] .≈ Q[2, :, :]) .| isnan.(Q[1, :, :]))
+    heatmap(X, c=:RdBu_11, cbar=false,
+        xaxis="Time on Cue",
+        yaxis="Accumulated Evidence"
+    )
+end
+
+
+
+
+
+# %% ==================== Simulation ====================
+
+m1 = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.1, 
+    threshold=8, noise=2, max_step=60, prior=Normal(0.5, 2)
+)
+
+pol1 = OptimalPolicy(m1)
+
+function sample_states(pol, N=10000)
+    states = [Float64[] for i in 1:3]
+    for i in 1:N
+        s = sample_state(m)
+        n_correct = (simulate(pol; s).b.focused == 1) + (simulate(pol; s).b.focused == 1)
+        push!(states[n_correct + 1], s[1])
+    end
+    states
+end
+
+states = sample_states(pol1)
+
+# figure() do
+#     map(states) do ss
+#         histogram!(ss)
+#     end
+# end
+
+# %% --------
+
+m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.1, switch_cost=.05,
+    threshold=8, noise=2, max_step=60, prior=Normal(1.5, 2)
+)
+
+@time pol = OptimalPolicy(m)
+# %% --------
+@everywhere function make_frame(pol, N=10000; ms_per_sample=250, σ_duration=.2)
     sims = map(1:N) do i
         sim = simulate(pol; fix_log=FullFixLog())
         strength_first, strength_second = sim.s
-        μ_pres = sim.fix_log.fixations .* ms_per_sample .+ pol.m.switch_cost * ms_per_sample
-        presentation_times = max.(1, rand.(Normal.(μ_pres, μ_pres .* σ_duration)))
+        presentation_times = sim.fix_log.fixations .* float(ms_per_sample)
+        presentation_times .+= (pol.m.switch_cost / pol.m.sample_cost) * ms_per_sample
+        presentation_times .+= rand(Gamma(10, 10), length(presentation_times))
+        # presentation_times = max.(1, rand.(Normal.(μ_pres, μ_pres .* σ_duration)))
         outcome = sim.b.focused
 
         (;strength_first, strength_second, presentation_times, outcome,
@@ -34,6 +106,20 @@ Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2
     end
     DataFrame(sims[:])
 end
+
+df = make_frame(pol)
+@show counts(length.(df.presentation_times)) ./ 10000
+@show mean(sum.(df.presentation_times))
+# df |> CSV.write("results/sim_gaussian2.csv")
+@show mean(df.outcome .== 1)
+
+
+
+
+
+# %% ==================== Search ====================
+
+
 
 # %% --------
 # m = MetaMDP(step_size=4, max_step=120, threshold=20, sample_cost=1, switch_cost=5, miss_cost=0, prior=(2, 6))

@@ -101,6 +101,9 @@ trials = left_join(trials, pretest) %>%
     mutate(rt_z=zscore(rt)) %>% 
     group_by(wid)
 
+trials %>% 
+    select(wid,word,rt,response_type,judgement) %>% 
+    write_csv("../data/processed/stopping.csv")
 ```
 
 - Dropping `r sum(!excl$keep)` participants who skipped more than 90% of critical trials.

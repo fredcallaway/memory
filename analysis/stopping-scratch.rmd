@@ -1,3 +1,150 @@
+## Calibrate RT
+
+```{r, fig.width=10, fig.height=6}
+
+read_sim  = . %>% 
+    read_csv() %>% 
+    mutate(response_type = if_else(outcome == 1, "correct", "empty")) %>% 
+    # mutate(rt = rt / 1000) %>% 
+    mutate(μ_post = μ_post + rnorm(n(), sd=1)) %>% 
+    mutate(judgement=cut(μ_post, quantile(μ_post, make_breaks(.35)), labels=F))
+
+df = bind_rows(
+    read_sim('../model/results/stopping_sim_rand.csv') %>% mutate(name="Random"),
+    read_sim('../model/results/stopping_sim.csv') %>% mutate(name="Optimal"),
+    trials %>% mutate(name = "Human")
+) %>% mutate(
+    name = factor(name, levels=c("Random", "Optimal", "Human"), ordered=T),
+    correct = response_type == "correct",
+    skip = response_type == "empty",
+
+)
+
+plot_effect = function(df, x, y) {
+    ggplot(df, aes({{x}}, {{y}}, color=name, linetype=name)) +
+        stat_summary(fun=mean, geom="line") +
+        stat_summary(fun.data=mean_cl_normal, size=.5) +
+        theme(legend.position="none") +
+        pal +
+        scale_linetype_manual(values=c(
+            'Human'='solid',
+            'Optimal'='dashed',
+            'Random'='dashed'
+        ))
+}
+
+acc_rt = df %>% plot_effect(pre_correct, rt) +
+    facet_wrap(~response_type) +
+    labs(x="Pretest Accuracy", y='Reaction Time') +
+    coord_cartesian(xlim=c(NULL), ylim=c(0, 4000)) +
+    scale_x_continuous(n.breaks=3)
+
+judge_rt = df %>% plot_effect(judgement, rt) +
+    facet_wrap(~response_type) +
+    labs(x="Judgement", y='Reaction Time') +
+    coord_cartesian(xlim=c(NULL), ylim=c(0, 4000))
+    scale_x_continuous(n.breaks=5)
+
+fast_skip = df %>% 
+    filter(!(correct & (rt < 1000))) %>% 
+    mutate(y = as.numeric(skip & rt < 1000)) %>%
+    plot_effect(pre_correct, y) +
+    coord_cartesian(xlim=c(NULL), ylim=c(0, 1)) +
+    labs(x="Pretest Accuracy", y="Proportion Fast Skip")
+
+p_skip = df %>% 
+    plot_effect(pre_correct, 1*skip) +
+    labs(x="Pretest Accuracy", y='Proportion Skip') +
+    scale_x_continuous(n.breaks=3)
+
+judge_dist = df %>% ggplot(aes(judgement, ..prop.., fill=name)) +
+    geom_bar(position="dodge") +
+    facet_wrap(~response_type) +
+    theme(legend.position="none") +
+    pal +
+    labs(x="Judgement", y='Proportion')
+
+((acc_rt / judge_rt) | (p_skip + fast_skip) / judge_dist)
+```
+
+```{r}
+plot_effect = function(df, x, y) {
+    ggplot(df, aes({{x}}, {{y}}, color=name, linetype=name)) +
+        stat_summary(fun.data=mean_cl_boot, size=.5) +
+        stat_summary(fun=mean, geom="line") +
+        theme(legend.position="none") +
+        pal
+}
+```
+
+## Judgement tuning
+
+```{r, fig.width=5, fig.height=3}
+make_breaks = function(tail_size) {
+    c(0, seq(tail_size, 1-tail_size, length=4), 1)
+}
+
+model = read_csv('../model/results/stopping_sim.csv') %>% 
+    mutate(response_type = if_else(outcome == 1, "correct", "empty")) %>% 
+    # mutate(rt = rt / 1000) %>% 
+    mutate(μ_post = μ_post + rnorm(n(), sd=1)) %>% 
+    mutate(judgement=cut(μ_post, quantile(μ_post, make_breaks(.35)), labels=F))
+
+trials$name = "Human"
+trials$judgement_alt = trials$judgement
+model$name = "Model"
+df = bind_rows(trials, model) %>% mutate(
+    correct = response_type == "correct",
+    skip = response_type == "empty",
+
+)
+
+plot_both(judgement, rt) +
+    facet_wrap(~response_type) +
+    labs(x="Judgement", y='Reaction Time') +
+    scale_x_continuous(n.breaks=5)
+```
+
+```{r}
+df %>% ggplot(aes(judgement, ..prop.., fill=name)) +
+    geom_bar(position="dodge") +
+    facet_wrap(~response_type) +
+    theme(legend.position="none") +
+    scale_colour_manual(values=c(
+        'Human'='gray10',
+        'Model'='#9D6BE0'
+    ), aesthetics=c("fill", "colour"), name="") +
+    labs(x="Judgement", y='Proportion')
+```
+
+## Stopping probability over time
+
+```{r, fig.width=5, fig.height=3}
+long = trials %>%
+    ungroup() %>% 
+    select(wid, word, rt, response_type, pre_correct) %>% 
+    mutate(trial_id = row_number()) %>% 
+    group_by(trial_id) %>% 
+    mutate(n_step = diff(c(0, round(cumsum(rt)/250)))) %>% 
+    uncount(n_step, .remove=F) %>% 
+    group_by(trial_id) %>% 
+    mutate(step = row_number()) %>% 
+    mutate(final = as.numeric(step == n_step))
+
+long %>%
+    ggplot(aes(step, final, color=pre_correct, group=pre_correct)) +
+    stat_summary(fun=mean, geom="line") +
+    facet_wrap(~response_type)
+```
+
+```{r, fig.width=5, fig.height=3}
+trials %>%
+    ggplot(aes(rt, color=pre_correct, group=pre_correct)) +
+    geom_density() +
+    facet_wrap(~response_type) +
+    theme(legend.position="top")
+```
+
 ## FOK model only
 
 ```{r, fig.width=5, fig.height=3}

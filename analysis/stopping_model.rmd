@@ -91,17 +91,22 @@ pal = scale_colour_manual(values=c(
     `1`="limegreen"
 ), aesthetics=c("fill", "colour"))
 
-model = read_csv('../model/results/stopping_sim.csv') %>% 
+make_breaks = function(tail_size) {
+    c(0, seq(tail_size, 1-tail_size, length=4), 1)
+}
+
+read_sim  = . %>% 
+    read_csv() %>% 
     mutate(response_type = if_else(outcome == 1, "correct", "empty")) %>% 
     # mutate(rt = rt / 1000) %>% 
-    mutate(judgement_alt=cut(judgement, quantile(judgement, seq(0, 1, length=6)), labels=F)) %>% 
-    group_by(response_type) %>% 
-    mutate(judgement=cut(judgement, quantile(judgement, seq(0, 1, length=6)), labels=F))
+    mutate(μ_post = μ_post + rnorm(n(), sd=1)) %>% 
+    mutate(judgement=cut(μ_post, quantile(μ_post, make_breaks(.35)), labels=F))
 
-trials$name = "Human"
-trials$judgement_alt = trials$judgement
-model$name = "Model"
-df = bind_rows(trials, model) %>% mutate(
+df = bind_rows(
+    read_sim('../model/results/stopping_sim_rand.csv') %>% mutate(name="Random"),
+    read_sim('../model/results/stopping_sim.csv') %>% mutate(name="Optimal"),
+    trials %>% mutate(name = "Human")
+) %>% mutate(
     correct = response_type == "correct",
     skip = response_type == "empty",
 
@@ -119,19 +124,24 @@ allowed me to get a much tighter fit than with the Binomial, where
 mean and variance are tied.
 
 ```{r}
-plot_both = function(x, y) {
-    df %>%
-        ggplot(aes({{x}}, {{y}}, color=name, linetype=name)) +
+pal = scale_colour_manual(values=c(
+    'Human'='gray10',
+    'Optimal'='#9D6BE0',
+    'Random'='gray60'
+), aesthetics=c("fill", "colour"), name="") 
+
+plot_effect = function(df, x, y) {
+    ggplot(df, aes({{x}}, {{y}}, color=name, linetype=name)) +
         stat_summary(fun.data=mean_cl_boot, size=.5) +
         stat_summary(fun=mean, geom="line") +
-        facet_wrap(~response_type) +
         theme(legend.position="none") +
-        scale_colour_manual(values=c(
-            'Human'='gray10',
-            'Model'='#9D6BE0'
-        ), aesthetics=c("fill", "colour"), name="") 
+        pal
 }
 
+plot_both = function(df, x, y) {
+    plot_effect(df, {{x}}, {{y}}) +
+        facet_wrap(~response_type)
+}
 ```
 
 ## Memamemory judgements
@@ -144,7 +154,7 @@ Model prediction is the dashed purple line.
 
 
 ```{r, fig.width=5, fig.height=3}
-plot_both(judgement_alt, rt) +
+df %>% plot_both(judgement, rt) +
     facet_wrap(~response_type) +
     labs(x="Judgement", y='Reaction Time') +
     scale_x_continuous(n.breaks=5)
@@ -161,26 +171,14 @@ variable that is mapped onto the discrete variable with arbitrary cutoff
 points. We could do something like this to better match the judgement
 distribution.
 
+
 ```{r}
-df %>% ggplot(aes(judgement_alt, ..prop.., fill=name)) +
+df %>% ggplot(aes(judgement, ..prop.., fill=name)) +
     geom_bar(position="dodge") +
     facet_wrap(~response_type) +
     theme(legend.position="none") +
-    scale_colour_manual(values=c(
-        'Human'='gray10',
-        'Model'='#9D6BE0'
-    ), aesthetics=c("fill", "colour"), name="") +
+    pal +
     labs(x="Judgement", y='Proportion')
-```
-
-Here is an alternative version where we use quintiles within
-response type.
-
-```{r, fig.width=5, fig.height=3}
-plot_both(judgement, rt) +
-    facet_wrap(~response_type) +
-    labs(x="Judgement (alt)", y='Reaction Time') +
-    scale_x_continuous(n.breaks=5)
 ```
 
 ## Pretest-accuracy
@@ -193,7 +191,7 @@ Jonsson (2005)](https://pubmed.ncbi.nlm.nih.gov/16262474/). Finally, we
 simulate each "pair" one more time for the criticial trial.
 
 ```{r, fig.width=5, fig.height=3}
-plot_both(pre_correct, rt) +
+df %>% plot_both(pre_correct, rt) +
     facet_wrap(~response_type) +
     labs(x="Pretest Accuracy", y='Reaction Time') +
     scale_x_continuous(n.breaks=3)
@@ -242,10 +240,7 @@ df %>%
     ggplot(aes(pre_correct, y, color=name, linetype=name)) +
     stat_summary(fun.data=mean_cl_boot, size=.5) +
     stat_summary(fun=mean, geom="line") +
-    scale_colour_manual(values=c(
-        'Human'='gray10',
-        'Model'='#9D6BE0'
-    ), aesthetics=c("fill", "colour"), name="") +
+    pal +
     theme(legend.position="none") +
     coord_cartesian(xlim=c(NULL), ylim=c(0, 0.4)) +
     labs(x="Pretest Accuracy", y="Proportion Fast Skip")
