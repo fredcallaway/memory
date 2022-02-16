@@ -17,49 +17,24 @@ end
 
 Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 
-# %% ==================== Policy Heatmap ====================
-
-# m = MetaMDP{2}(sample_cost=.1, threshold=4, noise=2, switch_cost=.1,
-#         max_step=30, prior=Normal(0.5, 2)
-# )
-
-# m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.1, threshold=4, noise=2, switch_cost=0,
-#         max_step=30, prior=Normal(0.5, 2)
-# )
-
-m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.03, 
-    threshold=10, noise=2, max_step=60, prior=Normal(0, 1)
-)
-
-B = BackwardsInduction(m; dv=0.2)
-
-countmap([simulate(OptimalPolicy(B)).b.focused for i in 1:1000])
+trials = CSV.read("../data/processed/exp2/trials.csv", DataFrame)
 
 # %% --------
-Q = B.Q[:, 1, :, 41, :, 1]
-# X = Q[1, :, :] - Q[2, :, :]
-# rng = maximum(filter(!isnan, (abs.(X))))
-# figure() do
-#     heatmap(X , c=:RdBu_11, cbar=false, clims=(-rng, rng))
-# end
 
-figure() do
-    X = (Q[1, :, :] .> Q[2, :, :]) .* 2 .- 1
-    X .*= .!((Q[1, :, :] .≈ Q[2, :, :]) .| isnan.(Q[1, :, :]))
-    heatmap(X, c=:RdBu_11, cbar=false,
-        xaxis="Time on Cue",
-        yaxis="Accumulated Evidence"
-    )
+@chain trials begin
+    @subset(:n_pres .> 1)
+    @by(:pre_correct_first, :y=mean(:first_pres_time))
+    @orderby(:pre_correct_first)
 end
 
+# %% --------
 
 
 
+# %% ==================== Sample states ====================
 
-# %% ==================== Simulation ====================
-
-m1 = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.1, 
-    threshold=8, noise=2, max_step=60, prior=Normal(0.5, 2)
+m1 = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.06, 
+    threshold=7, noise=1.5, max_step=60, prior=Normal(0, 1)
 )
 
 pol1 = OptimalPolicy(m1)
@@ -67,7 +42,7 @@ pol1 = OptimalPolicy(m1)
 function sample_states(pol, N=10000)
     states = [Float64[] for i in 1:3]
     for i in 1:N
-        s = sample_state(m)
+        s = sample_state(pol.m)
         n_correct = (simulate(pol; s).b.focused == 1) + (simulate(pol; s).b.focused == 1)
         push!(states[n_correct + 1], s[1])
     end
@@ -76,49 +51,66 @@ end
 
 states = sample_states(pol1)
 
-# figure() do
-#     map(states) do ss
-#         histogram!(ss)
-#     end
-# end
-
 # %% --------
 
-m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.1, switch_cost=.05,
-    threshold=8, noise=2, max_step=60, prior=Normal(1.5, 2)
+m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.06, switch_cost=.06,
+    threshold=7, noise=1.5, max_step=60, prior=Normal(0, 1)
 )
 
-@time pol = OptimalPolicy(m)
-# %% --------
-@everywhere function make_frame(pol, N=10000; ms_per_sample=250, σ_duration=.2)
-    sims = map(1:N) do i
-        sim = simulate(pol; fix_log=FullFixLog())
-        strength_first, strength_second = sim.s
+@time B = BackwardsInduction(m; dv=0.2)
+pol = OptimalPolicy(B)
+
+
+function make_frame(pol, N=10000; ms_per_sample=200)
+    states = sample_states(pol, 2N)
+    ss = mapreduce(vcat, 0:0.5:1, states) do pre_correct, strengths
+        map(strengths) do s
+            (pre_correct, s)
+        end
+    end
+    shuffle!(ss)
+    pairs = map(1:2:2N) do i
+        pre_correct_first, s1 = ss[i]
+        pre_correct_second, s2 = ss[i+1]
+        (;pre_correct_first, pre_correct_second), (s1, s2)
+    end
+
+    sims = map(pairs) do (pre_correct, s)
+        sim = simulate(pol; s, fix_log=FullFixLog())
         presentation_times = sim.fix_log.fixations .* float(ms_per_sample)
         presentation_times .+= (pol.m.switch_cost / pol.m.sample_cost) * ms_per_sample
         presentation_times .+= rand(Gamma(10, 10), length(presentation_times))
         # presentation_times = max.(1, rand.(Normal.(μ_pres, μ_pres .* σ_duration)))
         outcome = sim.b.focused
 
-        (;strength_first, strength_second, presentation_times, outcome,
-         duration_first = sum(presentation_times[1:2:end]),
-         duration_second = sum(presentation_times[2:2:end]))
+
+        (;response_type = outcome == -1 ? "empty" : "correct",
+          choose_first = outcome == 1,
+          pre_correct..., 
+          presentation_times
+         )
     end
     DataFrame(sims[:])
 end
 
+duration_first = sum(presentation_times[1:2:end])
+duration_second = sum(presentation_times[2:2:end])
+
 df = make_frame(pol)
 @show counts(length.(df.presentation_times)) ./ 10000
 @show mean(sum.(df.presentation_times))
-# df |> CSV.write("results/sim_gaussian2.csv")
-@show mean(df.outcome .== 1)
+@show mean(df.outcome .!= -1)
 
+df |> CSV.write("results/exp2_optimal.csv")
 
-
-
+make_frame(random_policy(m, commitment=false)) |> CSV.write("results/exp2_random.csv")
 
 # %% ==================== Search ====================
 
+
+
+
+# %% --------
 
 
 # %% --------
