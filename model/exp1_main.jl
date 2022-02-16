@@ -4,23 +4,16 @@ include("optimal_policy.jl")
 include("figure.jl")
 using DataFrames, DataFramesMeta, CSV
 
-# %% ==================== Likelihood ====================
 
-m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.1, 
-    threshold=8, noise=2, max_step=60, prior=Normal(0.5, 2)
-)
-
-trials = CSV.read("../data/processed/stopping.csv", DataFrame)
-
+trials = CSV.read("../data/processed/exp1/trials.csv", DataFrame)
 
 # %% ==================== Simulate ====================
 # explicit cost is .1 per second
 
-m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.03, 
-    threshold=14, noise=2, max_step=150, prior=Normal(0, 1)
+m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.06, 
+    threshold=7, noise=1.5, max_step=60, prior=Normal(0, 1)
 )
-
-
+ms_per_sample = 200
 
 function sample_states(pol, N=10000)
     states = [Float64[] for i in 1:3]
@@ -41,7 +34,7 @@ function make_frame(pol, N=10000)
             # strength = logistic(logit(strength) + randn())
             sim = simulate(pol; s = (strength,), fix_log=RTLog())
             post = posterior(pol.m, sim.b)[1]
-            (;pre_correct, strength, outcome=sim.b.focused, rt=sim.fix_log.rt * 100,
+            (;pre_correct, strength, outcome=sim.b.focused, rt=sim.fix_log.rt * ms_per_sample,
               μ_post=post.μ, σ_post=post.σ)
         end
     end
@@ -53,14 +46,14 @@ function make_frame(pol, N=10000)
 end
 
 opt_pol = OptimalPolicy(m)
-make_frame(opt_pol) |> CSV.write("results/stopping_sim.csv")
+make_frame(opt_pol) |> CSV.write("results/exp1_optimal.csv")
 
 # %% --------
 
 rt = @subset(trials, :response_type .== "empty").rt
-rand_pol = StopDistributionPolicy2(m, fit(Gamma, rt./100))
+rand_pol = StopDistributionPolicy2(m, fit(Gamma, rt ./ ms_per_sample))
 
-make_frame(rand_pol) |> CSV.write("results/stopping_sim_rand.csv")
+make_frame(rand_pol) |> CSV.write("results/exp1_random.csv")
 
 
 
