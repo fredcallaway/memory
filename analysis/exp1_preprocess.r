@@ -7,8 +7,7 @@ source("preprocess_common.r")  # defines all pretest and agg_pretest
 all_trials = load_data('simple-recall-penalized') %>% 
     filter(!practice) %>% 
     preprocess_recall %>% 
-    select(-judgement_type) %>% # redundant with response_type
-    mutate(skip=response_type=="empty", correct=response_type=="correct")  # convenience
+    select(-judgement_type)
 
 all_pretest = load_data('simple-recall') %>% 
     filter(!practice) %>% 
@@ -16,7 +15,7 @@ all_pretest = load_data('simple-recall') %>%
 
 excl = all_trials %>% 
     group_by(wid) %>%
-    summarise(correct_rate=mean(correct), skip_rate=mean(skip)) %>% 
+    summarise(skip_rate=mean(response_type == "empty")) %>% 
     mutate(keep=skip_rate < .9)
 
 keep_wids = excl %>% filter(keep) %>% with(wid)
@@ -31,8 +30,14 @@ trials = all_trials %>%
     mutate(rt_z=zscore(rt)) %>% 
     ungroup()
 
-pretest %>% write_csv('../data/processed/exp1/pretest.csv')
-trials %>% write_csv('../data/processed/exp1/trials.csv')
+pretest %>% 
+    select(wid, response_type, rt) %>% 
+    write_csv('../data/processed/exp1/pretest.csv')
+
+trials %>% 
+    select(wid, response_type, rt, judgement, pretest_accuracy) %>% 
+    write_csv('../data/processed/exp1/trials.csv')
+
 
 
 # judgement_breaks = function(tail_size) {
