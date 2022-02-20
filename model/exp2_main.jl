@@ -159,7 +159,7 @@ println(target)
 
 # %% ==================== Fit ====================
 
-@everywhere function compute_metrics(trials, fixations)
+@everywhere function twocue_metrics(trials, fixations)
     trials = @rsubset(trials, :response_type == "correct")
     fixations = @rsubset(fixations, :response_type == "correct")
 
@@ -184,7 +184,7 @@ println(target)
          p_correct = mean(trials.response_type .== "correct"),
     )
 end
-@everywhere compute_metrics(df) = compute_metrics(make_trials(df), make_fixations(df))
+@everywhere twocue_metrics(df) = compute_metrics(make_trials(df), make_fixations(df))
 
 target = compute_metrics(trials, fixations);
 @everywhere target = $target
@@ -203,6 +203,12 @@ end
 prm = (drift_μ = 0.6, drift_σ = 0.8, threshold = 5, sample_cost = 0.04, noise = 1.3, switch_cost=.01)
 
 df = simulate_optimal(prm)
+# %% --------
+
+twocue_metrics(df).z_durations
+
+df |> make_trials |> CSV.write("results/exp2/optimal_trials.csv")
+df |> make_fixations |> CSV.write("results/exp2/optimal_fixations.csv")
 
 # %% ==================== Run ====================
 
