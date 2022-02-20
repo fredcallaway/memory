@@ -10,9 +10,11 @@ end
 
 Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 
+pretest = CSV.read("../data/processed/exp2/pretest.csv", DataFrame, missingstring="NA")
 trials = CSV.read("../data/processed/exp2/trials.csv", DataFrame, missingstring="NA")
 fixations = CSV.read("../data/processed/exp2/fixations.csv", DataFrame, missingstring="NA")
 
+pretest = @rsubset pretest :practice == false :block == 3
 @everywhere trials = $trials
 @everywhere fixations = $fixations
 # trials = @rsubset(all_trials, :response_type == "correct")
@@ -72,21 +74,87 @@ end
     end
 end
 
-
-m1 = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.06, 
-    threshold=7, noise=1.5, max_step=60, prior=Normal(0, 1)
-)
-pol1 = OptimalPolicy(m1; dv=m1.threshold*.01)
-@everywhere pol1 = $pol1
-
 @everywhere function simulate_optimal(prm::NamedTuple, N=100000)
-    m2 = MetaMDP{2}(;allow_stop=true, miss_cost=3, max_step=60, 
-                   prior=Normal(prm.drift_μ, prm.drift_σ), 
-                   prm.threshold, prm.sample_cost, prm.switch_cost, prm.noise)
-    
-    pol2 = OptimalPolicy(m2; dv=round(prm.threshold*.05; digits=5))
-    df = make_frame(pol1, pol2, N)
+    m1 = MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
+        prm.threshold, prm.sample_cost, prm.switch_cost, prm.noise,
+        prior=Normal(prm.drift_μ, prm.drift_σ),
+    )
+    pol1 = OptimalPolicy(m1; dv=m1.threshold*.01)
+
+    m2 = MetaMDP{2}(;allow_stop=true, max_step=60, miss_cost=2,
+        prm.threshold, prm.sample_cost, prm.switch_cost, prm.noise,
+        prior=Normal(prm.drift_μ, prm.drift_σ),
+    )
+    pol2 = OptimalPolicy(m2; dv=m2.threshold*.01)
+    make_frame(pol1, pol2, N)
 end
+
+# %% ==================== Tune pretest ====================
+
+@everywhere function simulate_pretest(prm, N=10000)
+    m = MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
+        prm.threshold, prm.sample_cost, prm.noise,
+        prior=Normal(prm.drift_μ, prm.drift_σ),
+    )
+    pol = OptimalPolicy(m; dv=m.threshold*.01)
+    
+    mapreduce(vcat, 1:N) do i
+        s = sample_state(pol.m)
+        map(1:2) do j
+            sim = simulate(pol; s, fix_log=RTLog())
+            (;
+                wid="optimal",
+                word=i,
+                strength=only(s),
+                response_type = sim.b.focused == -1 ? "empty" : "correct",
+                rt=sim.fix_log.rt * ms_per_sample,
+            )
+        end
+    end |> DataFrame
+end
+
+@everywhere function pretest_metrics(df)
+    acc_rate = @chain df begin
+        @by([:word, :wid], :x=mean(:response_type .== "correct"))
+        @by(_, :x, :n=length(:x) ./ nrow(_))
+        wrapdims(:n, :x)
+        sortkeys
+    end
+
+    rt_μ, rt_σ = @chain df begin
+        @rsubset :response_type .== "correct"
+        @with mean(:rt), std(:rt)
+    end
+
+    (;acc_rate, rt_μ, rt_σ)
+end
+
+target = pretest_metrics(pretest)
+
+prms = grid(
+    drift_μ=0:.1:.6,
+    drift_σ=0.8:.1:1.2,
+    threshold=5:9,
+    sample_cost=.04:.01:.08,
+    noise=1.3:.1:1.7
+)
+
+metrics = @showprogress pmap(prms) do prm
+    pretest_metrics(simulate_pretest(prm))
+end
+
+# %% --------
+L = map(metrics) do pred
+    10sum(squared.(target.acc_rate .- pred.acc_rate)) +
+    # squared((target.rt_σ - pred.rt_σ) / 1000) +
+    # 5squared((target.rt_μ - pred.rt_μ) / 1000) +
+    0
+end
+
+prms[argmin(L)]
+println(metrics[argmin(L)])
+println(target)
+
 
 
 # %% ==================== Fit ====================
@@ -129,6 +197,12 @@ target = compute_metrics(trials, fixations);
     nfix_loss + duration_loss
 end
 
+
+# %% ==================== Manual ====================
+
+prm = (drift_μ = 0.6, drift_σ = 0.8, threshold = 5, sample_cost = 0.04, noise = 1.3, switch_cost=.01)
+
+df = simulate_optimal(prm)
 
 # %% ==================== Run ====================
 
