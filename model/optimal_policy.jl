@@ -20,9 +20,10 @@ struct BackwardsInduction{N,N2,N3}
     Q::Array{Float64,N3}  # 2+2N
 end
 
-function BackwardsInduction(m::MetaMDP{N}; dv=.1) where {N}
+function BackwardsInduction(m::MetaMDP{N}; dv=.01, compute=true) where {N}
     T = transition_matrix(m, dv)
-    e_max = Int(2m.threshold / dv + 1)
+    @assert round(m.threshold / dv) ≈ m.threshold / dv
+    e_max = round(Int, 2m.threshold / dv + 1)
     t_max = m.max_step + 1
     sz = if N == 1
         (e_max, t_max)
@@ -34,7 +35,7 @@ function BackwardsInduction(m::MetaMDP{N}; dv=.1) where {N}
     V = fill(NaN, N, sz...)  # last_action, e1, (e2), t1, (t2)
     Q = fill(NaN, N, N, sz...)  # action, last_action, e1, (e2), t1, (t2)
     b = BackwardsInduction(m, dv, T, V, Q)
-    compute_value_functions!(b)
+    compute && compute_value_functions!(b)
     b
 end
 
@@ -77,7 +78,7 @@ function compute_value_functions!(model::BackwardsInduction{1})
     @unpack dv, T, V, Q = model
     @unpack allow_stop, max_step, threshold, sample_cost, switch_cost, miss_cost = model.m
     t_max = max_step + 1
-    e_max = Int(threshold*2/dv + 1)
+    e_max = round(Int, 2threshold / dv + 1)
     a = 1 # we only have this for consistency with two-item case
 
     @assert allow_stop  # only version that makes sense
@@ -116,7 +117,7 @@ function compute_value_functions!(model::BackwardsInduction{2})
     @unpack dv, T, V, Q = model
     @unpack allow_stop, max_step, threshold, sample_cost, switch_cost, miss_cost = model.m
     t_max = max_step + 1
-    e_max = Int(threshold*2/dv + 1)
+    e_max = round(Int, 2threshold / dv + 1)
 
     stop_value = allow_stop ? -miss_cost : -Inf
 
@@ -198,7 +199,7 @@ struct OptimalPolicy{N}
 end    
 
 OptimalPolicy(B::BackwardsInduction) = OptimalPolicy(B.m, B)
-OptimalPolicy(m::MetaMDP) = OptimalPolicy(m, BackwardsInduction(m))
+OptimalPolicy(m::MetaMDP; dv=.01) = OptimalPolicy(m, BackwardsInduction(m; dv))
 
 function act(pol::OptimalPolicy, b::Belief)
     qs = @view pol.B.Q[:, belief2index(pol.B, b)...]

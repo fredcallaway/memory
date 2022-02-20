@@ -6,7 +6,7 @@ using Distributions
 
 @with_kw struct MetaMDP{N}
     allow_stop::Bool = false
-    threshold::Int = 100
+    threshold::Float64 = 1.
     sample_cost::Float64 = 1.
     switch_cost::Float64 = 0.
     miss_cost::Float64 = 0.

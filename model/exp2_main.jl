@@ -1,14 +1,7 @@
-using ProgressMeter
-using JSON
 @everywhere begin
-    using CSV, DataFrames, DataFramesMeta
     using StatsBase
-    include("utils.jl")
-    include("figure.jl")
-    include("constants.jl")
-    include("mdp.jl")
-    include("optimal_policy.jl")
-    include("empirical_fixation.jl")
+    include("common.jl")
+    # include("empirical_fixation.jl")
 end
 
 # time out proportion
@@ -17,86 +10,231 @@ end
 
 Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 
-trials = CSV.read("../data/processed/exp2/trials.csv", DataFrame)
+trials = CSV.read("../data/processed/exp2/trials.csv", DataFrame, missingstring="NA")
+fixations = CSV.read("../data/processed/exp2/fixations.csv", DataFrame, missingstring="NA")
 
-# %% --------
+@everywhere trials = $trials
+@everywhere fixations = $fixations
+# trials = @rsubset(all_trials, :response_type == "correct")
+# fixations = @rsubset(all_fixations, :response_type == "correct")
 
-@chain trials begin
-    @subset(:n_pres .> 1)
-    @by(:pre_correct_first, :y=mean(:first_pres_time))
-    @orderby(:pre_correct_first)
-end
+# %% ==================== Simulate ====================
 
-# %% --------
-
-
-
-# %% ==================== Sample states ====================
-
-m1 = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.06, 
-    threshold=7, noise=1.5, max_step=60, prior=Normal(0, 1)
-)
-
-pol1 = OptimalPolicy(m1)
-
-function sample_states(pol, N=10000)
-    states = [Float64[] for i in 1:3]
-    for i in 1:N
-        s = sample_state(pol.m)
-        n_correct = (simulate(pol; s).b.focused == 1) + (simulate(pol; s).b.focused == 1)
-        push!(states[n_correct + 1], s[1])
-    end
-    states
-end
-
-states = sample_states(pol1)
-
-# %% --------
-
-m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.06, switch_cost=.06,
-    threshold=7, noise=1.5, max_step=60, prior=Normal(0, 1)
-)
-
-@time B = BackwardsInduction(m; dv=0.2)
-pol = OptimalPolicy(B)
-
-
-function make_frame(pol, N=10000; ms_per_sample=200)
-    states = sample_states(pol, 2N)
-    ss = mapreduce(vcat, 0:0.5:1, states) do pre_correct, strengths
-        map(strengths) do s
-            (pre_correct, s)
-        end
-    end
-    shuffle!(ss)
+@everywhere function make_frame(pol1, pol2, N=10000; ms_per_sample=200)
+    strengths = sample_strengths(pol1,  2N)
     pairs = map(1:2:2N) do i
-        pre_correct_first, s1 = ss[i]
-        pre_correct_second, s2 = ss[i+1]
-        (;pre_correct_first, pre_correct_second), (s1, s2)
+        s1, pretest_accuracy_first = strengths[i]
+        s2, pretest_accuracy_second = strengths[i+1]
+        (;pretest_accuracy_first, pretest_accuracy_second), (s1, s2)
     end
 
-    sims = map(pairs) do (pre_correct, s)
-        sim = simulate(pol; s, fix_log=FullFixLog())
+    sims = map(pairs) do (pretest_accuracy, s)
+        sim = simulate(pol2; s, fix_log=FullFixLog())
         presentation_times = sim.fix_log.fixations .* float(ms_per_sample)
-        presentation_times .+= (pol.m.switch_cost / pol.m.sample_cost) * ms_per_sample
+        # presentation_times .+= (pol2.m.switch_cost / pol2.m.sample_cost) * ms_per_sample
         presentation_times .+= rand(Gamma(10, 10), length(presentation_times))
-        # presentation_times = max.(1, rand.(Normal.(μ_pres, μ_pres .* σ_duration)))
-        outcome = sim.b.focused
-
-
-        (;response_type = outcome == -1 ? "empty" : "correct",
-          choose_first = outcome == 1,
-          pre_correct..., 
+        (;response_type = sim.b.focused == -1 ? "empty" : "correct",
+          choose_first = sim.b.focused == 1,
+          pretest_accuracy..., 
+          strength_first = s[1], strength_second = s[2],
           presentation_times
          )
     end
     DataFrame(sims[:])
 end
 
-duration_first = sum(presentation_times[1:2:end])
-duration_second = sum(presentation_times[2:2:end])
+@everywhere function make_trials(df)
+    safeindex(x, i) = length(x) < i ? NaN : x[i]
+    @chain df begin
+         @rtransform(
+            :first_pres_time = safeindex(:presentation_times, 1),
+            :second_pres_time = safeindex(:presentation_times, 2),
+            :third_pres_time = safeindex(:presentation_times, 3),
+            :last_pres_time = :presentation_times[end],
+            :n_pres = length(:presentation_times),
+            :total_first = sum(:presentation_times[1:2:end]),
+            :total_second = sum(:presentation_times[2:2:end]),
+            :wid = "optimal"
+        )
+        @transform :rt = :total_first .+ :total_second
+        select(setdiff(names(trials)))
+    end
+end
 
-df = make_frame(pol)
+@everywhere function make_fixations(df)
+    @chain df begin
+        @transform(:trial_id = 1:nrow(df))
+        @rtransform(:n_pres = length(:presentation_times))
+        @rtransform(:presentation = 1:(:n_pres), :wid = "optimal")
+        DataFrames.flatten([:presentation_times, :presentation])
+        DataFrames.rename(:presentation_times => :duration)
+        select(setdiff(names(fixations)))
+    end
+end
+
+
+m1 = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.06, 
+    threshold=7, noise=1.5, max_step=60, prior=Normal(0, 1)
+)
+pol1 = OptimalPolicy(m1; dv=m1.threshold*.01)
+@everywhere pol1 = $pol1
+
+@everywhere function simulate_optimal(prm::NamedTuple, N=100000)
+    m2 = MetaMDP{2}(;allow_stop=true, miss_cost=3, max_step=60, 
+                   prior=Normal(prm.drift_μ, prm.drift_σ), 
+                   prm.threshold, prm.sample_cost, prm.switch_cost, prm.noise)
+    
+    pol2 = OptimalPolicy(m2; dv=round(prm.threshold*.05; digits=5))
+    df = make_frame(pol1, pol2, N)
+end
+
+
+# %% ==================== Fit ====================
+
+@everywhere function compute_metrics(trials, fixations)
+    trials = @rsubset(trials, :response_type == "correct")
+    fixations = @rsubset(fixations, :response_type == "correct")
+
+    avg_ptime = @chain fixations begin
+        @rsubset(:presentation != :n_pres)
+        @by(:wid, :mean=mean(:duration), :sd=std(:duration))
+    end
+
+    z_durations = @chain fixations begin
+        leftjoin(avg_ptime, on=:wid)
+        @rsubset(!isnan(:sd))
+        @rtransform(:rel_acc = :pretest_accuracy_first - :pretest_accuracy_second)
+        @rsubset(:presentation <= 3 && :presentation != :n_pres)
+        @rtransform(:duration_z = (:duration - :mean) / :sd)
+        @by([:presentation, :rel_acc], :x = mean(:duration_z))
+        wrapdims(:x, :presentation, :rel_acc)
+        sortkeys
+    end
+    (;
+        z_durations,
+         nfix_hist = counts(trials.n_pres, 1:4) ./ nrow(trials),
+         p_correct = mean(trials.response_type .== "correct"),
+    )
+end
+@everywhere compute_metrics(df) = compute_metrics(make_trials(df), make_fixations(df))
+
+target = compute_metrics(trials, fixations);
+@everywhere target = $target
+
+@everywhere squared(x) = x^2
+@everywhere function loss(pred)
+    nfix_loss = crossentropy(target.nfix_hist, pred.nfix_hist)
+    isfinite(nfix_loss) || return Inf
+    duration_loss = mean(squared.(pred.z_durations .- target.z_durations))
+    nfix_loss + duration_loss
+end
+
+
+# %% ==================== Run ====================
+
+mkpath("tmp/sims")
+
+prms = grid(
+    drift_μ=0:.1:.6,
+    drift_σ=0.8:.1:1.2,
+    threshold=5:9,
+    sample_cost=.04:.01:.08,
+    switch_cost=[.005, .01, .02, .03],
+    noise=1.3:.1:1.7
+)
+
+# %% ==================== One go ====================
+
+L = @showprogress pmap(prms) do prm
+    prm |> simulate_optimal |> compute_metrics |> loss
+end
+
+# %% --------
+prms[argmin(L)]
+minimum(L)
+df = simulate_optimal(prms[argmin(L)]);
+pred = compute_metrics(df)
+loss(pred)
+
+# %% --------
+
+prm = (drift_μ = 0.0, drift_σ = 1, threshold = 5, sample_cost = 0.05, switch_cost = 0.00, noise = 1.5)
+df = simulate_optimal(prm, 10000);
+pred = compute_metrics(df)
+pred.z_durations
+pred.nfix_hist
+
+
+df |> make_trials |> CSV.write("results/exp2/optimal_trials.csv")
+df |> make_fixations |> CSV.write("results/exp2/optimal_fixations.csv")
+
+# %% ==================== Separate steps  ====================
+
+
+sims = @showprogress map(simulate_optimal, prms)
+predictions = map(compute_metrics, sims);
+target = compute_metrics(trials, fixations);
+
+L = map(loss, predictions)
+
+prms[argmin(L)]
+predictions[argmin(L)].nfix_hist
+
+df = simulate_optimal(prms[argmin(L)])
+loss(compute_metrics(df))
+
+# %% --------
+target.nfix_hist
+
+df |> make_trials |> CSV.write("results/exp2/optimal_trials.csv")
+df |> make_fixations |> CSV.write("results/exp2/optimal_fixations.csv")
+
+# %% --------
+
+
+figure() do
+   plot!(second_fixation_duration(make_trials(df), make_fixations(df)))
+   plot!(second_fixation_duration(trials, fixations))
+end      
+
+prm = first(prms)
+second_fixation_duration(make_trials(df), make_fixations(df))
+
+# %% --------
+
+
+# %% ==================== Hand selected ====================
+
+m1 = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.06, 
+    threshold=7, noise=1.5, max_step=60, prior=Normal(0, 1)
+)
+pol1 = OptimalPolicy(m1)
+
+# %% --------
+m2 = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.06, switch_cost=.06,
+    threshold=7, noise=1.5, max_step=60, prior=Normal(0, 1)
+)
+# note: was a bug here with m instead of m2
+@time B = BackwardsInduction(m2; dv=0.2)
+pol2 = OptimalPolicy(B)
+
+# %% --------
+mkpath("results/exp2")
+df = make_frame(pol1, pol2)
+df |> make_trials |> CSV.write("results/exp2/optimal_trials.csv")
+df |> make_fixations |> CSV.write("results/exp2/optimal_fixations.csv")
+
+pol_rand = random_policy(m, commitment=false)
+df_rand = make_frame(pol1, pol_rand)
+df_rand |> make_trials |> CSV.write("results/exp2/random_trials.csv")
+df_rand |> make_fixations |> CSV.write("results/exp2/random_fixations.csv")
+
+df
+# %% ==================== OLD ====================
+
+
+# %% --------
+
 @show counts(length.(df.presentation_times)) ./ 10000
 @show mean(sum.(df.presentation_times))
 @show mean(df.outcome .!= -1)
