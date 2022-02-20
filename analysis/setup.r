@@ -16,7 +16,6 @@ library(ggside)
 library(broom.mixed)
 library(lmerTest)
 
-
 options(
     "summ-model.info"=FALSE, 
     "summ-model.fit"=FALSE, 
@@ -95,6 +94,18 @@ midbins = function(x, breaks) {
     right = breaks[-1]
     ((left + right) / 2)[bin_ids]
 }
+
+load_model_human = function(exp, name) {
+    bind_rows(
+        read_csv(glue('../data/processed/{exp}/{name}.csv'), 
+            col_types = cols()) %>% mutate(name='Human'),
+        read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
+            col_types = cols()) %>% mutate(name='Optimal'),
+        read_csv(glue('../model/results/{exp}/random_{name}.csv'), 
+            col_types = cols()) %>% mutate(name='Random'),
+    )
+}
+
 # %% ==================== Saving results ====================
 
 sprintf_transformer <- function(text, envir) {
@@ -145,6 +156,35 @@ fig = function(name="tmp", w=4, h=4, dpi=320, pdf=FALSE, ...) {
     if (pdf) ggsave(glue("figs/{name}.pdf"), width=w, height=h, ...)
     # invisible(dev.off())
     # knitr::include_graphics(p)
+}
+
+# %% ==================== Plotting ====================
+
+
+pal = scale_colour_manual(values=c(
+    'Human'='gray10',
+    'Optimal'='#9D6BE0',
+    'Random'='gray60'
+), aesthetics=c("fill", "colour"), name="") 
+
+plot_effect = function(df, x, y, min_n=10) {
+    enough_data = df %>% 
+        # filter(name == "Human") %>% 
+        count(name, response_type, {{x}}) %>% 
+        filter(n > min_n)
+
+    df %>% 
+        right_join(enough_data) %>% 
+        ggplot(aes({{x}}, {{y}}, color=name, linetype=name)) +
+            stat_summary(fun=mean, geom="line") +
+            stat_summary(fun.data=mean_cl_normal, size=.5) +
+            theme(legend.position="none") +
+            pal +
+            scale_linetype_manual(values=c(
+                'Human'='solid',
+                'Optimal'='dashed',
+                'Random'='dashed'
+            ))
 }
 
 # %% ==================== Tidy regressions ====================
@@ -215,8 +255,6 @@ geom_ydensity = list(
     geom_ysidedensity(aes(x=stat(density))),
     scale_ysidex_continuous(breaks = NULL, labels = "")
 )
-
-# %% --------
 
 make_breaks = function(x, n=7, q=.025) {
     xmin = quantile(x, q, na.rm=T)

@@ -1,13 +1,27 @@
 # %% ==================== Setup ====================
 
-VERSIONS = c('v5.6')
-
 suppressPackageStartupMessages(source("setup.r"))
-source("load_exp1.r")
-if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
 
-WIDTH = 5.2; HEIGHT = 2.2
+WIDTH = 5.2; HEIGHT = 2.2; S = 2.5
 write_tex = tex_writer("stats")
+
+pretest = read_csv('../data/processed/exp2/pretest.csv', col_types = cols())
+
+df = load_model_human("exp2", "trials") %>% 
+    filter(response_type == "correct") %>% 
+    mutate(rel_pretest_accuracy = pretest_accuracy_first - pretest_accuracy_second)
+
+fixations = load_model_human("exp2", "fixations") %>%
+    filter(response_type == "correct") %>% 
+    mutate(
+        last_fix = as.numeric(presentation == n_pres),
+        fix_first = presentation %% 2,
+        fix_stronger = case_when(
+            pretest_accuracy_first == pretest_accuracy_second ~ NaN,
+            pretest_accuracy_first > pretest_accuracy_second ~ 1*fix_first,
+            pretest_accuracy_first < pretest_accuracy_second ~ 1*!fix_first
+        )
+    )
 
 # %% ==================== Descriptive stats ====================
 
@@ -31,126 +45,40 @@ simple %>%
         write_tex("simple_response_pct/{response_type}", "{100*mean:.1}\\% $\\pm$ {100*sd:.1}\\%")
     ))
 
-multi
-
-# %% ==================== Additional utilities ====================
-
-tidy = function(model, ...) {
-    d = broom.mixed::tidy(model, conf.int=T, ...)
-    if (typeof(model) == "list") {
-        d$df = model$df
-    }
-    d
-}
-
-tidy_models = . %>% 
-    rowwise() %>% 
-    summarise(tidy(model)) %>% 
-    filter((term != "(Intercept)") & (are_na(effect) | effect == "fixed"))
-
-regression_tex = function(logistic=F, standardized=T) {
-    beta = if(standardized) "$\\beta = {estimate:.3}$" else "$B = {estimate:.3}$"
-    ci = "95\\% CI [{conf.low:.3}, {conf.high:.3}]"
-    stat = if(logistic) "$z={statistic:.2}$" else "$t({df:.1})={statistic:.2}$"
-    p = "${pval(p.value)}$"
-    paste(beta, ci, stat, p, sep=", ")
-}
-
-min_strength = -2.5; max_strength = 2.5
-breaks_strength = seq(-2.5, 2.5, 1)
-
-run_models = function(data, xvar, yvar, logistic=F) {
-    x = ensym(xvar); y = ensym(yvar)
-    data %>% 
-        group_by(name) %>% 
-        group_modify(function(data, grp) {
-            model = if (grp$name == "Human") {
-                if (logistic) {
-                    inject(glmer(!!y ~ !!x + (!!x | wid), family=binomial, data=data))
-                } else {
-                    inject(lmer(!!y ~ !!x + (!!x | wid), data=data))
-                }
-            } else {
-                if (logistic) {
-                    inject(glm(!!y ~ !!x, family=binomial, data=data))
-                } else {
-                    inject(lm(!!y ~ !!x, data=data))
-                }
-            }
-            tibble(model=list(model))
-        })
-}
-
-pal = scale_colour_manual(values=c(
-    'Human'='gray10',
-    'Optimal'='#9D6BE0',
-    'Random'='gray60'
-), aesthetics=c("fill", "colour"), name="") 
-
-plot_effect = function(df, x, y) {
-    ggplot(df, aes({{x}}, {{y}}, color=name, linetype=name)) +
-        stat_summary(fun.data=mean_cl_boot, size=.5) +
-        stat_summary(fun=mean, geom="line") +
-        theme(legend.position="none") +
-        pal
-}
-
-simple_regression = function(data, xvar, yvar, logistic=F, standardized=T) {
-    x = ensym(xvar); y = ensym(yvar)
-    models = run_models(data, {{xvar}}, {{yvar}}, logistic)
-    models %>% 
-        tidy_models() %>% 
-        rowwise() %>% group_walk(~ with(.x,
-            write_tex("{y}/{name}", regression_tex(logistic, standardized))
-        ))
-
-    plot_effect(data, {{xvar}}, {{yvar}})
-    # preds = models %>% rowwise() %>% summarise(
-        # tibble(ggpredict(model, glue("{x} [n=100]")))
-    # )
-}
-
 
 # %% ==================== Sanity check ====================
 
-WIDTH = 3; HEIGHT = 3
 
-df %>% 
-    filter(response_type == "correct") %>% 
-    mutate(choose_first = int(choose_first)) %>% 
-    plot_effect(pre_correct_first, choose_first)
+choice = df %>% 
+    plot_effect(pretest_accuracy_first, int(choose_first))
 
-fig("choice", WIDTH, HEIGHT, pdf=T)
-
-df %>% 
-    filter(response_type == "correct") %>% 
-    filter(n_pres > 0) %>% 
-    mutate(
-        last_pres_time = map_dbl(presentation_times, last),
-        last_pre_correct = if_else(last_pres == "first", pre_correct_first, pre_correct_second)
-    ) %>% 
-    plot_effect(last_pre_correct, last_pres_time)
-
-fig("last_duration_strength", WIDTH, HEIGHT, pdf=T)
-
-# %% ==================== Overall proportion and timecourse ====================
-df %>% filter(name == "Optimal") %>% with(rel_pre_correct)
-p_overall = df %>% filter(n_pres >= 2) %>% 
-    plot_effect(rel_pre_correct, prop_first)
-    # labs(x="Relative Memory Strength of First Cue", y="Proportion Fixation\nTime on First Cue")
-fig("prop_first", WIDTH, HEIGHT, pdf=T)
+fig("choice", S, S)
 
 # %% --------
 
-# p_interact = df %>% 
-#     filter(n_pres >= 2) %>% 
-#     regress_interaction(rel_pre_correct, last_pres, prop_first)
+last_duration = df %>% 
+    filter(response_type == "correct") %>% 
+    filter(n_pres > 0) %>% 
+    mutate(
+        last_pretest_accuracy = if_else(mod(n_pres, 2) == 1, pretest_accuracy_first, pretest_accuracy_second)
+    ) %>% 
+    plot_effect(last_pretest_accuracy, last_pres_time)
 
-# fig("prop_first_byfinal", WIDTH, HEIGHT)
+fig("last_duration_strength", S, S)
+
+# %% ==================== Overall proportion and timecourse ====================
+
+df %>% filter(name == "Optimal") %>% with(rel_pretest_accuracy)
+overall = df %>% filter(n_pres >= 2) %>% 
+    plot_effect(rel_pretest_accuracy, total_first / (total_first + total_second))
+    # labs(x="Relative Memory Strength of First Cue", y="Proportion Fixation\nTime on First Cue")
+fig("prop_first", S, S)
+
+# %% --------
 
 human %>% 
     filter(n_pres >= 2) %>% 
-    lmer(prop_first ~ rel_pre_correct * last_pres + (rel_pre_correct * last_pres | wid), data=.) %>% 
+    lmer(prop_first ~ rel_pretest_accuracy * last_pres + (rel_pretest_accuracy * last_pres | wid), data=.) %>% 
     tidy %>% 
     filter((term != "(Intercept)") & (are_na(effect) | effect == "fixed")) %>% 
     rowwise() %>% group_walk(~ with(.x,
@@ -171,18 +99,18 @@ normalized_timestep = function(long) {
         mutate(normalized_timestep = row_number())
 }
 
-p_time = long %>% 
+timecourse = fixations %>% 
     normalized_timestep %>% 
-    drop_na(strength_diff) %>% 
-    ggplot(aes(normalized_timestep/100, fix_stronger, group = strength_diff, color=strength_diff)) +
+    drop_na(fix_stronger) %>% 
+    ggplot(aes(normalized_timestep/100, fix_stronger, color=name)) +
+    pal + theme(legend.position="none") +
     geom_smooth(se=F) + 
     ylim(0, 1) +
-    facet_grid(~name) +
     labs(x="Trial Completion", y="Probability Fixate\nStronger Cue", color="Strength\nDifference") +
     geom_hline(yintercept=0.5) +
     scale_x_continuous(labels = scales::percent, n.breaks=3)
 
-# fig("normalized-timecourse", WIDTH+1, HEIGHT, pdf=T)
+fig("normalized-timecourse", S, S)
 
 # %% --------
 
@@ -191,22 +119,57 @@ p_time = long %>%
     plot_annotation(tag_levels = 'A') & 
     theme(plot.margin=margin(t=1, b=1, l=1, r=1))
 
-fig("overall_and_timecourse", WIDTH+1, HEIGHT*2, pdf=T)
+fig("overall_and_timecourse", WIDTH+1, HEIGHT*2)
 
 # %% ==================== Fixation Durations ====================
 
+avg_ptime = fixations %>% group_by(name,wid) %>% 
+    filter(last_fix == 0) %>% 
+    summarise(duration_mean=mean(duration), duration_sd=sd(duration))
+
+fix1 = df %>% 
+    left_join(avg_ptime) %>% 
+    filter(n_pres > 1) %>% 
+    mutate(first_pres_time = (first_pres_time-duration_mean)/duration_sd) %>% 
+    plot_effect(pretest_accuracy_first, first_pres_time)
+
+fix2 = df %>% 
+    left_join(avg_ptime) %>% 
+    filter(n_pres > 2) %>% 
+    mutate(second_pres_time = (second_pres_time-duration_mean)/duration_sd) %>% 
+    plot_effect(-rel_pretest_accuracy, second_pres_time)
+
+fix3 = df %>% 
+    left_join(avg_ptime) %>% 
+    filter(n_pres > 3) %>% 
+    mutate(third_pres_time = (third_pres_time-duration_mean)/duration_sd) %>% 
+    plot_effect(rel_pretest_accuracy, third_pres_time)
+
+fix1 + fix2 + fix3
+fig("fixation_durations", 3*S, S)
+
+# %% --------
+
+
+
+
+
+# %% ==================== Old ====================
+
+
+# %% --------
 fixdata = long %>% 
     ungroup() %>% 
     filter(presentation < 4 & last_fix == 0) %>% 
     left_join(avg_ptime) %>% 
     mutate(duration = (duration - duration_mean) / duration_sd) %>% 
-    left_join(select(df, trial_id, pre_correct_first, pre_correct_second)) %>% 
+    left_join(select(df, trial_id, pretest_accuracy_first, pretest_accuracy_second)) %>% 
     mutate(
-        fixated = if_else(fix_first==1, pre_correct_first, pre_correct_second),
-        nonfixated = if_else(fix_first==1, pre_correct_second, pre_correct_first),
-        relative = if_else(fix_first==1, rel_pre_correct, -rel_pre_correct)
+        fixated = if_else(fix_first==1, pretest_accuracy_first, pretest_accuracy_second),
+        nonfixated = if_else(fix_first==1, pretest_accuracy_second, pretest_accuracy_first),
+        relative = if_else(fix_first==1, rel_pretest_accuracy, -rel_pretest_accuracy)
     ) %>% 
-    pivot_longer(c(fixated, nonfixated, relative), names_to="cue", values_to="pre_correct", names_prefix="") %>% 
+    pivot_longer(c(fixated, nonfixated, relative), names_to="cue", values_to="pretest_accuracy", names_prefix="") %>% 
     group_by(name, presentation, cue) %>% 
     select(wid, strength, duration)
 
@@ -214,15 +177,15 @@ fixdata = long %>%
 
 p1 = df %>% 
     filter(n_pres > 1) %>% 
-    plot_effect(pre_correct_first, first_pres_time_z)
+    plot_effect(pretest_accuracy_first, first_pres_time_z)
 
 p2 = df %>% 
     filter(n_pres > 2) %>% 
-    plot_effect(rel_pre_correct, second_pres_time_z)
+    plot_effect(rel_pretest_accuracy, second_pres_time_z)
 
 p3 = df %>% 
     filter(n_pres > 1) %>% 
-    plot_effect(rel_pre_correct, third_pres_time_z)
+    plot_effect(rel_pretest_accuracy, third_pres_time_z)
 
 p1 + p2 + p3
 fig("fixation_durations", 3*WIDTH, HEIGHT)
@@ -267,7 +230,7 @@ ggplot(prep(preds), aes(x, predicted)) +
     facet_grid(presentation~name, labeller=labeller(presentation=c("1"="First", "2"="Second", "3"="Third"))) +
     labs(x="(Relative) Strength of Fixated Cue", y="Standardized Fixation Duration")
 
-fig("fixation_durations_relative", WIDTH, 2.2*HEIGHT, pdf=T)
+fig("fixation_durations_relative", WIDTH, 2.2*HEIGHT)
 
 # %% --------
 
@@ -288,7 +251,7 @@ ggplot(prep(preds), aes(x, predicted, group=Cue, color=Cue)) +
     ), aesthetics=c("fill", "colour")
  )
 
-fig("fixation_durations_split", WIDTH+1, 2*HEIGHT, pdf=T)
+fig("fixation_durations_split", WIDTH+1, 2*HEIGHT)
 
 # %% --------
 # model1 = lm(duration ~ strength, data=filter(fixdata, name=='Human'))
@@ -318,7 +281,7 @@ long %>%
     labs(x="Fixation Duration (s)", y="Proportion")
     # scale_x_continuous(breaks=seq(-1,5,1))
 
-fig("last_duration", WIDTH+1.2, HEIGHT, pdf=T)
+fig("last_duration", WIDTH+1.2, HEIGHT)
 
 # %% --------
 

@@ -1,11 +1,5 @@
 suppressPackageStartupMessages(source("setup.r"))
 
-pal = scale_colour_manual(values=c(
-    'Human'='gray10',
-    'Optimal'='#9D6BE0',
-    'Random'='gray60'
-), aesthetics=c("fill", "colour"), name="") 
-
 pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
 df = load_model_human("exp1", "trials") %>% 
     mutate(
@@ -15,26 +9,6 @@ df = load_model_human("exp1", "trials") %>%
     group_by(name, wid) %>% 
     mutate(rt_z = zscore(rt)) %>% 
     ungroup()
-
-plot_effect = function(df, x, y) {
-    enough_data = df %>% 
-        # filter(name == "Human") %>% 
-        count(name, response_type, {{x}}) %>% 
-        filter(n > 10)
-
-    df %>% 
-        right_join(enough_data) %>% 
-        ggplot(aes({{x}}, {{y}}, color=name, linetype=name)) +
-            stat_summary(fun=mean, geom="line") +
-            stat_summary(fun.data=mean_cl_normal, size=.5) +
-            theme(legend.position="none") +
-            pal +
-            scale_linetype_manual(values=c(
-                'Human'='solid',
-                'Optimal'='dashed',
-                'Random'='dashed'
-            ))
-}
 
 S = 2.5
 

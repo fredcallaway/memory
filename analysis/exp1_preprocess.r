@@ -4,39 +4,41 @@ VERSIONS = c('v6.5D')
 suppressPackageStartupMessages(source("setup.r"))
 source("preprocess_common.r")  # defines all pretest and agg_pretest
 
-all_trials = load_data('simple-recall-penalized') %>% 
-    filter(!practice) %>% 
-    preprocess_recall %>% 
-    select(-judgement_type)
+# %% ==================== Load  ====================
 
 all_pretest = load_data('simple-recall') %>% 
     filter(!practice) %>% 
     preprocess_recall
 
+all_trials = load_data('simple-recall-penalized') %>% 
+    filter(!practice) %>% 
+    preprocess_recall %>% 
+    select(-judgement_type)
+
+# %% ==================== Exclusions ====================
+
 excl = all_trials %>% 
     group_by(wid) %>%
     summarise(skip_rate=mean(response_type == "empty")) %>% 
     mutate(keep=skip_rate < .9)
-
 keep_wids = excl %>% filter(keep) %>% with(wid)
-
 pretest = all_pretest %>% filter(wid %in% keep_wids)
-
 trials = all_trials %>% 
-    filter(wid %in% keep_wids) %>% 
+    filter(wid %in% keep_wids)  %>% 
+    filter(response_type %in% c("correct","empty"))
+
+# %% ==================== Select and augment ====================
+
+pretest = pretest %>% select(wid, response_type, rt)
+
+trials = trials %>%
     left_join(summarise_pretest(pretest)) %>% 
-    filter(response_type %in% c("correct","empty")) %>% 
-    group_by(wid, response_type) %>% 
-    mutate(rt_z=zscore(rt)) %>% 
-    ungroup()
-
-pretest %>% 
-    select(wid, response_type, rt) %>% 
-    write_csv('../data/processed/exp1/pretest.csv')
-
-trials %>% 
     select(wid, response_type, rt, judgement, pretest_accuracy) %>% 
-    write_csv('../data/processed/exp1/trials.csv')
+
+# %% ==================== Save ====================
+
+write_csv(pretest, '../data/processed/exp1/pretest.csv')
+write_csv(trials, '../data/processed/exp1/trials.csv')
 
 
 
