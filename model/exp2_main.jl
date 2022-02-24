@@ -3,11 +3,7 @@
     include("common.jl")
     # include("empirical_fixation.jl")
 end
-
-# time out proportion
-# average fixation duration
-# average fixation length
-
+# %% --------
 Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 
 pretest = CSV.read("../data/processed/exp2/pretest.csv", DataFrame, missingstring="NA")
@@ -15,79 +11,10 @@ trials = CSV.read("../data/processed/exp2/trials.csv", DataFrame, missingstring=
 fixations = CSV.read("../data/processed/exp2/fixations.csv", DataFrame, missingstring="NA")
 
 pretest = @rsubset pretest :practice == false :block == 3
+trials = @rsubset trials :n_pres > 0
+
 @everywhere trials = $trials
 @everywhere fixations = $fixations
-# trials = @rsubset(all_trials, :response_type == "correct")
-# fixations = @rsubset(all_fixations, :response_type == "correct")
-
-# %% ==================== Simulate ====================
-
-@everywhere function make_frame(pol1, pol2, N=10000; ms_per_sample=200)
-    strengths = sample_strengths(pol1,  2N)
-    pairs = map(1:2:2N) do i
-        s1, pretest_accuracy_first = strengths[i]
-        s2, pretest_accuracy_second = strengths[i+1]
-        (;pretest_accuracy_first, pretest_accuracy_second), (s1, s2)
-    end
-
-    sims = map(pairs) do (pretest_accuracy, s)
-        sim = simulate(pol2; s, fix_log=FullFixLog())
-        presentation_times = sim.fix_log.fixations .* float(ms_per_sample)
-        # presentation_times .+= (pol2.m.switch_cost / pol2.m.sample_cost) * ms_per_sample
-        presentation_times .+= rand(Gamma(10, 10), length(presentation_times))
-        (;response_type = sim.b.focused == -1 ? "empty" : "correct",
-          choose_first = sim.b.focused == 1,
-          pretest_accuracy..., 
-          strength_first = s[1], strength_second = s[2],
-          presentation_times
-         )
-    end
-    DataFrame(sims[:])
-end
-
-@everywhere function make_trials(df)
-    safeindex(x, i) = length(x) < i ? NaN : x[i]
-    @chain df begin
-         @rtransform(
-            :first_pres_time = safeindex(:presentation_times, 1),
-            :second_pres_time = safeindex(:presentation_times, 2),
-            :third_pres_time = safeindex(:presentation_times, 3),
-            :last_pres_time = :presentation_times[end],
-            :n_pres = length(:presentation_times),
-            :total_first = sum(:presentation_times[1:2:end]),
-            :total_second = sum(:presentation_times[2:2:end]),
-            :wid = "optimal"
-        )
-        @transform :rt = :total_first .+ :total_second
-        select(setdiff(names(trials)))
-    end
-end
-
-@everywhere function make_fixations(df)
-    @chain df begin
-        @transform(:trial_id = 1:nrow(df))
-        @rtransform(:n_pres = length(:presentation_times))
-        @rtransform(:presentation = 1:(:n_pres), :wid = "optimal")
-        DataFrames.flatten([:presentation_times, :presentation])
-        DataFrames.rename(:presentation_times => :duration)
-        select(setdiff(names(fixations)))
-    end
-end
-
-@everywhere function simulate_optimal(prm::NamedTuple, N=100000)
-    m1 = MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
-        prm.threshold, prm.sample_cost, prm.switch_cost, prm.noise,
-        prior=Normal(prm.drift_μ, prm.drift_σ),
-    )
-    pol1 = OptimalPolicy(m1; dv=m1.threshold*.01)
-
-    m2 = MetaMDP{2}(;allow_stop=true, max_step=60, miss_cost=2,
-        prm.threshold, prm.sample_cost, prm.switch_cost, prm.noise,
-        prior=Normal(prm.drift_μ, prm.drift_σ),
-    )
-    pol2 = OptimalPolicy(m2; dv=m2.threshold*.01)
-    make_frame(pol1, pol2, N)
-end
 
 # %% ==================== Tune pretest ====================
 
@@ -96,7 +23,7 @@ end
         prm.threshold, prm.sample_cost, prm.noise,
         prior=Normal(prm.drift_μ, prm.drift_σ),
     )
-    pol = OptimalPolicy(m; dv=m.threshold*.01)
+    pol = OptimalPolicy(m; dv=m.threshold*.02)
     
     mapreduce(vcat, 1:N) do i
         s = sample_state(pol.m)
@@ -129,83 +56,152 @@ end
     (;acc_rate, rt_μ, rt_σ)
 end
 
-target = pretest_metrics(pretest)
+pretest_target = pretest_metrics(pretest)
 
-prms = grid(
-    drift_μ=0:.1:.6,
-    drift_σ=0.8:.1:1.2,
-    threshold=5:9,
-    sample_cost=.04:.01:.08,
-    noise=1.3:.1:1.7
+pretest_prms = grid(
+    drift_μ=0:.1:1,
+    drift_σ=0.5:.1:1.5,
+    threshold=1:1:9,
+    sample_cost=.001:.001:.01,
+    noise=.2:.2:2
 )
 
-metrics = @showprogress pmap(prms) do prm
-    pretest_metrics(simulate_pretest(prm))
+
+# %% --------
+mkpath(".cache/pretest_metrics")
+pretest_metrics = @showprogress pmap(prms) do prm
+    name = replace(string(prm), ([" ", "(", ")"] .=> "")...)
+    cache(".cache/pretest_metrics/$name") do
+        pretest_metrics(simulate_pretest(prm))
+    end
 end
 
 # %% --------
+squared(x) = x^2
 L = map(metrics) do pred
-    10sum(squared.(target.acc_rate .- pred.acc_rate)) +
-    # squared((target.rt_σ - pred.rt_σ) / 1000) +
-    # 5squared((target.rt_μ - pred.rt_μ) / 1000) +
+    sum(squared.(target.acc_rate .- pred.acc_rate)) +
+    squared((target.rt_μ - pred.rt_μ) / 1000) +
+    squared((target.rt_σ - pred.rt_σ) / 1000) +
     0
-end
+end;
 
-prms[argmin(L)]
+flat_prms = collect(prms)[:];
+flat_L = collect(L)[:];
+flat_prms[sortperm(flat_L)]
+
+println(prms[argmin(L)])
 println(metrics[argmin(L)])
 println(target)
 
-
-
-# %% ==================== Fit ====================
-
-@everywhere function twocue_metrics(trials, fixations)
-    trials = @rsubset(trials, :response_type == "correct")
-    fixations = @rsubset(fixations, :response_type == "correct")
-
-    avg_ptime = @chain fixations begin
-        @rsubset(:presentation != :n_pres)
-        @by(:wid, :mean=mean(:duration), :sd=std(:duration))
-    end
-
-    z_durations = @chain fixations begin
-        leftjoin(avg_ptime, on=:wid)
-        @rsubset(!isnan(:sd))
-        @rtransform(:rel_acc = :pretest_accuracy_first - :pretest_accuracy_second)
-        @rsubset(:presentation <= 3 && :presentation != :n_pres)
-        @rtransform(:duration_z = (:duration - :mean) / :sd)
-        @by([:presentation, :rel_acc], :x = mean(:duration_z))
-        wrapdims(:x, :presentation, :rel_acc)
-        sortkeys
-    end
-    (;
-        z_durations,
-         nfix_hist = counts(trials.n_pres, 1:4) ./ nrow(trials),
-         p_correct = mean(trials.response_type .== "correct"),
-    )
-end
-@everywhere twocue_metrics(df) = compute_metrics(make_trials(df), make_fixations(df))
-
-target = compute_metrics(trials, fixations);
-@everywhere target = $target
-
-@everywhere squared(x) = x^2
-@everywhere function loss(pred)
-    nfix_loss = crossentropy(target.nfix_hist, pred.nfix_hist)
-    isfinite(nfix_loss) || return Inf
-    duration_loss = mean(squared.(pred.z_durations .- target.z_durations))
-    nfix_loss + duration_loss
-end
-
+prm_pretest = keymin(L)
 
 # %% ==================== Manual ====================
 
-prm = (drift_μ = 0.6, drift_σ = 0.8, threshold = 5, sample_cost = 0.04, noise = 1.3, switch_cost=.01)
+# prm = (drift_μ = 0.6, drift_σ = 0.8, threshold = 5, sample_cost = 0.04, noise = 1.3, switch_cost=.01)
+# prm = (drift_μ = 0.5, drift_σ = 0.6, threshold = 4, sample_cost = 0.01, noise = 1.0, switch_cost=.01)
+prm = (drift_μ = 0.9, drift_σ = 1.1, threshold = 7, sample_cost = 0.002, 
+    noise = 1.4, switch_cost=.002, strength_drift_μ=0, strength_drift_σ=1e-9)
 
-df = simulate_optimal(prm)
+@time df = simulate_optimal(prm)
+
+# counts(make_trials(df).n_pres, 1:4) ./ nrow(df)
+# counts(trials.n_pres, 1:4) ./ nrow(trials)
+df |> make_trials |> CSV.write("results/exp2/optimal_trials.csv")
+df |> make_fixations |> CSV.write("results/exp2/optimal_fixations.csv")
+
+# %% ==================== Fit switch cost ====================
+
+@everywhere include("simulate_exp2.jl")
+
+@everywhere function critical_metrics(trials)
+    nfix = counts(trials.n_pres, 1:4) ./ nrow(trials)
+    push!(nfix, mean(trials.n_pres .> 4))
+    accuracy = mean(trials.response_type .== "correct")
+
+    choice_rate = @chain trials begin
+        @rsubset :response_type == "correct"
+        @by :pretest_accuracy_first :choice = mean(skipmissing(:choose_first))
+        wrapdims(:choice, :pretest_accuracy_first)
+        sortkeys
+    end
+
+    rt_μ, rt_σ = @chain trials begin
+        @rsubset :response_type .== "correct"
+        @with mean(:rt), std(:rt)
+    end
+    (;nfix, accuracy, choice_rate, rt_μ, rt_σ)
+end
+
+critical_target = critical_metrics(trials)
+
+crit_prms = grid(
+    switch_cost = .0002:.0002:.001,
+    strength_drift_μ = -.5:.1:0,
+    strength_drift_σ = [1e-3; .1:.1:.5]
+)
+
+mkpath(".cache/critical_metrics")
+metrics = @showprogress pmap(crit_prms) do cprm
+    prm = (;prm_pretest..., cprm...)
+    name = replace(string(prm), ([" ", "(", ")"] .=> "")...)
+    cache(".cache/critical_metrics/$name") do
+        trials = make_trials(simulate_optimal(prm))
+        critical_metrics(trials)
+    end
+end
+
 # %% --------
 
-twocue_metrics(df).z_durations
+L = map(metrics) do pred
+    mean(squared.(critical_target.nfix .- pred.nfix)) +
+    mean(squared.(pred.choice_rate .- critical_target.choice_rate))
+end
+
+metrics(switch_cost = .0002, strength_drift_σ=0.001, strength_drift_μ=0.)
+
+metrics[argmin(L)].choice_rate
+critical_target.choice_rate
+
+metrics[argmin(L)].nfix
+critical_target.nfix
+
+metrics[argmin(L)].rt_μ
+
+metrics(switch_cost = .0002, strength_drift_σ=.4, strength_drift_μ=-.1)
+
+prm = (;prm_pretest..., keymin(L)...) #TODO run this 
+
+# %% --------
+
+# prm = (drift_μ = 0.9, drift_σ = 1.1, threshold = 7, sample_cost = 0.002, noise = 1.4, switch_cost = 0.0002, strength_drift_μ = -0.1, strength_drift_σ = 0.4)
+prm = (drift_μ = 0.9, drift_σ = 1.1, threshold = 7, sample_cost = 0.002, noise = 1.4, switch_cost = 0.0002, strength_drift_μ = 0., strength_drift_σ = 1e-9)
+df = simulate_optimal(prm)
+df |> make_trials |> CSV.write("results/exp2/optimal_trials.csv")
+df |> make_fixations |> CSV.write("results/exp2/optimal_fixations.csv")
+
+# %% ====================  ====================
+
+m1 = MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
+    prm.threshold, prm.sample_cost, prm.switch_cost, prm.noise,
+    prior=Normal(prm.drift_μ, prm.drift_σ),
+)
+pol1 = OptimalPolicy(m1; dv=m1.threshold*.02)
+
+m2 = MetaMDP{2}(;allow_stop=true, max_step=60, miss_cost=2,
+    prm.threshold, prm.sample_cost, prm.switch_cost, prm.noise,
+    prior=Normal(prm.drift_μ, prm.drift_σ),
+)
+pol2 = OptimalPolicy(m2; dv=m2.threshold*.02)
+
+# %% --------
+
+
+
+df = make_frame(pol1, pol2, 10N; 
+    duration_noise=Gamma(1e-3, 1e-3), strength_drift=Normal(0, 1e-3))
+
+mean(df.response_type .== "correct")
+counts(make_trials(df).n_pres, 1:4) ./ nrow(df)
 
 df |> make_trials |> CSV.write("results/exp2/optimal_trials.csv")
 df |> make_fixations |> CSV.write("results/exp2/optimal_fixations.csv")
