@@ -193,13 +193,14 @@ function value(B::BackwardsInduction, b::Belief, f::Int)
 end
 
 
-struct OptimalPolicy{N}
+struct OptimalPolicy{N} <: Policy
     m::MetaMDP{N}
     B::BackwardsInduction{N}
 end    
 
 OptimalPolicy(B::BackwardsInduction) = OptimalPolicy(B.m, B)
-OptimalPolicy(m::MetaMDP; dv=.01) = OptimalPolicy(m, BackwardsInduction(m; dv))
+OptimalPolicy(m::MetaMDP, dv::Float64=.02m.threshold) = OptimalPolicy(m, BackwardsInduction(m; dv))
+
 
 function act(pol::OptimalPolicy, b::Belief)
     qs = @view pol.B.Q[:, belief2index(pol.B, b)...]

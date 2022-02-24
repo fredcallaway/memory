@@ -1,7 +1,46 @@
 @everywhere include("common.jl")
 mkpath("results/exp1")
-trials = CSV.read("../data/processed/exp1/trials.csv", DataFrame)
+Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
+# %% --------
+
+pretest = load_data("exp1/pretest")
+trials = load_data("exp1/trials")
+
 @everywhere trials = $trials
+
+# %% ==================== Fit pretest ====================
+
+pre_prms = grid(5, Box(
+    drift_μ = (-1, 1),
+    drift_σ = (0.5, 1.5),
+    threshold = (1, 10),
+    sample_cost = (.001, .05, :log),
+    noise = (.2, 2),
+))
+
+mkpath(".cache/exp1_pre_metrics")
+pre_metrics = @showprogress pmap(pre_prms) do prm
+    cache(".cache/exp1_pre_metrics/$(stringify(prm))") do
+        pretest_metrics(simulate_pretest(prm))
+    end
+end
+
+pre_target = pretest_metrics(pretest)
+
+# %% --------
+L = map(pre_metrics) do pred
+    sum(squared.(pre_target.acc_rate .- pred.acc_rate)) +
+    squared((pre_target.rt_μ - pred.rt_μ) / 3pre_target.rt_σ) +
+    squared((pre_target.rt_σ - pred.rt_σ) / 3pre_target.rt_σ)
+end;
+
+flat_prms = collect(pre_prms)[:];
+flat_L = collect(L)[:];
+flat_prms[sortperm(flat_L)]
+pre_prm = keymin(L)
+
+pre_metrics[argmin(L)]
+pre_target
 
 # %% ==================== Simulate data ====================
 
@@ -19,10 +58,11 @@ trials = CSV.read("../data/processed/exp1/trials.csv", DataFrame)
     df
 end
 
-@everywhere function make_frame(pol, N=10000)
-    df = map(sample_strengths(pol, N)) do (strength, pretest_accuracy)
-        sim = simulate(pol; s=(strength,), fix_log=RTLog())
-        post = posterior(pol.m, sim.b)[1]
+@everywhere function simulate_exp1(pre_pol, crit_pol, N=10000; strength_drift=Normal(0, 1e-9))
+    strengths = sample_strengths(pre_pol,  N; strength_drift)
+    df = map(strengths) do (strength, pretest_accuracy)
+        sim = simulate(crit_pol; s=(strength,), fix_log=RTLog())
+        post = posterior(crit_pol.m, sim.b)[1]
         (;
             response_type = sim.b.focused == -1 ? "empty" : "correct",
             rt=sim.fix_log.rt * ms_per_sample,
@@ -32,6 +72,32 @@ end
     end |> DataFrame
     discretize_judgement!(df)
 end
+
+# %% ==================== Fit critical ====================
+
+function pretest_mdp(prm)
+    MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
+        prm.threshold, prm.sample_cost, prm.noise,
+        prior=Normal(prm.drift_μ, prm.drift_σ),
+    )
+end
+
+function exp1_mdp(prm)
+    MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=3,
+        prm.threshold, prm.sample_cost, prm.noise,
+        prior=Normal(prm.drift_μ, prm.drift_σ),
+    )
+end
+
+# .1 cents per second
+# each time step if 200ms
+explicit_sample_cost = (ms_per_sample / 1000) * .1
+prm = (;pre_prm..., sample_cost=pre_prm.sample_cost + explicit_sample_cost)
+
+pre_pol = OptimalPolicy(pretest_mdp(pre_prm))
+crit_pol = OptimalPolicy(exp1_mdp(prm))
+df = simulate_exp1(pre_pol, crit_pol)
+df |> CSV.write("results/exp1/optimal_trials.csv")
 
 # %% ==================== Fit parameters ====================
 
@@ -54,10 +120,6 @@ end
 
 # simulate_optimal((drift_μ=0, drift_σ=2, sample_cost=.06, noise=2, threshold=14)) |> compute_metrics
 # simulate_optimal((drift_μ=0, drift_σ=.5, sample_cost=.06, noise=.5, threshold=3.5)) |> compute_metrics
-
-# %% --------
-
-
 
 # %% --------
 
