@@ -29,11 +29,11 @@ trials = all_trials %>%
 
 # %% ==================== Select and augment ====================
 
-pretest = pretest %>% select(wid, response_type, rt)
-
 trials = trials %>%
     left_join(summarise_pretest(pretest)) %>% 
-    select(wid, response_type, rt, judgement, pretest_accuracy) %>% 
+    select(wid, response_type, rt, judgement, pretest_accuracy)
+
+pretest = pretest %>% select(wid, block, word, response_type, rt)
 
 # %% ==================== Save ====================
 
