@@ -9,6 +9,21 @@ trials = load_data("exp1/trials")
 
 @everywhere trials = $trials
 
+# %% ==================== Arbitrary ====================
+
+prm = (
+    drift_μ = 0,
+    drift_σ = 1,
+    strength_drift_μ = 0,
+    strength_drift_σ = .5,
+    noise = 1.5,
+    threshold = 7,
+    sample_cost = .04
+)
+
+df = simulate_exp1(prm)
+df |> CSV.write("results/exp1/optimal_trials.csv")
+
 # %% ==================== Fit pretest ====================
 
 pre_prms = grid(5, Box(
