@@ -13,6 +13,16 @@ squared(x) = x^2
 load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
 stringify(nt::NamedTuple) = replace(string(map(x->round(x; digits=6), nt::NamedTuple)), ([" ", "(", ")"] .=> "")...)
 
+macro bywrap(x, what, val)
+    arg = :(:_val = $val)
+    esc(quote
+        b = $(DataFramesMeta.by_helper(x, what, arg))
+        wrapdims(b, :_val, $what, sort=true)
+    end)
+
+end
+
+
 function sample_strengths(pol, N=10000; strength_drift=Normal(0, .5))
     map(1:N) do i
         s = sample_state(pol.m)

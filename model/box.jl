@@ -66,6 +66,7 @@ valmap(f, d::AbstractDict) = Dict(k => f(v) for (k, v) in d)
 function grid(n::Int, box::Box)
     xs = range(0, 1, length=n)
     kws = valmap(box.dims) do d
+        length(d) == 1 && return [d]
         [rescale(d, x) for x in xs]
     end
     grid(;kws...)

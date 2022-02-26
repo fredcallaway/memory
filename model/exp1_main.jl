@@ -1,4 +1,5 @@
 @everywhere include("common.jl")
+@everywhere include("exp1_simulate.jl")
 mkpath("results/exp1")
 Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 # %% --------
@@ -29,9 +30,9 @@ pre_target = pretest_metrics(pretest)
 
 # %% --------
 L = map(pre_metrics) do pred
-    sum(squared.(pre_target.acc_rate .- pred.acc_rate)) +
-    squared((pre_target.rt_μ - pred.rt_μ) / 3pre_target.rt_σ) +
-    squared((pre_target.rt_σ - pred.rt_σ) / 3pre_target.rt_σ)
+    sum(squared.(pre_target.acc_rate .- pred.acc_rate))
+    # squared((pre_target.rt_μ - pred.rt_μ) / 3pre_target.rt_σ) +
+    # squared((pre_target.rt_σ - pred.rt_σ) / 3pre_target.rt_σ)
 end;
 
 flat_prms = collect(pre_prms)[:];
@@ -42,52 +43,75 @@ pre_prm = keymin(L)
 pre_metrics[argmin(L)]
 pre_target
 
-# %% ==================== Simulate data ====================
+# account for the change of adding implicit cost
+# re_prm = (;pre_prm..., sample_cost = 0.007071067811865478 - 0.00333333) 
 
-@everywhere function discretize_judgement!(df)
-    df.judgement .+= rand(Normal(0, 1), nrow(df))
-    breaks = map(["empty", "correct"]) do rtyp
-        human = @subset(trials, :response_type .== rtyp).judgement
-        model = @subset(df, :response_type .== rtyp).judgement
-        target_prop = counts(human) ./ length(human)
-        rtyp => quantile(model, cumsum(target_prop)) 
-    end |> Dict
-    df.judgement = map(df.response_type, df.judgement) do rtyp, j
-        findfirst(j .≤ breaks[rtyp])
-    end
-    df
-end
-
-@everywhere function simulate_exp1(pre_pol, crit_pol, N=10000; strength_drift=Normal(0, 1e-9))
-    strengths = sample_strengths(pre_pol,  N; strength_drift)
-    df = map(strengths) do (strength, pretest_accuracy)
-        sim = simulate(crit_pol; s=(strength,), fix_log=RTLog())
-        post = posterior(crit_pol.m, sim.b)[1]
-        (;
-            response_type = sim.b.focused == -1 ? "empty" : "correct",
-            rt=sim.fix_log.rt * ms_per_sample,
-            judgement=post.μ,
-            pretest_accuracy,
-        )
-    end |> DataFrame
-    discretize_judgement!(df)
-end
 
 # %% ==================== Fit critical ====================
 
-function pretest_mdp(prm)
-    MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
-        prm.threshold, prm.sample_cost, prm.noise,
-        prior=Normal(prm.drift_μ, prm.drift_σ),
-    )
+@everywhere function exp1_metrics(df)
+    skip_rate = @bywrap df :pretest_accuracy mean(:response_type .== "empty")
+    pretest_rate = @bywrap df :pretest_accuracy length(:rt) / nrow(df)
+    rt_μ = @bywrap df :response_type mean(:rt)
+    rt_σ = @bywrap df :response_type std(:rt)
+    (;skip_rate, pretest_rate, rt_μ, rt_σ)
 end
 
-function exp1_mdp(prm)
-    MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=3,
-        prm.threshold, prm.sample_cost, prm.noise,
-        prior=Normal(prm.drift_μ, prm.drift_σ),
-    )
+
+
+@everywhere function exp1_metrics(df)
+    skip_rate = @bywrap df :pretest_accuracy mean(:response_type .== "empty")
+    pretest_rate = @bywrap df :pretest_accuracy length(:rt) / nrow(df)
+    rt_μ = @bywrap df :response_type mean(:rt)
+    rt_σ = @bywrap df :response_type std(:rt)
+    (;skip_rate, pretest_rate, rt_μ, rt_σ)
 end
+
+# %% --------
+
+prms = grid(7, Box(
+    drift_μ = (-1, 1),
+    drift_σ = (0.5, 1.5),
+    threshold = (1, 10),
+    sample_cost = (0, .01),
+    noise = (.2, 2),
+    strength_drift_μ = 0,
+    strength_drift_σ = 1e-9
+
+))
+
+metrics = @showprogress pmap(prms) do prm
+    cache(".cache/exp1_metrics/$(stringify(prm))") do
+        exp1_metrics(simulate_exp1(prm))
+    end
+end
+
+# %% --------
+target = exp1_metrics(trials)
+
+L = map(metrics) do pred
+    try
+        mean(squared.(target.skip_rate .- pred.skip_rate)) +
+        mean(squared.(target.pretest_rate .- pred.pretest_rate)) +
+        mean(squared.((target.rt_μ .- pred.rt_μ) ./ target.rt_σ)) +
+        mean(squared.((target.rt_σ .- pred.rt_σ) ./ target.rt_σ))
+    catch
+        Inf
+    end
+end;
+
+flat_prms = collect(pre_prms)[:];
+flat_L = collect(L)[:];
+res = flat_prms[partialsortperm(flat_L, 1:10)] |> DataFrame
+res.loss = partialsort(flat_L, 1:10)
+fit_prm = keymin(L)
+
+
+exp1_metrics(simulate_exp1(fit_prm))
+target
+simulate_exp1(fit_prm) |> CSV.write("results/exp1/optimal_trials.csv")
+
+# %% ==================== Use pretest parameters ====================
 
 # .1 cents per second
 # each time step if 200ms
