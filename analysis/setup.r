@@ -169,13 +169,14 @@ pal = scale_colour_manual(values=c(
 
 plot_effect = function(df, x, y, min_n=10) {
     enough_data = df %>% 
+        ungroup() %>% 
         # filter(name == "Human") %>% 
         count(name, response_type, {{x}}) %>% 
         filter(n > min_n)
 
     df %>% 
         right_join(enough_data) %>% 
-        ggplot(aes({{x}}, {{y}}, color=name, linetype=name)) +
+        ggplot(aes({{x}}, {{y}}, color=name, linetype=name, group=name)) +
             stat_summary(fun=mean, geom="line") +
             stat_summary(fun.data=mean_cl_normal, size=.5) +
             theme(legend.position="none") +

@@ -14,10 +14,33 @@ S = 2.5
 
 # %% --------
 
-acc_rt = df %>% plot_effect(pretest_accuracy, rt_z) +
-    facet_wrap(~response_type) +
+plot_effect = function(df, x, y, color, min_n=10) {
+    enough_data = df %>% 
+        ungroup() %>% 
+        # filter(name == "Human") %>% 
+        count(name, response_type, {{x}}) %>% 
+        filter(n > min_n)
+
+    df %>% 
+        right_join(enough_data) %>% 
+        ggplot(aes({{x}}, {{y}}, color={{color}})) +
+            stat_summary(fun=mean, geom="line") +
+            stat_summary(fun.data=mean_cl_normal, size=.5) +
+            facet_wrap(~name)
+            # theme(legend.position="none") +
+            # pal +
+}f
+
+# %% --------
+
+df %>% 
+    group_by(name, response_type) %>% 
+    summarise(mean(rt))
+
+acc_rt = df %>%
+    plot_effect(pretest_accuracy, rt, response_type) +
     labs(x="Pretest Accuracy", y='Reaction Time') +
-    coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
+    # coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
     scale_x_continuous(n.breaks=3)
 
 fig("tmp", 2*S, S)
@@ -25,10 +48,10 @@ fig("tmp", 2*S, S)
 # %% --------
 
 judge_rt = df %>% 
-    plot_effect(judgement, rt_z) +
+    plot_effect(judgement, rt) +
     facet_wrap(~response_type) +
     labs(x="Judgement", y='Reaction Time') +
-    coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
+    # coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
     scale_x_continuous(n.breaks=5)
 
 fig("tmp", 2*S, S)

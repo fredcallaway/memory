@@ -2,7 +2,7 @@
 
 suppressPackageStartupMessages(source("setup.r"))
 
-WIDTH = 5.2; HEIGHT = 2.2; S = 2.5
+WIDTH = 5.2; HEIGHT = 2.5; S = 2.7
 write_tex = tex_writer("stats")
 
 pretest = read_csv('../data/processed/exp2/pretest.csv', col_types = cols())
@@ -45,6 +45,10 @@ simple %>%
         write_tex("simple_response_pct/{response_type}", "{100*mean:.1}\\% $\\pm$ {100*sd:.1}\\%")
     ))
 
+# %% --------
+
+
+
 
 # %% ==================== Sanity check ====================
 
@@ -68,10 +72,10 @@ fig("last_duration_strength", S, S)
 
 # %% ==================== Overall proportion and timecourse ====================
 
-df %>% filter(name == "Optimal") %>% with(rel_pretest_accuracy)
 overall = df %>% filter(n_pres >= 2) %>% 
-    plot_effect(rel_pretest_accuracy, total_first / (total_first + total_second))
-    # labs(x="Relative Memory Strength of First Cue", y="Proportion Fixation\nTime on First Cue")
+    plot_effect(rel_pretest_accuracy, total_first / (total_first + total_second)) +
+    ylim(0, 1) +
+    labs(x="Relative Pretest Accuracy\nof First Cue", y="Proportion Fixation\nTime on First Cue")
 fig("prop_first", S, S)
 
 # %% --------
@@ -84,6 +88,12 @@ human %>%
     rowwise() %>% group_walk(~ with(.x,
         write_tex("overall_interaction/{term}", regression_tex())
     ))
+
+# %% --------
+df %>% 
+    group_by(name) %>%
+    slice_sample(n=10000) %>% 
+    count(name)
 
 # %% --------
 
@@ -111,6 +121,16 @@ timecourse = fixations %>%
     scale_x_continuous(labels = scales::percent, n.breaks=3)
 
 fig("normalized-timecourse", S, S)
+
+# %% --------
+
+nts = fixations %>% 
+    normalized_timestep
+
+
+nts %>% 
+    mutate
+    group_by()
 
 # %% --------
 
@@ -268,7 +288,7 @@ models %>%
 
 # %% ==================== Last fixation duration ====================
 
-long %>% 
+fixations %>% 
     filter(duration <= 5000) %>%
     mutate(type=if_else(last_fix==1, "final", "non-final")) %>% 
     ggplot(aes(duration/1000, fill=type, y = ..width..*..density..)) +

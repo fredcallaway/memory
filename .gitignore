@@ -1,8 +1,8 @@
+*.bak
 analysis/.fighist
 analysis/.lintr
 analysis/*.html
 analysis/figs
-analysis/exp1.R
 model/scratch.jl
 analysis/.Rhistory
 model/bak/
@@ -11,3 +11,6 @@ analysis/test.rmd
 model/Makefile
 model/.fighist/
 data/
+model/figs/beliefs/
+model/tmp/
+model/.cache/
