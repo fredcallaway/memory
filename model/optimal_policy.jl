@@ -40,7 +40,11 @@ function BackwardsInduction(m::MetaMDP{N}; dv=.01, compute=true) where {N}
 end
 
 function transition_matrix(m, dv)
-    evidences = collect(-m.threshold:dv:m.threshold)
+    # make sure we don't lose a grid cell to numerical error
+    n_grid = round(Int, 1 + 2m.threshold / dv)
+    evidences = range(-m.threshold, m.threshold, length=n_grid)
+    @assert (evidences[2] - evidences[1]) ≈ dv
+
     λ_obs = m.noise ^ -2
     λ_prior = m.prior.σ^-2
     μ_prior = m.prior.μ
@@ -78,7 +82,7 @@ function compute_value_functions!(model::BackwardsInduction{1})
     @unpack dv, T, V, Q = model
     @unpack allow_stop, max_step, threshold, sample_cost, switch_cost, miss_cost = model.m
     t_max = max_step + 1
-    e_max = round(Int, 2threshold / dv + 1)
+    e_max = size(T, 1)
     a = 1 # we only have this for consistency with two-item case
 
     @assert allow_stop  # only version that makes sense

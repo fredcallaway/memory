@@ -1,4 +1,5 @@
 using DataStructures: OrderedDict
+using Sobol
 
 struct Box
     dims::OrderedDict
@@ -71,3 +72,9 @@ function grid(n::Int, box::Box)
     end
     grid(;kws...)
 end
+
+function sobol(n::Int, box::Box)
+    seq = skip(SobolSeq(n_free(box)), n)
+    [box(Sobol.next!(seq)) for i in 1:n]
+end
+
