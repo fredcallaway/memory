@@ -28,14 +28,6 @@ function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000;
     discretize_judgement!(df, judgement_noise)
 end
 
-function pretest_mdp(prm)
-    time_cost = (ms_per_sample / 1000) * (.25 / 15)
-    MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
-        prm.threshold, prm.noise, sample_cost=prm.sample_cost + time_cost,
-        prior=Normal(prm.drift_μ, prm.drift_σ),
-    )
-end
-
 function exp1_mdp(prm)
     time_cost = (ms_per_sample / 1000) * .1
     MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=3,

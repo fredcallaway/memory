@@ -68,7 +68,7 @@ df |> CSV.write("results/exp1/optimal_trials.csv")
 
 # %% ==================== Automatic ====================
 
-prms = sobol(10000, Box(
+prms = sobol(100000, Box(
     drift_μ = (-1, 1),
     noise = (.5, 2.5),
     drift_σ = (1, 3),
@@ -79,19 +79,21 @@ prms = sobol(10000, Box(
     judgement_noise=1,
 ))
 
+@everywhere optimal_policies(prm) = (
+    OptimalPolicy(pretest_mdp(prm)),
+    OptimalPolicy(exp1_mdp(prm)),
+)
+
 metrics = @showprogress pmap(prms) do prm
-    exp1_metrics(simulate_exp1(prm))
-    # cache(".cache/exp1_metrics/$(hash(prm))") do
-    # end
+    exp1_metrics(simulate_exp1(optimal_policies, prm))
 end
-serialize("tmp/metrics", metrics)
-metrics = deserialize("tmp/metrics")
+serialize("tmp/exp1_opt_metrics", metrics)
+metrics = deserialize("tmp/exp1_opt_metrics");
 
 # %% --------
 
 response_rate(x) = x.acc_n(response_type="correct") ./ ssum(x.acc_n, :response_type)
 pretest_dist(x) = normalize(ssum(x.acc_n, :response_type))
-response_rate(target)
 
 function marginal_loss(pred)
     size(pred.acc_rt) == size(target.acc_rt) || return Inf
@@ -129,9 +131,10 @@ end
 # TODO: fix
 fit_prm, tbl = minimize_loss(acc_rt_loss, metrics, prms);
 println(tbl)
-df = simulate_exp1(fit_prm) # FIX
+df = simulate_exp1(optimal_policies, fit_prm)
 pred = exp1_metrics(df)
 df |> CSV.write("results/exp1/optimal_trials.csv")
+serialize("tmp/exp1_fit_prm", fit_prm)
 
 # %% ==================== Random ====================
 

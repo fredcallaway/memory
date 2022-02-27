@@ -1,4 +1,6 @@
-@time @everywhere include("common.jl")
+@everywhere include("common.jl")
+@everywhere include("simulate_exp2.jl")
+
 mkpath("results/exp2")
 Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 # %% --------
@@ -13,21 +15,56 @@ trials = @rsubset trials :n_pres > 0
 @everywhere trials = $trials
 @everywhere fixations = $fixations
 
+# %% ==================== From experiment 1 ====================
+
+@everywhere optimal_policies(prm) = (
+    OptimalPolicy(pretest_mdp(prm)),
+    OptimalPolicy(exp2_mdp(prm)),
+)
+
+# exp1_prm = deserialize("tmp/exp1_fit_prm")
+prm = (;exp1_prm..., switch_cost=0.)
+df = simulate_exp2(optimal_policies, prm)
+# target = critical_metrics(trials)
+# x = critical_metrics(make_trials(df))
+# x.nfix
+# target.nfix
+
+df |> make_trials |> CSV.write("results/exp2/optimal_trials.csv")
+df |> make_fixations |> CSV.write("results/exp2/optimal_fixations.csv")
+
+
 # %% ==================== Fit pretest ====================
 
-pre_prms = grid(10, Box(
-    drift_μ = (0, 1),
-    drift_σ = (0.5, 1.5),
-    threshold = (1, 10),
-    sample_cost = (.001, .05, :log),
-    noise = (.2, 2),
+@everywhere function pretest_metrics(df)
+    acc_rate = @chain df begin
+        @by([:word, :wid], :x=mean(:response_type .== "correct"))
+        @by(_, :x, :n=length(:x) ./ nrow(_))
+        wrapdims(:n, :x)
+        sortkeys
+    end
+
+    rt_μ, rt_σ = @chain df begin
+        @rsubset :response_type .== "correct"
+        @with mean(:rt), std(:rt)
+    end
+
+    (;acc_rate, rt_μ, rt_σ)
+end
+
+pre_prms = sobol(100000, Box(
+    drift_μ = (-1, 1),
+    noise = (.5, 2.5),
+    drift_σ = (1, 3),
+    threshold = (5, 15),
+    sample_cost = (0, .1),
+    strength_drift_μ = 0,
+    strength_drift_σ = (0, 0.5),
+    judgement_noise=1,
 ))
 
-mkpath(".cache/exp2_pre_metrics")
 pre_metrics = @showprogress pmap(pre_prms) do prm
-    cache(".cache/exp2_pre_metrics/$(stringify(prm))") do
-        pretest_metrics(simulate_pretest(prm))
-    end
+    pretest_metrics(simulate_pretest(prm))
 end
 
 # %% --------
@@ -54,25 +91,40 @@ pre_prm = keymin(L)
 
 # %% ==================== Fit critical ====================
 
-@everywhere include("simulate_exp2.jl")
-
+@everywhere z_score(x) = (x .- mean(x)) ./ std(x)
 @everywhere function critical_metrics(trials)
     nfix = counts(trials.n_pres, 1:4) ./ nrow(trials)
     push!(nfix, mean(trials.n_pres .> 4))
     accuracy = mean(trials.response_type .== "correct")
-
-    choice_rate = @chain trials begin
-        @rsubset :response_type == "correct"
-        @by :pretest_accuracy_first :choice = mean(skipmissing(:choose_first))
-        wrapdims(:choice, :pretest_accuracy_first)
-        sortkeys
+    correct_trials = @chain trials begin
+        @rsubset :response_type == "correct" 
+        @transform :rel_pretest = :pretest_accuracy_first - :pretest_accuracy_second
     end
 
-    rt_μ, rt_σ = @chain trials begin
-        @rsubset :response_type .== "correct"
-        @with (mean(:rt), std(:rt))
+    choice_rate = @bywrap correct_trials :pretest_accuracy_first mean(:choose_first)
+    rt_μ, rt_σ = @with correct_trials (mean(:rt), std(:rt))
+    fix1 = @chain correct_trials begin
+        @rsubset :n_pres > 1
+        groupby(:wid)
+        @transform :first_pres_time = z_score(:first_pres_time)
+        @bywrap :pretest_accuracy_first nanmean(:first_pres_time)
     end
-    (;nfix, accuracy, choice_rate, rt_μ, rt_σ)
+
+    fix2 = @chain correct_trials begin
+        @rsubset :n_pres > 2
+        groupby(:wid)
+        @transform :second_pres_time = z_score(:second_pres_time)
+        @bywrap :rel_pretest nanmean(:second_pres_time)
+    end
+
+    fix3 = @chain correct_trials begin
+        @rsubset :n_pres > 3
+        groupby(:wid)
+        @transform :third_pres_time = z_score(:third_pres_time)
+        @bywrap :rel_pretest nanmean(:third_pres_time)
+    end
+
+    (;nfix, accuracy, choice_rate, rt_μ, rt_σ, fix1, fix2, fix3)
 end
 
 crit_prms = grid(10, Box(
@@ -90,6 +142,8 @@ crit_metrics = @showprogress pmap(crit_prms) do cprm
         critical_metrics(trials)
     end
 end
+
+# %% --------
 
 # crit_metrics = deserialize("tmp/crit_metrics")
 # %% --------
