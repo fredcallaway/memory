@@ -44,12 +44,8 @@ function exp1_mdp(prm)
     )
 end
 
-function simulate_exp1(prm::NamedTuple, N=100000)
-    simulate_exp1(
-        OptimalPolicy(pretest_mdp(prm)), 
-        OptimalPolicy(exp1_mdp(prm)), 
-        N; 
-        strength_drift=Normal(prm.strength_drift_μ, prm.strength_drift_σ),
-        prm.judgement_noise
-    )
+function simulate_exp1(make_policies::Function, prm::NamedTuple, N=100000)
+    strength_drift = Normal(prm.strength_drift_μ, prm.strength_drift_σ)
+    simulate_exp1(make_policies(prm)..., N; strength_drift, prm.judgement_noise)
 end
+

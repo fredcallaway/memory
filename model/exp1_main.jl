@@ -8,6 +8,7 @@ pretest = load_data("exp1/pretest")
 trials = load_data("exp1/trials")
 
 @everywhere trials = $trials
+@everywhere pretest = $pretest
 
 # %% ==================== Metrics ====================
 
@@ -47,33 +48,20 @@ prm = (
     judgement_noise = 1,
 )
 
-# prm = (threshold = 2.5, drift_σ = 1.1666666666666665, drift_μ = 0.0, sample_cost = 0.01,  noise = 0.6,
-#  strength_drift_σ = 0.0, strength_drift_μ = 0)
-
 df = simulate_exp1(prm)
 
 figure() do
     plot(
         plot(exp1_metrics(df).acc_rt'),
-        plot(exp1_metrics(trials).acc_rt'),
+        plot(target.acc_rt'),
         plot(exp1_metrics(df).judge_rt'),
-        plot(exp1_metrics(trials).judge_rt'),
+        plot(target.judge_rt'),
         legend=false,
         size=(600, 600),
         ylim=(0, 4000),
     )
 end
-# %% --------
-acc_rt = @bywrap df [:response_type, :judgement] mean_or_missing(:rt)
-acc_n = @bywrap df [:response_type, :judgement] length(:rt)
 
-figure() do
-    plot(
-        plot(exp1_metrics(df).acc_rt', ylim=(0, 3000)),
-        plot(exp1_metrics(trials).acc_rt', ylim=(0, 3000)),
-        legend=false
-    )
-end
 # %% --------
 
 df |> CSV.write("results/exp1/optimal_trials.csv")
@@ -128,17 +116,57 @@ function judge_rt_loss(pred)
     ismissing(l) ? Inf : l
 end
 
-L = map(x->acc_rt_loss(x) + judge_rt_loss(x), metrics);
+function minimize_loss(loss, metrics, prms)
+    L = map(loss, metrics);
+    flat_prms = collect(prms)[:];
+    flat_L = collect(L)[:];
+    fit_prm = flat_prms[argmin(flat_L)]
+    tbl = flat_prms[partialsortperm(flat_L, 1:10)] |> DataFrame
+    tbl.loss = partialsort(flat_L, 1:10)
+    fit_prm, tbl
+end
 
-# %% --------
-
-flat_prms = collect(prms)[:];
-flat_L = collect(L)[:];
-res = flat_prms[partialsortperm(flat_L, 1:10)] |> DataFrame
-res.loss = partialsort(flat_L, 1:10)
-res
-# %% --------
-fit_prm = flat_prms[argmin(flat_L)]
-df = simulate_exp1(fit_prm)
+# TODO: fix
+fit_prm, tbl = minimize_loss(acc_rt_loss, metrics, prms);
+println(tbl)
+df = simulate_exp1(fit_prm) # FIX
 pred = exp1_metrics(df)
 df |> CSV.write("results/exp1/optimal_trials.csv")
+
+# %% ==================== Random ====================
+
+@everywhere begin
+    pretest_stop_dist = fit(Gamma, @subset(pretest, :response_type .== "empty").rt ./ ms_per_sample)
+    crit_stop_dist = fit(Gamma, @subset(trials, :response_type .== "empty").rt ./ ms_per_sample)
+    random_policies(prm) = (
+        StopDistributionPolicy2(pretest_mdp(prm), pretest_stop_dist),
+        StopDistributionPolicy2(exp1_mdp(prm), crit_stop_dist),
+    )
+end
+
+prms = sobol(10000, Box(
+    drift_μ = (-1, 1),
+    noise = (.5, 2.5),
+    drift_σ = (1, 3),
+    threshold = (5, 15),
+    strength_drift_μ = 0,
+    strength_drift_σ = (0, 0.5),
+    judgement_noise=1,
+    sample_cost = 0.,
+))
+
+metrics = @showprogress pmap(prms) do prm
+    exp1_metrics(simulate_exp1(random_policies, prm))
+end
+serialize("tmp/metrics", metrics)
+metrics = deserialize("tmp/metrics")
+# %% --------
+fit_prm, tbl = minimize_loss(acc_rt_loss, metrics, prms);
+tbl
+
+# make_frame(rand_pol) |> CSV.write("results/exp1/random_trials.csv")
+simulate_exp1(random_policies, prm) |> CSV.write("results/exp1/random_trials.csv")
+
+
+
+
