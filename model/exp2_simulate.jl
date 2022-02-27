@@ -1,3 +1,26 @@
+
+function simulate_pretest(prm, N=10000)
+    m = MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
+        prm.threshold, prm.sample_cost, prm.noise,
+        prior=Normal(prm.drift_μ, prm.drift_σ),
+    )
+    pol = OptimalPolicy(m; dv=m.threshold*.02)
+    
+    mapreduce(vcat, 1:N) do i
+        s = sample_state(pol.m)
+        map(1:2) do j
+            sim = simulate(pol; s, fix_log=RTLog())
+            (;
+                wid="optimal",
+                word=i,
+                strength=only(s),
+                response_type = sim.b.focused == -1 ? "empty" : "correct",
+                rt=sim.fix_log.rt * ms_per_sample,
+            )
+        end
+    end |> DataFrame
+end
+
 function simulate_optimal(prm::NamedTuple, N=100000; kws...)
     m1 = MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
         prm.threshold, prm.sample_cost, prm.switch_cost, prm.noise,
