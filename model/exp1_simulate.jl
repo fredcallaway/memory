@@ -1,5 +1,5 @@
-function discretize_judgement!(df)
-    df.judgement .+= rand(Normal(0, 1), nrow(df))
+function discretize_judgement!(df, noise)
+    df.judgement .+= rand(Normal(0, noise), nrow(df))
     breaks = map(["empty", "correct"]) do rtyp
         human = @subset(trials, :response_type .== rtyp).judgement
         model = @subset(df, :response_type .== rtyp).judgement
@@ -12,7 +12,8 @@ function discretize_judgement!(df)
     df
 end
 
-function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000; strength_drift=Normal(0, 1e-9))
+function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000; 
+                       strength_drift=Normal(0, 1e-9), judgement_noise=0.)
     strengths = sample_strengths(pre_pol,  N; strength_drift)
     df = map(strengths) do (strength, pretest_accuracy)
         sim = simulate(crit_pol; s=(strength,), fix_log=RTLog())
@@ -24,7 +25,7 @@ function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000; strength_dri
             pretest_accuracy,
         )
     end |> DataFrame
-    discretize_judgement!(df)
+    discretize_judgement!(df, judgement_noise)
 end
 
 function pretest_mdp(prm)
@@ -47,6 +48,8 @@ function simulate_exp1(prm::NamedTuple, N=100000)
     simulate_exp1(
         OptimalPolicy(pretest_mdp(prm)), 
         OptimalPolicy(exp1_mdp(prm)), 
-        N; strength_drift=Normal(prm.strength_drift_μ, prm.strength_drift_σ)
+        N; 
+        strength_drift=Normal(prm.strength_drift_μ, prm.strength_drift_σ),
+        prm.judgement_noise
     )
 end

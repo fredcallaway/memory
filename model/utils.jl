@@ -64,7 +64,6 @@ smaximum = squeezify(maximum)
 sminimum = squeezify(minimum)
 smean = squeezify(mean)
 ssum = squeezify(sum)
-ssum = squeezify(sum)
 
 function monte_carlo(f, N=10000)
     N \ mapreduce(+, 1:N) do i
