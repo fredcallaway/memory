@@ -28,7 +28,6 @@ function cache(f, file; disable=false)
     disable && return f()
     isfile(file) && return deserialize(file)
     result = f()
-    mkpath(dirname(file))
     serialize(file, result)
     result
 end

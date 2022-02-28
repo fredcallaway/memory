@@ -184,8 +184,10 @@ StopDistributionPolicy2(m::MetaMDP, d::Distribution) = StopDistributionPolicy2(m
 
 function act(pol::StopDistributionPolicy2, b::Belief)
     if b.n_step == 1  # because first fixation is forced to be 1
-        pol.time_to_stop = ceil(Int, rand(pol.dist)) - 1
+        pol.time_to_stop = ceil(Int, rand(pol.dist)) + 1
         1
+    elseif b.n_step > pol.time_to_stop
+        error("Something is wrong")
     elseif b.n_step == pol.time_to_stop
         # println("stop ", b.n_step)
         0

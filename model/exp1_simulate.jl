@@ -14,6 +14,7 @@ end
 
 function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000; 
                        strength_drift=Normal(0, 1e-9), judgement_noise=0.)
+
     strengths = sample_strengths(pre_pol,  N; strength_drift)
     df = map(strengths) do (strength, pretest_accuracy)
         sim = simulate(crit_pol; s=(strength,), fix_log=RTLog())
