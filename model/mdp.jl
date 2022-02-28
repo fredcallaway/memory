@@ -160,104 +160,60 @@ end
 
 # %% ==================== Policies ====================
 
-struct RandomPolicy <: Policy
-    m::MetaMDP
-end
-
-act(pol::RandomPolicy, b::Belief{N}) where N = rand(1:N)
-
-
 struct StayPolicy <: Policy
     m::MetaMDP
 end
 
 act(pol::StayPolicy, b::Belief{N}) where N = 1
 
-
-mutable struct StopDistributionPolicy2 <: Policy
+mutable struct RandomStoppingPolicy <: Policy
     m::MetaMDP
     dist::Distribution
     time_to_stop::Int
 end
 
-StopDistributionPolicy2(m::MetaMDP, d::Distribution) = StopDistributionPolicy2(m, d, 0)
+RandomStoppingPolicy(m::MetaMDP{1}, d::Distribution) = RandomStoppingPolicy(m, d, 0)
 
-function act(pol::StopDistributionPolicy2, b::Belief)
-    if b.n_step == 1  # because first fixation is forced to be 1
-        pol.time_to_stop = ceil(Int, rand(pol.dist)) + 1
-        1
-    elseif b.n_step > pol.time_to_stop
-        error("Something is wrong")
-    elseif b.n_step == pol.time_to_stop
-        # println("stop ", b.n_step)
+function act(pol::RandomStoppingPolicy, b::Belief)
+    if b.n_step == 1  # initialize
+        pol.time_to_stop = ceil(Int, rand(pol.dist))  # note: could be 1 (current step)
+    end
+    @assert 1 ≤ b.n_step ≤ pol.time_to_stop
+
+    if b.n_step == pol.time_to_stop
         0
     else
-        # println("sample ", b.n_step)
         1
     end
 end
 
-
-struct RandomSwitchPolicy <: Policy
+mutable struct RandomSwitchingPolicy{D<:Distribution} <: Policy 
     m::MetaMDP
-    p_switch::Float64
-end
-
-function act(pol::RandomSwitchPolicy, b::Belief)
-    if b.focused == 0 || rand() < pol.p_switch
-        rand(setdiff(1:2, b.focused))
-    else
-        b.focused
-    end
-end
-
-
-mutable struct SwitchDistributionPolicy{D<:Distribution} <: Policy 
-    m::MetaMDP
-    dist::D
+    switch_dist::D
+    stop_dist::D
     time_to_switch::Int
+    time_to_stop::Int
 end
 
-SwitchDistributionPolicy(m::MetaMDP, d::Distribution) = SwitchDistributionPolicy(m, d, 0)
+function RandomSwitchingPolicy(m::MetaMDP, switch_dist::Distribution, stop_dist::Distribution)
+    RandomSwitchingPolicy(m, switch_dist, stop_dist, 0, 0)
+end
 
-function act(pol::SwitchDistributionPolicy, b::Belief)
-    if b.n_step == 0 || pol.time_to_switch == 0
-        pol.time_to_switch = ceil(Int, rand(pol.dist)) - 1
-        rand(setdiff(1:2, b.focused))
+function act(pol::RandomSwitchingPolicy, b::Belief)
+    if b.n_step == 1  # initialize
+        pol.time_to_stop = ceil(Int, rand(pol.stop_dist))
+        pol.time_to_switch = ceil(Int, rand(pol.switch_dist))
+    end
+    @assert 1 ≤ b.n_step ≤ min(pol.time_to_stop, pol.time_to_switch)
+
+    if b.n_step == pol.time_to_stop
+        0
     else
-        pol.time_to_switch -= 1
-        b.focused
+        if b.n_step == pol.time_to_switch
+            pol.time_to_switch = b.n_step + ceil(Int, rand(pol.switch_dist))
+            [2, 1][b.focused]
+        else
+            b.focused
+        end
     end
 end
-
-
-#struct OptimalPolicy <: Policy
-#    m::MetaMDP
-#    V::ValueFunction
-#end
-
-#OptimalPolicy(m::MetaMDP) = OptimalPolicy(m, ValueFunction(m))
-#OptimalPolicy(V::ValueFunction) = OptimalPolicy(V.m, V)
-
-#function act(pol::OptimalPolicy, b::Belief)
-#    rand(argmaxes(c -> Q(pol.V, b, c), actions(pol.m, b)))
-#end
-
-
-#struct SoftOptimalPolicy <: Policy
-#    m::MetaMDP
-#    V::ValueFunction
-#    β::Float64
-#end
-
-#SoftOptimalPolicy(m::MetaMDP; β::Real) = SoftOptimalPolicy(m, ValueFunction(m), float(β))
-#SoftOptimalPolicy(V::ValueFunction; β::Real) = SoftOptimalPolicy(V.m, V, float(β))
-
-#function act(pol::SoftOptimalPolicy, b::Belief)
-#    p = softmax!(map(c-> pol.β * Q(pol.V, b, c), actions(pol.m, b)))
-#    sample(actions(pol.m, b), Weights(p))
-#end
-
-
-# rollout(callback::Function, policy; kws...) = rollout(policy; kws..., callback=callback)
-
