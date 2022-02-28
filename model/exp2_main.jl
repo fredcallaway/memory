@@ -1,7 +1,7 @@
 @everywhere include("common.jl")
 @everywhere include("exp2_simulate.jl")
-
 mkpath("results/exp2")
+mkpath("tmp")
 Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 # %% --------
 
@@ -79,15 +79,16 @@ prms = sobol(10000, Box(
 
 mkpath(".cache/exp2_crit_metrics")
 
-crit_metrics = @showprogress pmap(WorkerPool(collect(2:65)), prms) do prm
+crit_metrics = @showprogress asyncmap(prms) do prm
     cache(".cache/exp2_crit_metrics/$(stringify(prm))") do
+        @assert false
         df = simulate_exp2(optimal_policies, prm)
         x = critical_metrics(make_trials(df))
         GC.gc()
         x
     end
 end;
-tyserialize("tmp/exp2_crit_metrics", crit_metrics)
+serialize("tmp/exp2_crit_metrics", crit_metrics)
 # %% --------
 crit_metrics = deserialize("tmp/exp2_crit_metrics");
 
@@ -115,30 +116,8 @@ end
 opt_prm, tbl, loss = minimize_loss(fix_loss, crit_metrics, prms);
 display(select(tbl, Not(:strength_drift_μ)))
 
-top = partialsortperm(loss, 1:1000)
-top_prms = prms[top]
-top_metrics = @showprogress pmap(WorkerPool(collect(2:40)), ) do prm
-    cache(".cache/exp2_crit_metrics/$(stringify(prm))") do
-        df = simulate_exp2(optimal_policies, prm)
-        x = critical_metrics(make_trials(df))
-        GC.gc()
-        x
-    end
-end;
 # %% --------
-opt_prm = @chain tbl begin
-    @rsubset :strength_drift_σ < .1
-    select(Not(:loss))
-    _[1, :]
-    NamedTuple
-end
-
-opt_prm, tbl, loss = minimize_loss(fix_loss, top_metrics, top_prms);
-
-
-# %% --------
-
-# fit_metrics.fix3
+opt_prm
 
 @time df = simulate_exp2(optimal_policies, opt_prm)
 make_trials(df) |> critical_metrics |> fix_loss

@@ -1,7 +1,6 @@
 include("utils.jl")
 include("mdp.jl")
 include("optimal_policy.jl")
-include("figure.jl")
 include("box.jl")
 
 using DataFrames, DataFramesMeta, CSV
