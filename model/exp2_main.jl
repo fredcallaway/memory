@@ -161,6 +161,25 @@ emp_metrics = @showprogress pmap(emp_prms) do prm
         x
     end
 end;
+serialize("tmp/exp2_emp_metrics", emp_metrics)
+
+# %% --------
+emp_metrics = deserialize("tmp/exp2_emp_metrics")
+# %% --------
+emp_prm, tbl, loss = minimize_loss(fix_loss, emp_metrics, emp_prms);
+display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ])))
+
+# %% --------
+@time df = simulate_exp2(empirical_policies, emp_prm)
+make_trials(df) |> critical_metrics |> fix_loss
+df |> make_trials |> CSV.write("results/exp2/empirical_trials.csv")
+df |> make_fixations |> CSV.write("results/exp2/empirical_fixations.csv")
+
+# %% ==================== empirical ====================
+
+
+
+
 
 # %% ==================== random ====================
 
