@@ -16,68 +16,79 @@ trials = @rsubset trials :n_pres > 0
 @everywhere pretest = $pretest
 @everywhere fixations = $fixations
 
-# %% ==================== define metrics ====================
+# %% ==================== summary statistics ====================
 
-@everywhere z_score(x) = (x .- mean(x)) ./ std(x)
-@everywhere function critical_metrics(trials)
-    nfix = counts(trials.n_pres, 1:4) ./ nrow(trials)
-    push!(nfix, mean(trials.n_pres .> 4))
+# @everywhere z_score(x) = (x .- mean(x)) ./ std(x)
+@everywhere function exp2_sumstats(trials, fixations)
     accuracy = mean(trials.response_type .== "correct")
-    correct_trials = @chain trials begin
+
+    tri = @chain trials begin
         @rsubset :response_type == "correct" 
-        @transform :rel_pretest = :pretest_accuracy_first - :pretest_accuracy_second
+        groupby([:wid, :pretest_accuracy_first, :pretest_accuracy_second])
+        @combine begin
+            :rt_μ = mean(:rt)
+            :rt_σ = std(:rt)
+            :choose_first = mean(:choose_first)
+            :prop_first = mean(:total_first ./ :total_second)
+            :total_first = mean(:total_first)
+            :total_second = mean(:total_second)
+            :n = length(:rt)
+        end
     end
 
-    choice_rate = @bywrap correct_trials :pretest_accuracy_first mean(:choose_first)
-    rt_μ, rt_σ = @with correct_trials (mean(:rt), std(:rt))
-    fix1 = @chain correct_trials begin
-        @rsubset :n_pres > 1
-        groupby(:wid)
-        @transform :first_pres_time = z_score(:first_pres_time)
-        @bywrap :pretest_accuracy_first nanmean(:first_pres_time)
+    fix = @chain fixations begin
+        @rsubset :response_type == "correct"
+        @rtransform :final = :presentation == :n_pres
+        @rtransform :presentation = min(:presentation, 10)
+        groupby([:wid, :presentation, :pretest_accuracy_first, :pretest_accuracy_second, :final])
+        @combine begin
+            :duration_μ = mean(:duration) 
+            :duration_σ = std(:duration) 
+            :n = length(:duration)
+        end
     end
 
-    fix2 = @chain correct_trials begin
-        @rsubset :n_pres > 2
-        groupby(:wid)
-        @transform :second_pres_time = z_score(:second_pres_time)
-        @bywrap :rel_pretest nanmean(:second_pres_time)
-    end
-
-    fix3 = @chain correct_trials begin
-        @rsubset :n_pres > 3
-        groupby(:wid)
-        @transform :third_pres_time = z_score(:third_pres_time)
-        @bywrap :rel_pretest nanmean(:third_pres_time)
-    end
-
-    fixs = [:first_pres_time, :second_pres_time, :third_pres_time, :last_pres_time]
-    fix_times = map(fixs) do f
-        mean(skipmissing(correct_trials[:, f]))
-    end
-    (;nfix, accuracy, choice_rate, rt_μ, rt_σ, fix1, fix2, fix3, fix_times)
+    (;accuracy, tri, fix)
 end
-target = critical_metrics(trials)
+target = exp2_sumstats(trials, fixations)
 
 # %% ==================== loss ====================
 
-function fix_loss(pred)
-    mapreduce(+, [:fix1, :fix2, :fix3]) do f
-        t = getfield(target, f)
-        p = getfield(pred, f)
-        size(t) == size(p) || return Inf
-        sum(squared.(t .- p))
+function pooled_mean_std(ns::AbstractVector{<:Integer},
+                        μs::AbstractVector{<:Number},
+                        σs::AbstractVector{<:Number})
+    nsum = sum(ns)
+    meanc = ns' * μs / nsum
+    vs = replace!(σs .^ 2, NaN=>0)
+    varc = sum((ns .- 1) .* vs + ns .* abs2.(μs .- meanc)) / (nsum - 1)
+    return meanc, .√(varc)
+end
+
+function nonfinal_duration(metric)    
+    X = @chain metric.fix begin
+        @rsubset :presentation > 1 && !:final
+        groupby(:wid)
+        @transform @astable begin
+            μ, σ = pooled_mean_std(:n, :duration_μ, :duration_σ)
+            :z = (:duration_μ .- μ) / σ
+        end
+        @rsubset !isnan(:z)
+        @rtransform @astable begin
+            x = (:pretest_accuracy_first, :pretest_accuracy_second)
+            f, n = iseven(:presentation) ? reverse(x) : x
+            :fixated = f
+            :nonfixated = n
+            :relative = f - n
+        end
+        @bywrap [:relative] mean(:z, Weights(:n))
     end
 end
 
-function minimize_loss(loss, metrics, prms)
-    L = map(loss, metrics);
-    flat_prms = collect(prms)[:];
-    flat_L = collect(L)[:];
-    fit_prm = flat_prms[argmin(flat_L)]
-    tbl = flat_prms[sortperm(flat_L)] |> DataFrame
-    tbl.loss = sort(flat_L)
-    fit_prm, tbl, flat_L
+_human_nonfinal = nonfinal_duration(target)
+function fix_loss(pred)
+    p = nonfinal_duration(pred)
+    size(_human_nonfinal) == size(p) || return Inf
+    sum(squared.(_human_nonfinal .- p))
 end
 
 # %% ==================== optimal ====================
@@ -87,7 +98,7 @@ end
     OptimalPolicy(exp2_mdp(prm)),
 )
 
-prms = sobol(10000, Box(
+opt_prms = sobol(10000, Box(
     drift_μ = (-1, 1),
     noise = (.5, 2.5),
     drift_σ = (1, 3),
@@ -99,30 +110,28 @@ prms = sobol(10000, Box(
     judgement_noise=1,
 ))
 
-mkpath(".cache/exp2_opt_metrics")
-
-opt_metrics = @showprogress asyncmap(prms) do prm
-    cache(".cache/exp2_opt_metrics/$(stringify(prm))") do
-        @assert false
+# %% --------
+mkpath(".cache/exp2_opt_sumstats")
+opt_sumstats = @showprogress pmap(opt_prms) do prm
+    cache(".cache/exp2_opt_sumstats/$(stringify(prm))") do
         df = simulate_exp2(optimal_policies, prm)
-        x = critical_metrics(make_trials(df))
+        x = exp2_sumstats(make_trials(df), make_fixations(df))
         GC.gc()
         x
     end
 end;
-serialize("tmp/exp2_opt_metrics", opt_metrics)
+serialize("tmp/exp2_opt_sumstats", opt_sumstats)
 
 # %% --------
-opt_metrics = deserialize("tmp/exp2_opt_metrics");
-
-opt_prm, tbl, loss = minimize_loss(fix_loss, opt_metrics, prms);
-display(select(tbl, Not(:strength_drift_μ)))
+opt_sumstats = deserialize("tmp/exp2_opt_sumstats");
+opt_prm, tbl, loss = minimize_loss(fix_loss, opt_sumstats, opt_prms);
+display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ])))
 
 # %% --------
-opt_prm
 
 @time df = simulate_exp2(optimal_policies, opt_prm)
-make_trials(df) |> critical_metrics |> fix_loss
+exp2_sumstats(make_trials(df), make_fixations(df))
+
 df |> make_trials |> CSV.write("results/exp2/optimal_trials.csv")
 df |> make_fixations |> CSV.write("results/exp2/optimal_fixations.csv")
 
@@ -152,26 +161,31 @@ emp_prms = sobol(10000, Box(
 ));
 
 # %% --------
-mkpath(".cache/exp2_emp_metrics")
-emp_metrics = @showprogress pmap(emp_prms) do prm
-    cache(".cache/exp2_emp_metrics/$(stringify(prm))") do
+mkpath(".cache/exp2_emp_sumstats")
+emp_sumstats = @showprogress pmap(emp_prms) do prm
+    cache(".cache/exp2_emp_sumstats/$(stringify(prm))") do
         df = simulate_exp2(empirical_policies, prm)
-        x = critical_metrics(make_trials(df))
+        x = exp2_sumstats(make_trials(df))
         GC.gc()
         x
     end
 end;
-serialize("tmp/exp2_emp_metrics", emp_metrics)
+serialize("tmp/exp2_emp_sumstats", emp_sumstats)
 
 # %% --------
-emp_metrics = deserialize("tmp/exp2_emp_metrics")
+emp_sumstats = deserialize("tmp/exp2_emp_sumstats")
 # %% --------
-emp_prm, tbl, loss = minimize_loss(fix_loss, emp_metrics, emp_prms);
+function full_loss(pred)
+    pred.accuracy > .8 || return Inf
+    fix_loss(pred)
+end
+emp_prm, tbl, loss = minimize_loss(full_loss, emp_sumstats, emp_prms);
 display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ])))
 
 # %% --------
-@time df = simulate_exp2(empirical_policies, emp_prm)
-make_trials(df) |> critical_metrics |> fix_loss
+df = simulate_exp2(empirical_policies, emp_prm)
+emp_ss = exp2_sumstats(make_trials(df), make_fixations(df))
+
 df |> make_trials |> CSV.write("results/exp2/empirical_trials.csv")
 df |> make_fixations |> CSV.write("results/exp2/empirical_fixations.csv")
 
