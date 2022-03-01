@@ -37,3 +37,7 @@ function pretest_mdp(prm)
         prior=Normal(prm.drift_μ, prm.drift_σ),
     )
 end
+
+function empirical_distribution(x)
+    fit(DiscreteNonParametric, max.(1, round.(Int, x ./ ms_per_sample)))
+end

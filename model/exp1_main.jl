@@ -10,7 +10,7 @@ trials = load_data("exp1/trials")
 @everywhere trials = $trials
 @everywhere pretest = $pretest
 
-# %% ==================== Metrics ====================
+# %% ==================== define metrics ====================
 
 @everywhere mean_or_missing(x; min_n=10) = length(x) < min_n ? missing : mean(x)
 @everywhere function exp1_metrics(df)
@@ -28,72 +28,7 @@ end
 
 target = exp1_metrics(trials)
 
-# %% ==================== Manual ====================
-
-function cost_to_wage(sample_cost)
-    cps = .01* sample_cost / (ms_per_sample/1000)
-    dps = cps / 100
-    sph = 60 * 60
-    dph = cps * sph
-end
-
-prm = (
-    drift_μ = 0.,
-    drift_σ = 1.5,
-    strength_drift_μ = 0,
-    strength_drift_σ = 0,
-    noise = 1.5,
-    threshold = 10,
-    sample_cost = .05,
-    judgement_noise = 1,
-)
-
-df = simulate_exp1(prm)
-
-figure() do
-    plot(
-        plot(exp1_metrics(df).acc_rt'),
-        plot(target.acc_rt'),
-        plot(exp1_metrics(df).judge_rt'),
-        plot(target.judge_rt'),
-        legend=false,
-        size=(600, 600),
-        ylim=(0, 4000),
-    )
-end
-
-# %% --------
-
-df |> CSV.write("results/exp1/optimal_trials.csv")
-
-# %% ==================== Automatic ====================
-
-prms = sobol(10000, Box(
-    drift_μ = (-1, 1),
-    noise = (.5, 2.5),
-    drift_σ = (1, 3),
-    threshold = (5, 15),
-    sample_cost = (0, .1),
-    strength_drift_μ = 0,
-    # strength_drift_σ = (0, 0.5),
-    strength_drift_σ = 0.,
-    judgement_noise=1,
-))
-
-@everywhere optimal_policies(prm) = (
-    OptimalPolicy(pretest_mdp(prm)),
-    OptimalPolicy(exp1_mdp(prm)),
-)
-
-# %% --------
-metrics = @showprogress pmap(prms) do prm
-    exp1_metrics(simulate_exp1(optimal_policies, prm))
-end
-serialize("tmp/exp1_opt_metrics_nodrift", metrics)
-# %% --------
-metrics = deserialize("tmp/exp1_opt_metrics_nodrift");
-
-# %% --------
+# %% ==================== loss function ====================
 
 response_rate(x) = x.acc_n(response_type="correct") ./ ssum(x.acc_n, :response_type)
 pretest_dist(x) = normalize(ssum(x.acc_n, :response_type))
@@ -121,6 +56,10 @@ function judge_rt_loss(pred)
     ismissing(l) ? Inf : l
 end
 
+function full_loss(x)    
+    acc_rt_loss(x) + judge_rt_loss(x)
+end
+
 function minimize_loss(loss, metrics, prms)
     L = map(loss, metrics);
     flat_prms = collect(prms)[:];
@@ -131,26 +70,46 @@ function minimize_loss(loss, metrics, prms)
     fit_prm, tbl
 end
 
+# %% ==================== optimal ====================
 
-# TODO: fix
-# fit_prm, tbl = minimize_loss(acc_rt_loss, metrics, prms);
-fit_prm, tbl = minimize_loss(x->acc_rt_loss(x) + judge_rt_loss(x), metrics, prms);
-println(tbl)
+@everywhere optimal_policies(prm) = (
+    OptimalPolicy(pretest_mdp(prm)),
+    OptimalPolicy(exp1_mdp(prm)),
+)
+
+prms = sobol(10000, Box(
+    drift_μ = (-1, 1),
+    noise = (.5, 2.5),
+    drift_σ = (1, 3),
+    threshold = (5, 15),
+    sample_cost = (0, .1),
+    strength_drift_μ = 0,
+    strength_drift_σ = 0.,
+    judgement_noise=1,
+))
+
+# %% --------
+metrics = @showprogress pmap(prms) do prm
+    exp1_metrics(simulate_exp1(optimal_policies, prm))
+end
+serialize("tmp/exp1_opt_metrics", metrics)
+# %% --------
+metrics = deserialize("tmp/exp1_opt_metrics");
+# %% --------
+fit_prm, tbl = minimize_loss(full_loss, metrics, prms);
+display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise])))
 df = simulate_exp1(optimal_policies, fit_prm)
-pred = exp1_metrics(df)
+full_loss(exp1_metrics(df))
 df |> CSV.write("results/exp1/optimal_trials.csv")
-serialize("tmp/exp1_fit_prm2", fit_prm)
 
-fit_prm
-
-# %% ==================== Random (plot fitting) ====================
+# %% ==================== random ====================
 
 @everywhere function random_policies(prm)
     pretest_stop_dist = Gamma(prm.α_pre, prm.θ_pre)
     crit_stop_dist = Gamma(prm.α_crit, prm.θ_crit)
     (
-        StopDistributionPolicy2(pretest_mdp(prm), pretest_stop_dist),
-        StopDistributionPolicy2(exp1_mdp(prm), crit_stop_dist),
+        RandomStoppingPolicy(pretest_mdp(prm), pretest_stop_dist),
+        RandomStoppingPolicy(exp1_mdp(prm), crit_stop_dist),
     )
 end
 
@@ -173,52 +132,49 @@ rand_prms = sobol(10000, Box(
 rand_metrics = @showprogress pmap(rand_prms) do prm
     exp1_metrics(simulate_exp1(random_policies, prm))
 end;
-serialize("tmp/exp1_rand_fit_metrics", rand_metrics)
+serialize("tmp/exp1_rand_metrics", rand_metrics)
 # %% --------
-rand_metrics = deserialize("tmp/exp1_rand_fit_metrics");
+rand_metrics = deserialize("tmp/exp1_rand_metrics");
 # %% --------
-rand_prm, tbl = minimize_loss(acc_rt_loss, rand_metrics, rand_prms);
-display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise])))
+rand_prm, tbl = minimize_loss(full_loss, rand_metrics, rand_prms);
+display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise, :sample_cost])))
 df = simulate_exp1(random_policies, rand_prm)
-acc_rt_loss(exp1_metrics(df))
+full_loss(exp1_metrics(df))
 df |> CSV.write("results/exp1/random_trials.csv")
 
-# %% ==================== Random (empirical) ====================
+# %% ==================== empirical ====================
 
 @everywhere begin
-    pretest_stop_dist = fit(Gamma, @subset(pretest, :response_type .== "empty").rt ./ ms_per_sample)
-    crit_stop_dist = fit(Gamma, @subset(trials, :response_type .== "empty").rt ./ ms_per_sample)
-    random_policies(prm) = (
-        StopDistributionPolicy2(pretest_mdp(prm), pretest_stop_dist),
-        StopDistributionPolicy2(exp1_mdp(prm), crit_stop_dist),
+    const emp_pretest_stop_dist = empirical_distribution(@subset(pretest, :response_type .== "empty").rt)
+    const emp_crit_stop_dist = empirical_distribution(@subset(trials, :response_type .== "empty").rt)
+
+    empirical_policies(prm) = (
+        RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
+        RandomStoppingPolicy(exp1_mdp(prm), emp_crit_stop_dist),
     )
 end
 
-rand_prms = sobol(10000, Box(
+emp_prms = sobol(10000, Box(
     drift_μ = (-1, 1),
     noise = (.5, 2.5),
     drift_σ = (1, 3),
     threshold = (5, 15),
     strength_drift_μ = 0,
-    # strength_drift_σ = (0, 0.5),
     strength_drift_σ = 0.,
     judgement_noise=1,
     sample_cost = 0.,
 ))
 
 # %% --------
-rand_metrics = @showprogress pmap(rand_prms) do prm
-    exp1_metrics(simulate_exp1(random_policies, prm))
+emp_metrics = @showprogress pmap(emp_prms) do prm
+    exp1_metrics(simulate_exp1(empirical_policies, prm))
 end
-serialize("tmp/exp1_rand_metrics", rand_metrics)
+serialize("tmp/exp1_emp_metrics", emp_metrics)
 # %% --------
-rand_metrics = deserialize("tmp/exp1_rand_metrics")
+emp_metrics = deserialize("tmp/exp1_emp_metrics")
 # %% --------
-rand_prm, tbl = minimize_loss(acc_rt_loss, rand_metrics, rand_prms);
-rand_prm
-df = simulate_exp1(random_policies, rand_prm)
-
-acc_rt_loss(exp1_metrics(df))
-
-df |> CSV.write("results/exp1/random_trials.csv")
-
+emp_prm, tbl = minimize_loss(full_loss, emp_metrics, emp_prms);
+display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise, :sample_cost])))
+df = simulate_exp1(empirical_policies, emp_prm)
+exp1_metrics(df).judge_rt
+df |> CSV.write("results/exp1/empirical_trials.csv")
