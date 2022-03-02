@@ -23,6 +23,15 @@ end
 
 # %% ==================== General Purpose ====================
 
+function pooled_mean_std(ns::AbstractVector{<:Integer},
+                        μs::AbstractVector{<:Number},
+                        σs::AbstractVector{<:Number})
+    nsum = sum(ns)
+    meanc = ns' * μs / nsum
+    vs = replace!(σs .^ 2, NaN=>0)
+    varc = sum((ns .- 1) .* vs + ns .* abs2.(μs .- meanc)) / (nsum - 1)
+    return meanc, .√(varc)
+end
 
 function cache(f, file; disable=false)
     disable && return f()

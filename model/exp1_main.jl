@@ -176,5 +176,5 @@ emp_metrics = deserialize("tmp/exp1_emp_metrics")
 emp_prm, tbl = minimize_loss(full_loss, emp_metrics, emp_prms);
 display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise, :sample_cost])))
 df = simulate_exp1(empirical_policies, emp_prm)
-exp1_metrics(df).judge_rt
+exp1_metrics(df)
 df |> CSV.write("results/exp1/empirical_trials.csv")

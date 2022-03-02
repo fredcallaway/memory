@@ -41,3 +41,13 @@ end
 function empirical_distribution(x)
     fit(DiscreteNonParametric, max.(1, round.(Int, x ./ ms_per_sample)))
 end
+
+function minimize_loss(loss, metrics, prms)
+    L = map(loss, metrics);
+    flat_prms = collect(prms)[:];
+    flat_L = collect(L)[:];
+    fit_prm = flat_prms[argmin(flat_L)]
+    tbl = flat_prms[sortperm(flat_L)] |> DataFrame
+    tbl.loss = sort(flat_L)
+    fit_prm, tbl, flat_L
+end
