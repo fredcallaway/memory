@@ -1,33 +1,8 @@
-@everywhere include("common.jl")
-@everywhere include("exp1_simulate.jl")
-mkpath("results/exp1")
-
 if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
-# %% --------
 
-pretest = load_data("exp1/pretest")
-trials = load_data("exp1/trials")
-
-@everywhere trials = $trials
-@everywhere pretest = $pretest
-
-N_SOBOL = 100_000
-include("exp1_loss.jl")
-
-function compute_sumstats(name, make_policies, prms)
-    mkpath("cache/exp1_$(name)_sumstats")
-    @showprogress pmap(prms) do prm
-        cache("cache/exp1_$(name)_sumstats/$(stringify(prm))") do
-            exp1_sumstats(simulate_exp1(make_policies, prm))
-        end
-    end;
-end
-
-function loss(ss)
-    mae(target.unrolled(time = <(10000)), ss.unrolled(time = <(10000)))
-end
+include("exp1_base.jl")
 
 # %% ==================== optimal ====================
 
