@@ -13,7 +13,7 @@ function discretize_judgement!(df, noise)
 end
 
 function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000; 
-                       strength_drift=Normal(0, 1e-9), judgement_noise=0.)
+                       strength_drift=Normal(0, 0), ndt=Gamma(1e-9, 1e-9), judgement_noise=0.)
 
     strengths = sample_strengths(pre_pol,  N; strength_drift)
     df = map(strengths) do (strength, pretest_accuracy)
@@ -21,7 +21,7 @@ function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000;
         post = posterior(crit_pol.m, sim.b)[1]
         (;
             response_type = sim.b.focused == -1 ? "empty" : "correct",
-            rt=sim.fix_log.rt * ms_per_sample,
+            rt=rand(ndt) + sim.fix_log.rt * ms_per_sample,
             judgement=post.μ,
             pretest_accuracy,
         )
@@ -39,6 +39,7 @@ end
 
 function simulate_exp1(make_policies::Function, prm::NamedTuple, N=100000)
     strength_drift = Normal(prm.strength_drift_μ, prm.strength_drift_σ)
-    simulate_exp1(make_policies(prm)..., N; strength_drift, prm.judgement_noise)
+    ndt = Gamma(prm.ndt_α, prm.ndt_μ / prm.ndt_α)
+    simulate_exp1(make_policies(prm)..., N; strength_drift, ndt, prm.judgement_noise)
 end
 

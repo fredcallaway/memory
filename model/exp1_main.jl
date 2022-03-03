@@ -13,7 +13,7 @@ trials = load_data("exp1/trials")
 @everywhere trials = $trials
 @everywhere pretest = $pretest
 
-N_SOBOL = 10_000
+N_SOBOL = 100_000
 include("exp1_loss.jl")
 
 function compute_sumstats(name, make_policies, prms)
@@ -37,11 +37,13 @@ end
 )
 
 opt_prms = sobol(N_SOBOL, Box(
-    drift_μ = (-1, 0.),
+    drift_μ = (-1, 1.),
     noise = (1., 3.),
     drift_σ = (1, 3),
-    threshold = (5, 10),
+    threshold = (5, 15),
     sample_cost = (0, .05),
+    ndt_α = (1, 100, :log),
+    ndt_μ = (0, 200),
     strength_drift_μ = 0,
     strength_drift_σ = 0.,
     judgement_noise=1,
