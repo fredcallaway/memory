@@ -19,3 +19,7 @@ analysis/exp2-old.r
 analysis/exp2-scratch.rmd
 analysis/load_exp1.r
 model/results/
+model/cache/
+analysis/exp1_old.r
+analysis/exp2_old.r
+model/exp1_scratch.jl
