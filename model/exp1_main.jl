@@ -12,13 +12,11 @@ include("exp1_base.jl")
 )
 
 opt_prms = sobol(N_SOBOL, Box(
-    drift_μ = (-1, 1.),
+    drift_μ = (-1, 0.),
     noise = (1., 3.),
     drift_σ = (1, 3),
-    threshold = (5, 15),
+    threshold = (5, 10),
     sample_cost = (0, .05),
-    ndt_α = (1, 100, :log),
-    ndt_μ = (0, 200),
     strength_drift_μ = 0,
     strength_drift_σ = 0.,
     judgement_noise=1,
