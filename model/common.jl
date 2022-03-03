@@ -9,6 +9,8 @@ using ProgressMeter
 ms_per_sample = 200
 
 squared(x) = x^2
+mse(x, y) = mean(squared.(x .- y))
+mae(x, y) = mean(abs.(x .- y))
 load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
 stringify(nt::NamedTuple) = replace(string(map(x->round(x; digits=8), nt::NamedTuple)), ([" ", "(", ")"] .=> "")...)
 
@@ -42,12 +44,13 @@ function empirical_distribution(x)
     fit(DiscreteNonParametric, max.(1, round.(Int, x ./ ms_per_sample)))
 end
 
-function minimize_loss(loss, metrics, prms)
-    L = map(loss, metrics);
+function minimize_loss(loss, sumstats, prms)
+    ismissing(sumstats) && return Inf
+    L = map(loss, sumstats);
     flat_prms = collect(prms)[:];
     flat_L = collect(L)[:];
     fit_prm = flat_prms[argmin(flat_L)]
     tbl = flat_prms[sortperm(flat_L)] |> DataFrame
     tbl.loss = sort(flat_L)
-    fit_prm, tbl, flat_L
+    fit_prm, sumstats[argmin(flat_L)], tbl, flat_L
 end
