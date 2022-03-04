@@ -1,28 +1,51 @@
-@everywhere include("common.jl")
-@everywhere include("exp1_simulate.jl")
-mkpath("results/exp1")
-
-pretest = load_data("exp1/pretest")
-trials = load_data("exp1/trials")
-
-@everywhere trials = $trials
-@everywhere pretest = $pretest
-
-N_SOBOL = 100_000
-
-function compute_sumstats(name, make_policies, prms; read_only = true)
-    mkpath("cache/exp1_$(name)_sumstats")
-    map = read_only ? asyncmap : pmap
-    @showprogress map(prms) do prm
-        cache("cache/exp1_$(name)_sumstats/$(stringify(prm))"; read_only) do
-            exp1_sumstats(simulate_exp1(make_policies, prm))
-        end
-    end;
+function discretize_judgement!(df, noise)
+    df.judgement .+= rand(Normal(0, noise), nrow(df))
+    breaks = map(["empty", "correct"]) do rtyp
+        human = @subset(trials, :response_type .== rtyp).judgement
+        model = @subset(df, :response_type .== rtyp).judgement
+        target_prop = counts(human) ./ length(human)
+        rtyp => quantile(model, cumsum(target_prop)) 
+    end |> Dict
+    df.judgement = map(df.response_type, df.judgement) do rtyp, j
+        findfirst(j .≤ breaks[rtyp])
+    end
+    df
 end
+
+function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000; 
+                       strength_drift=Normal(0, 1e-9), judgement_noise=0.)
+
+    strengths = sample_strengths(pre_pol,  N; strength_drift)
+    df = map(strengths) do (strength, pretest_accuracy)
+        sim = simulate(crit_pol; s=(strength,), fix_log=RTLog())
+        post = posterior(crit_pol.m, sim.b)[1]
+        (;
+            response_type = sim.b.focused == -1 ? "empty" : "correct",
+            rt=sim.fix_log.rt * ms_per_sample,
+            judgement=post.μ,
+            pretest_accuracy,
+        )
+    end |> DataFrame
+    discretize_judgement!(df, judgement_noise)
+end
+
+function exp1_mdp(prm)
+    time_cost = (ms_per_sample / 1000) * .1
+    MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=3,
+        prm.threshold, prm.noise, sample_cost=prm.sample_cost + time_cost,
+        prior=Normal(prm.drift_μ, prm.drift_σ),
+    )
+end
+
+function simulate_exp1(make_policies::Function, prm::NamedTuple, N=100000)
+    strength_drift = Normal(prm.strength_drift_μ, prm.strength_drift_σ)
+    simulate_exp1(make_policies(prm)..., N; strength_drift, prm.judgement_noise)
+end
+
 
 # %% ==================== summary statistics ====================
 
-@everywhere function unroll_trial!(P, rt, response_type; dt)
+function unroll_trial!(P, rt, response_type; dt)
     max_step = size(P, 1)
     n_step = round(Int, rt / dt)
     P[1:n_step, 1] .+= 1 
@@ -30,7 +53,7 @@ end
     P[n_step+1:max_step, outcome] .+= 1
 end
 
-@everywhere function unroll_time(trials; dt=ms_per_sample, maxt=15000)
+function unroll_time(trials; dt=ms_per_sample, maxt=15000)
     @chain trials begin
         groupby(:pretest_accuracy)
         combine(_) do d
@@ -51,7 +74,7 @@ end
     end 
 end
 
-@everywhere function exp1_sumstats(trials)
+function exp1_sumstats(trials)
     try
         rt = @chain trials begin
             groupby([:response_type, :pretest_accuracy, :judgement])
@@ -65,47 +88,4 @@ end
     catch
         missing
     end
-end
-
-target = exp1_sumstats(trials)
-
-# %% ==================== loss function ====================
-
-response_rate(x) = x.acc_n(response_type="correct") ./ ssum(x.acc_n, :response_type)
-pretest_dist(x) = normalize(ssum(x.acc_n, :response_type))
-
-function marginal_loss(pred)
-    size(pred.acc_rt) == size(target.acc_rt) || return Inf
-    sum(squared.(response_rate(pred) .- response_rate(target))) +
-    sum(squared.(pretest_dist(pred) .- pretest_dist(target))) +
-    mean(squared.((target.rt_μ .- pred.rt_μ) ./ target.rt_σ))
-end
-
-function acc_rt_loss(pred)
-    size(pred.acc_rt) == size(target.acc_rt) || return Inf
-    dif = (target.acc_rt .- pred.acc_rt)[:]
-    mask = (!ismissing).(target.acc_rt[:])
-    l = mean(squared.(dif[mask]) / 1000^2)
-    ismissing(l) ? Inf : l
-end
-
-function judge_rt_loss(pred)
-    size(pred.judge_rt) == size(target.judge_rt) || return Inf
-    dif = (target.judge_rt .- pred.judge_rt)[:]
-    mask = (!ismissing).(target.judge_rt[:])
-    l = mean(squared.(dif[mask]) / 1000^2)
-    ismissing(l) ? Inf : l
-end
-
-function cum_prob_loss(x)    
-    mean(squared.(target.p_correct .- x.p_correct)) +
-    mean(squared.(target.p_skip .- x.p_skip))
-end
-
-function acc_judge_loss(x)
-    acc_rt_loss(x) + judge_rt_loss(x)
-end
-
-function loss(ss)
-    mae(target.unrolled(time = <(10000)), ss.unrolled(time = <(10000)))
 end
