@@ -96,16 +96,16 @@ midbins = function(x, breaks) {
     ((left + right) / 2)[bin_ids]
 }
 
-load_model_human = function(exp, name) {
+load_model_human = function(exp, name, random='empirical') {
     bind_rows(
         read_csv(glue('../data/processed/{exp}/{name}.csv'), 
             col_types = cols()) %>% mutate(name='Human'),
         read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
-            col_types = cols()) %>% mutate(name='Optimal'),
-        read_csv(glue('../model/results/{exp}/empirical_{name}.csv'), 
-            col_types = cols()) %>% mutate(name='Random'),
+            col_types = cols()) %>% mutate(name='Optimal Metamemory'),
+        read_csv(glue('../model/results/{exp}/{random}_{name}.csv'), 
+            col_types = cols()) %>% mutate(name='No Metamemory'),
     ) %>% 
-    mutate(name = factor(name, levels=c("Optimal", "Human", "Random"), ordered=T))
+    mutate(name = factor(name, levels=c("Optimal Metamemory", "Human", "No Metamemory"), ordered=T))
 }
 
 # %% ==================== Saving results ====================
@@ -146,7 +146,10 @@ tex_writer = function(path) {
 system('mkdir -p figs')
 system('mkdir -p .fighist')
 
-fig = function(name="tmp", w=4, h=4, dpi=320, pdf=FALSE, ...) {
+# %% --------
+
+fig = function(name="tmp", w=4, h=4, dpi=320, pdf=exists("MAKE_PDF") && MAKE_PDF, ...) {
+
     if (isTRUE(getOption('knitr.in.progress'))) {
         show(last_plot())
         return()
@@ -162,24 +165,31 @@ fig = function(name="tmp", w=4, h=4, dpi=320, pdf=FALSE, ...) {
 }
 
 # %% ==================== Plotting ====================
+participant_means = function(data, y, ...) {
+    data %>% 
+        group_by(name, wid, ...) %>% 
+        summarise("{{y}}" := mean({{y}})) %>% 
+        ungroup()
+}
 
 plot_effect = function(df, x, y, color, min_n=10, geom="pointrange") {
-    enough_data = df %>% 
+    dat = participant_means(df, {{y}}, {{x}}, {{color}})
+    enough_data = dat %>% 
         ungroup() %>% 
         filter(name == "Human") %>% 
         count({{color}}, {{x}}) %>% 
         filter(n > min_n)
 
-    # enough_data = df %>% 
-    #     ungroup() %>% 
-    #     count(name, response_type, {{x}}) %>% 
-    #     filter(n > min_n)
     warn("Using Normal approximation for confidence intervals", .frequency="once", .frequency_id="normconf")
-    df %>% 
+    
+    rng = dat %>% summarise(rng = max({{x}}) - min({{x}})) %>% with(rng[1])
+    dodge = position_dodge2(.06 * rng)
+
+    dat %>% 
         right_join(enough_data) %>% 
         ggplot(aes({{x}}, {{y}}, color={{color}})) +
-            stat_summary(fun=mean, geom="line") +
-            stat_summary(fun.data=mean_cl_normal, geom=geom) +
+            stat_summary(fun=mean, geom="line", position=dodge) +
+            stat_summary(fun.data=mean_cl_normal, geom=geom, position=dodge) +
             facet_wrap(~name)
             # theme(legend.position="none") +
             # pal +

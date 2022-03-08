@@ -54,7 +54,7 @@ trials = trials %>%
 
 fixations = trials %>% 
     transmute(
-        wid, presentation_times, n_pres, pretest_accuracy_first, pretest_accuracy_second, response_type,
+        wid, presentation_times, n_pres, pretest_accuracy_first, pretest_accuracy_second, response_type, choose_first,
         trial_id = row_number(),
     ) %>% 
     filter(n_pres >= 1) %>% 
