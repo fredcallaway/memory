@@ -1,12 +1,12 @@
 suppressPackageStartupMessages(source("setup.r"))
 SIZE = 2.5
-MAKE_PDF = TRUE
-OUT = "exp2"
+MAKE_PDF = FALSE
+OUT = "exp2_err"
 
 savefig = function(name, width, height) {
     fig(glue("{OUT}/{name}"), width*SIZE, height*SIZE, pdf=MAKE_PDF)
 }
-system(glue('mkdir -p {OUT}'))
+system(glue('mkdir -p figs/{OUT}'))
 
 # %% ==================== load data ====================
 
@@ -68,7 +68,7 @@ plt_timecourse = sum_timecourse %>%
     ggplot(aes(time, fix_first, group=factor(rel_pretest_accuracy))) +
     # geom_hline(yintercept=0.5, size=.5) +
     stat_summary(aes(color=factor(rel_pretest_accuracy)), fun=mean, geom="line", size=.9) +
-    stat_summary(fun.data=mean_cl_boot, geom="ribbon", alpha=0.08) +
+    # stat_summary(fun.data=mean_cl_boot, geom="ribbon", alpha=0.08) +
     # geom_line(size=.9) +
     facet_wrap(~name) +
     labs(x="Time (s)", y="Probability Fixate First Cue")
@@ -108,7 +108,57 @@ nonfinal = fixations %>%
             mod(presentation, 2) == 0 ~ pretest_accuracy_first,
         )
     ) %>% mutate(relative = fixated - nonfixated)
+# %% --------
 
+plt_first = nonfinal %>% 
+    filter(presentation == 1) %>% 
+    group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>% 
+    plot_effect(fixated, duration, "Non-Final First", collapse=T) +
+    scale_x_continuous(n.breaks=3) +
+    labs(x="Pretest Accuracy of First Cue", y="Fixation Duration", colour="Fixation Type")
+
+plt_other = nonfinal %>% 
+    filter(presentation > 1) %>% 
+    group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>%
+    plot_effect(nonfixated, duration, "Non-Final Non-First", collapse=T) +
+    labs(x="Pretest Accuracy of Non-Fixated Cue", y="Fixation Duration", colour="Fixation Type")
+
+(plt_first / plt_other) +
+    plot_layout(guides = "collect") +
+    plot_annotation(tag_levels = 'A') & 
+    theme(plot.tag.position = c(0, 1)) &
+    scale_colour_manual(values=c(
+        "Non-Final First"="#DCBCF8", 
+        "Non-Final Non-First"="#AF7BDC"
+    ))
+savefig("nonfinal_fixations", 3.2, 2)
+
+# %% --------
+
+plt_first = nonfinal %>% 
+    filter(presentation == 1) %>% 
+    group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>% 
+    plot_effect(fixated, duration, "Non-Final First", collapse=F) +
+    scale_x_continuous(n.breaks=3) +
+    labs(x="Pretest Accuracy of First Cue", y="Z-scored\nFixation Duration", colour="Fixation Type")
+
+plt_other = nonfinal %>% 
+    filter(presentation > 1) %>% 
+    group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>%
+    plot_effect(relative, duration, "Non-Final Non-First", collapse=F) +
+    labs(x="Relative Pretest Accuracy of Fixated Cue", y="Z-scored\nFixation Duration", colour="Fixation Type")
+
+(plt_first / plt_other) +
+    plot_layout(guides = "collect") +
+    plot_annotation(tag_levels = 'A') & 
+    theme(plot.tag.position = c(0, 1)) &
+    scale_colour_manual(values=c(
+        "Non-Final First"="#DCBCF8", 
+        "Non-Final Non-First"="#AF7BDC"
+    ))
+savefig("nonfinal_fixations_alt", 3.2, 2)
+
+# %% --------
 
 plt_first = nonfinal %>% 
     group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
@@ -131,32 +181,17 @@ plt_other = nonfinal %>%
         "Non-Final Non-Initial"="#AF7BDC"
     ))
 
-savefig("nonfinal_fixations", 3.2, 2)
+savefig("nonfinal_fixations_alt2", 3.2, 2)
 
 # %% --------
 
-plt_first = nonfinal %>% 
-    filter(presentation == 1) %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration)) %>% 
-    plot_effect(fixated, duration, "Non-Final First", collapse=T) +
-    scale_x_continuous(n.breaks=3) +
-    labs(x="Pretest Accuracy of First Cue", y="Z-scored\nFixation Duration", colour="Fixation Type")
-
-plt_other = nonfinal %>% 
+nonfinal %>% 
     filter(presentation > 1) %>% 
     group_by(name, wid) %>% mutate(duration = scale(duration)) %>%
     plot_effect(relative, duration, "Non-Final Non-First", collapse=T) +
     labs(x="Relative Pretest Accuracy of Fixated Cue", y="Z-scored\nFixation Duration", colour="Fixation Type")
 
-(plt_first / plt_other) +
-    plot_layout(guides = "collect") +
-    plot_annotation(tag_levels = 'A') & 
-    theme(plot.tag.position = c(0, 1)) &
-    scale_colour_manual(values=c(
-        "Non-Final First"="#DCBCF8", 
-        "Non-Final Non-First"="#AF7BDC"
-    ))
-savefig("nonfinal_fixations_alt", 3.2, 2)
+savefig("nonfinal_fixations_relative", 3.2, 1)
 
 # %% ==================== last fixation duration ====================
 
@@ -189,16 +224,18 @@ savefig("by_fixation", 3, 1)
 # %% ==================== heatmap ====================
 
 nonfinal %>% 
-    filter(presentation == 1) %>% 
+    filter(presentation != n_pres) %>% 
+    filter(presentation > 1) %>% 
     # filter(between(duration, -3, 3)) %>% 
-    group_by(name, presentation, fixated, nonfixated) %>% 
-    filter(n() > 10) %>% 
-    summarise(duration=mean(duration)) %>%
+    group_by(name, wid) %>% mutate(duration = scale(duration, scale=T)) %>%
+    group_by(name, fixated, nonfixated) %>% 
+    # filter(n() > 10) %>% 
+    summarise(duration=mean(duration, na.rm=T)) %>%
     ggplot(aes(fixated, nonfixated, fill=duration)) +
     geom_tile() +
     facet_wrap(~name)
 
-fig("tmp", 3*S, S)
+savefig("heatmap", 3, 1)
 
  
     # facet_grid(presentation~name, labeller=labeller(presentation=c("1"="First", "2"="Second", "3"="Third")))
