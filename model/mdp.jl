@@ -187,6 +187,26 @@ function act(pol::RandomStoppingPolicy, b::Belief)
     end
 end
 
+
+abstract type DecisionBoundPolicy <: Policy end
+
+function act(pol::DecisionBoundPolicy, b::Belief{1})
+    Int(b.evidence[1] > -bound(pol, b.time[1]))
+end
+
+struct ConstantBoundPolicy <: DecisionBoundPolicy
+    m::MetaMDP
+    θ::Float64
+end
+bound((;θ)::ConstantBoundPolicy, t) = θ
+
+struct ExponentialBoundPolicy <: DecisionBoundPolicy
+    m::MetaMDP
+    θ::Float64
+    τ::Float64
+end
+bound3((;θ, τ)::ExponentialBoundPolicy, t) = θ * exp(-τ * t)
+
 mutable struct RandomSwitchingPolicy{D<:Distribution} <: Policy 
     m::MetaMDP
     switch_dist::D

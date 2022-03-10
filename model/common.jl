@@ -9,8 +9,8 @@ using ProgressMeter
 ms_per_sample = 200
 
 squared(x) = x^2
-mse(x, y) = mean(squared.(x .- y))
-mae(x, y) = mean(abs.(x .- y))
+mse(x, y) = size(x) != size(y) ? Inf : mean(squared.(x .- y))
+mae(x, y) = size(x) != size(y) ? Inf : mean(abs.(x .- y))
 load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
 stringify(nt::NamedTuple) = replace(string(map(x->round(x; digits=8), nt::NamedTuple)), ([" ", "(", ")"] .=> "")...)
 
@@ -46,7 +46,7 @@ end
 
 function minimize_loss(loss, sumstats, prms)
     ismissing(sumstats) && return Inf
-    L = map(loss, sumstats);
+    L = @showprogress map(loss, sumstats);
     flat_prms = collect(prms)[:];
     flat_L = collect(L)[:];
     fit_prm = flat_prms[argmin(flat_L)]

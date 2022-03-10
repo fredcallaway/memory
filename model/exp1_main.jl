@@ -7,7 +7,7 @@ end
 mkpath("results/exp1")
 
 N_SOBOL = 10_000
-
+# %% --------
 function compute_sumstats(name, make_policies, prms; read_only = false)
     mkpath("cache/exp1_$(name)_sumstats")
     map = read_only ? asyncmap : pmap
@@ -47,50 +47,20 @@ opt_prms = sobol(N_SOBOL, Box(
     threshold = (3, 10),
     sample_cost = (0, .03),
     strength_drift_μ = 0,
-    strength_drift_σ = 0.,
+    strength_drift_σ = 0,
     judgement_noise=1,
 ))
 
 opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms)
 
+# %% --------
+
 opt_prm, opt_ss, tbl, full_loss = minimize_loss(loss, opt_sumstats, opt_prms);
-
 display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise]))[1:13, :])
-
 df = simulate_exp1(optimal_policies, opt_prm)
 @show loss(exp1_sumstats(df))
 CSV.write("results/exp1/optimal_trials.csv", df)
 
-# %% --------
-
-pretest_rate(ss) = @chain ss.rt begin
-     @bywrap :pretest_accuracy sum(:n)
-     normalize
-end
-
-acc_rate(ss) = @chain ss.rt begin
-     @bywrap [:pretest_accuracy, :response_type] sum(:n)
-     normalize
-end
-
-acc_rt(ss) = @bywrap ss.rt [:pretest_accuracy, :response_type] (sum(:n) > 10 ? mean(:μ, Weights(:n)) : missing)
-
-# %% --------
-opt_prm, opt_ss, tbl, full_loss = minimize_loss(opt_sumstats, opt_prms) do ss
-    mae(acc_rate(ss), acc_rate(target)) <= .05 || return Inf
-    x = acc_rt(target)[:]
-    mask = (!ismissing).(x)
-    mae(x[mask], acc_rt(ss)[mask])
-end
-
-acc_rt(opt_ss)
-acc_rate(opt_ss)
-acc_rate(target)
-
-# %% --------
-
-df = simulate_exp1(optimal_policies, opt_prm)
-CSV.write("results/exp1/optimal_trials.csv", df)
 
 # %% ==================== empirical ====================
 println("--- empirical ---")
@@ -116,7 +86,7 @@ emp_prms = sobol(N_SOBOL, Box(
     sample_cost = 0.,
 ))
 
-emp_sumstats = compute_sumstats("emp", empirical_policies, emp_prms)
+emp_sumstats = compute_sumstats("emp", empirical_policies, emp_prms);
 
 # %% --------
 
@@ -125,3 +95,39 @@ display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_nois
 df = simulate_exp1(empirical_policies, emp_prm)
 @show loss(exp1_sumstats(df))
 CSV.write("results/exp1/empirical_trials.csv", df)
+
+# %% ==================== decision bound ====================
+
+println("--- decision bound ---")
+
+@everywhere bound_policies(prm) = (
+    ConstantBoundPolicy(pretest_mdp(prm), prm.θ),
+    ConstantBoundPolicy(exp1_mdp(prm), prm.θ),
+)
+
+bound_prms = sobol(N_SOBOL, Box(
+    drift_μ = (-1, 1),
+    noise = (1., 3.),
+    drift_σ = (2., 5.),
+    threshold = (1, 15),
+    θ = (1, 15),
+    τ = (.001, 1, :log),
+    strength_drift_μ = 0,
+    strength_drift_σ = 0.,
+    judgement_noise=1,
+    sample_cost = 0.,
+))
+
+
+bound_sumstats = compute_sumstats("bound", bound_policies, bound_prms);
+
+# %% --------
+
+bound_prm, bound_ss, tbl, full_loss = minimize_loss(loss, bound_sumstats, bound_prms);
+display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise, :sample_cost]))[1:13, :])
+df = simulate_exp1(bound_policies, bound_prm)
+@show loss(exp1_sumstats(df))
+CSV.write("results/exp1/bound_trials.csv", df)
+
+
+

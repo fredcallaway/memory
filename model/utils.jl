@@ -77,6 +77,13 @@ keymax(x::KeyedArray{<:Real, 1}) = axiskeys(x, 1)[argmax(x)]
 keymin(X::KeyedArray) = (; (d=>x[i] for (d, x, i) in zip(dimnames(X), axiskeys(X), argmin(X).I))...)
 keymin(x::KeyedArray{<:Real, 1}) = axiskeys(x, 1)[argmin(x)]
 
+function Base.diff(K::KeyedArray; dims, removefirst::Bool=true)
+    range = removefirst ? (2:size(K, dims)) : (1:size(K,dims)-1)
+    out = similar(selectdim(K, dims, range) )
+    out[:] = Base.diff(parent(parent(K)); dims=AxisKeys.dim(parent(K),dims))
+    return out
+end
+
 Base.dropdims(idx::Union{Symbol,Int}...) = X -> dropdims(X, dims=idx)
 squeezify(f) = (X, dims...) -> dropdims(f(X; dims); dims)
 smaximum = squeezify(maximum)
