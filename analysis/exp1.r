@@ -56,6 +56,13 @@ p_skip = plot_cum(!(correct & (rt <= cutoff)), skip & (rt <= cutoff)) +
 
 fig("exp1/cum_probs", 3.5*S, 2.2*S)
 
+# plot_cum(!(correct & (rt <= cutoff)), rt >= cutoff) +
+#     labs(x="Time (s)", y="Probability of Continuing\n Search Given No Recall") +
+#     scale_colour_manual("Pretest\nAccuracy", values=c(
+#         `0`="#B8648D",
+#         `0.5`="#DE79AA",
+#         `1`="#FF92C7"
+#     ), aesthetics=c("fill", "colour"))
 
 
 # %% ==================== reaction times ====================

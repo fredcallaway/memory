@@ -40,7 +40,8 @@ theme_update(
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank(),
-    panel.grid.major.y = element_blank(),
+    # panel.grid.major.y = element_blank(),
+    panel.grid.major.y = element_line(color="#EDEDED"),
     strip.background = element_blank(),
     strip.text.x = element_text(size=12),
     strip.text.y = element_text(size=12),
@@ -96,16 +97,21 @@ midbins = function(x, breaks) {
     ((left + right) / 2)[bin_ids]
 }
 
+load_human = function(exp, name) {
+    read_csv(glue('../data/processed/{exp}/{name}.csv')) %>% 
+        mutate(name = 'Human')
+}
+
 load_model_human = function(exp, name, random='empirical') {
     bind_rows(
         read_csv(glue('../data/processed/{exp}/{name}.csv'), 
             col_types = cols()) %>% mutate(name='Human'),
         read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
-            col_types = cols()) %>% mutate(name='Optimal Metamemory'),
+            col_types = cols()) %>% mutate(name='Optimal'),
         read_csv(glue('../model/results/{exp}/{random}_{name}.csv'), 
-            col_types = cols()) %>% mutate(name='No Metamemory'),
+            col_types = cols()) %>% mutate(name='Random'),
     ) %>% 
-    mutate(name = factor(name, levels=c("Optimal Metamemory", "Human", "No Metamemory"), ordered=T))
+    mutate(name = factor(name, levels=c("Optimal", "Human", "Random"), ordered=T))
 }
 
 # %% ==================== Saving results ====================
@@ -133,7 +139,7 @@ pval = function(p) {
 
 tex_writer = function(path) {
   # dir.create(path, recursive=TRUE, showWarnings=FALSE)
-  function(name, tex) {
+  function(tex, name) {
     name = glue(name, .envir=parent.frame()) %>% str_replace("[:*]", "-")
     tex = fmt(tex, .envir=parent.frame())
     file = glue("{path}/{name}.tex")
@@ -168,12 +174,16 @@ fig = function(name="tmp", w=4, h=4, dpi=320, pdf=exists("MAKE_PDF") && MAKE_PDF
 participant_means = function(data, y, ...) {
     data %>% 
         group_by(name, wid, ...) %>% 
-        summarise("{{y}}" := mean({{y}})) %>% 
+        summarise("{{y}}" := mean({{y}}, na.rm=T)) %>% 
         ungroup()
 }
 
-plot_effect = function(df, x, y, color, min_n=10, geom="pointrange") {
-    dat = participant_means(df, {{y}}, {{x}}, {{color}})
+plot_effect = function(df, x, y, color, min_n=10, geom="pointrange", collapse=T) {
+    if (collapse) {
+        dat = participant_means(df, {{y}}, {{x}}, {{color}})
+    } else {
+        dat = df
+    }
     enough_data = dat %>% 
         ungroup() %>% 
         filter(name == "Human") %>% 
@@ -263,97 +273,4 @@ geom_ydensity = list(
     geom_ysidedensity(aes(x=stat(density))),
     scale_ysidex_continuous(breaks = NULL, labels = "")
 )
-
-make_breaks = function(x, n=7, q=.025) {
-    xmin = quantile(x, q, na.rm=T)
-    xmax = quantile(x, 1 - q, na.rm=T)
-    seq(xmin, xmax, length.out=n)
-}
-
-regress = function(data, xvar, yvar, bins=6, bin_range=0.95, mixed=TRUE, logistic=FALSE, show_reg=TRUE) {
-    x = ensym(xvar); y = ensym(yvar)
-
-    xx = filter(data, name == "Human")[[x]]
-    q = (1 - bin_range) / 2
-    xmin = quantile(xx, q, na.rm=T)
-    xmax = quantile(xx, 1 - q, na.rm=T)
-
-    preds = data %>% 
-        group_by(name) %>% 
-        group_modify(function(data, grp) {
-            model = if (grp$name == "Human") {
-                if (mixed) {
-                    if (logistic) {
-                        model = inject(glmer(!!y ~ !!x + (!!x | wid), family=binomial, data=data))
-                    } else {
-                        model = inject(lmer(!!y ~ !!x + (!!x | wid), data=data))
-                    }
-                } else {
-                    if (logistic) {
-                        model = inject(glm(!!y ~ !!x, family=binomial, data=data))
-                    } else {
-                        model = inject(lm(!!y ~ !!x, data=data))
-                    }
-                }
-                if(show_reg) {
-                    print(glue("N = {nrow(data)}"))
-                    smart_print(summ(model))
-                }
-                tibble(ggpredict(model, terms = glue("{x} [n=100]}")))
-            } else {
-                if (logistic) {
-                    model = inject(glm(!!y ~ !!x, family=binomial, data=data))
-                } else {
-                    model = inject(lm(!!y ~ !!x, data=data))
-                }
-                tibble(ggpredict(model, terms = glue("{x} [n=100]}")))
-            }
-        })
-
-    pp = preds %>% filter(between(x, xmin, xmax)) 
-
-    ggplot(data, aes({{xvar}}, {{yvar}})) +
-        geom_line(aes(x, predicted), pp) +
-        geom_ribbon(aes(x, predicted, ymin=conf.low, ymax=conf.high), pp, alpha=0.1) +
-        stat_summary_bin(, 
-            fun.data=mean_cl_normal, size=.2, 
-            breaks=seq(xmin, xmax, length.out=bins),
-        ) +
-        facet_grid(~name) +
-        labs(x=pretty_name(x), y=pretty_name(y)) +
-        coord_cartesian(xlim=c(xmin, xmax))
-}
-
-regress_interaction = function(data, xvar, cvar, yvar, bins=6, bin_range=0.95) {
-    # xstr = deparse(substitute(xvar)); cstr = deparse(substitute(cvar)); ystr = deparse(substitute(yvar))
-    x = ensym(xvar); c = ensym(cvar); y = ensym(yvar)
-    preds = data %>% 
-        group_by(name) %>% 
-        group_modify(function(data, grp) {
-            model = if (grp$name == "Human") {
-                model = inject(lmer(!!y ~ !!x * !!c + (!!x * !!c | wid), data=data))
-                smart_print(summ(model))
-                tibble(ggpredict(model, terms = c(glue("{x} [n=30]}"), as_string(c))))
-            } else {
-                model = inject(lm(!!y ~ !!x * !!c, data=data))
-                tibble(ggpredict(model, terms = c(glue("{x} [n=30]}"), as_string(c))))
-            }
-        })
-
-    xx = filter(data, name == "Human")[[x]]
-    q = (1 - bin_range) / 2
-    xmin = quantile(xx, q, na.rm=T)
-    xmax = quantile(xx, 1 - q, na.rm=T)
-
-    preds %>% ggplot(aes(x, predicted, group=group)) +
-        geom_line(aes(color=group)) +
-        geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
-        stat_summary_bin(aes({{xvar}}, {{yvar}}, color={{cvar}}, group={{cvar}}), 
-            data=data, fun.data=mean_cl_normal, bins=5, size=.2, 
-            breaks=seq(xmin, xmax, length.out=bins),
-        ) +
-        facet_grid(~name) +
-        labs(x=pretty_name(x), y=pretty_name(y), color=pretty_name(c)) +
-        coord_cartesian(xlim=c(xmin, xmax))
-}
 
