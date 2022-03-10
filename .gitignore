@@ -1,5 +1,7 @@
 *.bak
 analysis/.fighist
+analysis/scratch.r
+analysis/stats
 analysis/.lintr
 analysis/*.html
 analysis/figs
@@ -25,3 +27,5 @@ analysis/exp2_old.r
 model/exp1_scratch.jl
 model/exp2_scratch.jl
 model/exp2_2step.jl
+model/alt_fitting.jl
+analysis/exp1_scratch.r
