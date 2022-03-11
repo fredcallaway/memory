@@ -7,7 +7,7 @@ end
 mkpath("results/exp2")
 
 N_SOBOL = 10_000
-RUN = "witherr"
+RUN = "default"
 if isempty(ARGS) 
     CACHE_ONLY = false
     JOBS = 1:N_SOBOL
@@ -84,18 +84,16 @@ println("--- optimal ---")
 
 opt_prms = sobol(N_SOBOL, Box(
     drift_μ = (0.5, 1),
-    noise = (.5, 2.5),
+    noise = (1.5, 2.5),
     drift_σ = (1, 3),
     threshold = (5, 15),
     sample_cost = (0, .01),
     switch_cost = (0, .03),
     strength_drift_μ = 0,
-    strength_drift_σ = (0., 1.),
+    strength_drift_σ = (0., 1.5),
     judgement_noise=1,
 ))
-# opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms[JOBS], read_only=true);
-
-htoopt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms);
+opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms[JOBS]);
 
 # %% --------
 if !CACHE_ONLY
@@ -110,42 +108,42 @@ if !CACHE_ONLY
     end
 end
 
-# %% ==================== empirical ====================
-println("--- empirical ---")
+# # %% ==================== empirical ====================
+# println("--- empirical ---")
 
-@everywhere begin
-    plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
-    const emp_pretest_stop_dist = empirical_distribution(plausible_skips(pretest).rt)
-    const emp_crit_stop_dist = empirical_distribution(plausible_skips(trials).rt)
-    const emp_switch_dist = empirical_distribution(fixations.duration)
+# @everywhere begin
+#     plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
+#     const emp_pretest_stop_dist = empirical_distribution(plausible_skips(pretest).rt)
+#     const emp_crit_stop_dist = empirical_distribution(plausible_skips(trials).rt)
+#     const emp_switch_dist = empirical_distribution(fixations.duration)
 
-    empirical_policies(prm) = (
-        RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
-        RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
-    )
-end
+#     empirical_policies(prm) = (
+#         RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
+#         RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
+#     )
+# end
 
-emp_prms = sobol(N_SOBOL, Box(
-    drift_μ = (-1, 1),
-    noise = (.5, 2.5),
-    drift_σ = (1, 3),
-    threshold = (5, 15),
-    strength_drift_μ = 0,
-    strength_drift_σ = 0.,
-    sample_cost = 0.,
-    switch_cost = 0.,
-));
+# emp_prms = sobol(N_SOBOL, Box(
+#     drift_μ = (-1, 1),
+#     noise = (.5, 2.5),
+#     drift_σ = (1, 3),
+#     threshold = (5, 15),
+#     strength_drift_μ = 0,
+#     strength_drift_σ = 0.,
+#     sample_cost = 0.,
+#     switch_cost = 0.,
+# ));
 
-emp_sumstats = compute_sumstats("emp", empirical_policies, emp_prms[JOBS])
+# emp_sumstats = compute_sumstats("emp", empirical_policies, emp_prms[JOBS])
 
-if !CACHE_ONLY
-    emp_prm, emp_ss, tbl, full_loss = minimize_loss(loss, emp_sumstats, emp_prms);
-    show(select(tbl, Not([:strength_drift_μ, :strength_drift_σ]))[1:10, :])
-    let
-        df = simulate_exp2(empirical_policies, emp_prm)
-        trials = make_trials(df); fixations = make_fixations(df)
-        @show loss(exp2_sumstats(trials, fixations))
-        CSV.write("results/exp2/empirical_trials.csv", trials)
-        CSV.write("results/exp2/empirical_fixations.csv", fixations)
-    end
-end
+# if !CACHE_ONLY
+#     emp_prm, emp_ss, tbl, full_loss = minimize_loss(loss, emp_sumstats, emp_prms);
+#     show(select(tbl, Not([:strength_drift_μ, :strength_drift_σ]))[1:10, :])
+#     let
+#         df = simulate_exp2(empirical_policies, emp_prm)
+#         trials = make_trials(df); fixations = make_fixations(df)
+#         @show loss(exp2_sumstats(trials, fixations))
+#         CSV.write("results/exp2/empirical_trials.csv", trials)
+#         CSV.write("results/exp2/empirical_fixations.csv", fixations)
+#     end
+# end

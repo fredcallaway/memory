@@ -72,7 +72,6 @@ function unroll_trial!(P, durations, choice; dt)
     max_step = size(P, 1)
     breaks = round.(Int, cumsum(durations) / dt)
 
-    # denom[1:min(breaks[end], max_step)] .+= 1
     start = 1
     for (i, stop) in enumerate(breaks)
         stop = min(stop, max_step)
@@ -90,9 +89,8 @@ end
 
 function unroll_time(fixations; dt=ms_per_sample, maxt=15000)
     @chain fixations begin
-        # @rsubset :response_type == "correct"
-        # @rtransform :rel_pretest_accuracy = :pretest_accuracy_first - :pretest_accuracy_second
-        groupby([:pretest_accuracy_first, :pretest_accuracy_second])
+        @rsubset :response_type == "correct"
+        groupby([:pretest_accuracy_first, :pretest_accuracy_second, :choose_first])
         combine(_) do d
             P = zeros(Int(maxt/dt), 5)
             grp = groupby(d, :trial_id)
@@ -104,7 +102,8 @@ function unroll_time(fixations; dt=ms_per_sample, maxt=15000)
             Ref(P)  # prevents unrolling the array
         end
         DataFrames.rename(:x1 => :timecourse)
-        # @orderby :pretest_accuracy_first :pretest_accuracy_second
+        @orderby :pretest_accuracy_first :pretest_accuracy_second
+        # @rtransform :rel_pretest_accuracy = :pretest_accuracy_first - :pretest_accuracy_second
         # @with combinedims(:x1)
         # @catch_missing KeyedArray(_,
         #     time=dt:dt:maxt, 
@@ -118,7 +117,7 @@ function exp2_sumstats(trials, fixations)
     accuracy = mean(trials.response_type .== "correct")
 
     tri = @chain trials begin
-        # @rsubset :response_type == "correct" 
+        @rsubset :response_type == "correct" 
         groupby([:wid, :pretest_accuracy_first, :pretest_accuracy_second, :choose_first])
         @combine begin
             :rt_μ = mean(:rt)
@@ -131,7 +130,7 @@ function exp2_sumstats(trials, fixations)
     end
 
     fix = @chain fixations begin
-        # @rsubset :response_type == "correct"
+        @rsubset :response_type == "correct"
         @rtransform :final = :presentation == :n_pres
         @rtransform :presentation = min(:presentation, 10)
         groupby([:wid, :presentation, :pretest_accuracy_first, :pretest_accuracy_second, :final, :choose_first])
