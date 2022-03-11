@@ -75,21 +75,28 @@ function unroll_time(trials; dt=ms_per_sample, maxt=15000)
 end
 
 function exp1_sumstats(trials)
-    try
-        # rt = @chain trials begin
-        #     groupby([:response_type, :pretest_accuracy, :judgement])
-        #     @combine begin
-        #         :μ = mean(:rt)
-        #         :σ = std(:rt)
-        #         :n = length(:rt)
-        #     end
-        # end
-        @chain trials begin
-            @rtransform :rt = 200 * cld(:rt, 200)
-            @bywrap [:rt, :response_type, :judgement, :pretest_accuracy] length(:rt) 0
-        end
-        # (;rt, hist, unrolled = unroll_time(trials)
-    catch
-        missing
+    X = KeyedArray(zeros(25,2,5), rt=200:200:5000, response_type=["correct", "empty"], judgement=1:5)
+    for t in eachrow(trials)
+        rt = min(Int(cld(t.rt, 200)), 25)
+        rtype = Int(t.response_type == "empty") + 1
+        X[rt, rtype, t.judgement] += 1        
     end
+    normalize(X)
+    # try
+    #     # rt = @chain trials begin
+    #     #     groupby([:response_type, :pretest_accuracy, :judgement])
+    #     #     @combine begin
+    #     #         :μ = mean(:rt)
+    #     #         :σ = std(:rt)
+    #     #         :n = length(:rt)
+    #     #     end
+    #     # end
+    #     @chain trials begin
+    #         @rtransform :rt = 200 * cld(:rt, 200)
+    #         @bywrap [:rt, :response_type, :judgement, :pretest_accuracy] length(:rt) 0
+    #     end
+    #     # (;rt, hist, unrolled = unroll_time(trials)
+    # catch
+    #     missing
+    # end
 end

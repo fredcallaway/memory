@@ -18,6 +18,26 @@ function compute_sumstats(name, make_policies, prms; read_only = false)
     end;
 end
 
+# %% ==================== Fix ====================
+
+# %% --------
+function fix_ss(ss)
+    X = KeyedArray(zeros(25,2,5), rt=200:200:5000, response_type=["correct", "empty"], judgement=1:5)
+    for t in eachrow(DataFrame(ss))
+        rt = min(Int(cld(t.rt, 200)), 25)
+        rtype = Int(t.response_type == "empty") + 1
+        X[rt, rtype, t.judgement] += t.value
+    end
+    normalize(X)
+end
+
+@showprogress for prm in opt_prms
+    f = "cache/exp1_opt_sumstats/$(hash(prm))"
+    serialize(f, fix_ss(deserialize(f)))
+end
+    
+
+
 # %% ==================== load data ====================
 
 pretest = load_data("exp1/pretest")
@@ -29,7 +49,7 @@ trials = load_data("exp1/trials")
 target = exp1_sumstats(trials)
 
 function loss(ss)
-    mae(target.unrolled, ss.unrolled)
+    crossentropy(target, normalize(ss))
 end
 
 # %% ==================== optimal ====================
@@ -54,13 +74,16 @@ opt_prms = sobol(N_SOBOL, Box(
 opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms);
 
 # %% --------
+opt_prm, opt_ss, tbl, full_loss = minimize_loss(opt_sumstats, opt_prms) do ss
+    crossentropy(ssum(target, :judgement), normalize(ssum(ss, :judgement) .+ .01))
+end
 
-opt_prm, opt_ss, tbl, full_loss = minimize_loss(loss, opt_sumstats, opt_prms);
 display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise]))[1:13, :])
 df = simulate_exp1(optimal_policies, opt_prm)
 @show loss(exp1_sumstats(df))
 CSV.write("results/exp1/optimal_trials.csv", df)
 
+# %% --------
 
 # %% ==================== empirical ====================
 println("--- empirical ---")
