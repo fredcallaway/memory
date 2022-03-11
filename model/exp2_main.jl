@@ -7,6 +7,7 @@ end
 mkpath("results/exp2")
 
 N_SOBOL = 10_000
+RUN = "witherr"
 if isempty(ARGS) 
     CACHE_ONLY = false
     JOBS = 1:N_SOBOL
@@ -19,10 +20,12 @@ else  # precomputing with batch compute
 end
 
 # %% --------
-function compute_sumstats(name, make_policies, prms)
-    mkpath("cache/exp2_$(name)_sumstats_witherr")
-    @showprogress pmap(prms) do prm
-        cache("cache/exp2_$(name)_sumstats_witherr/$(stringify(prm))") do
+function compute_sumstats(name, make_policies, prms; run=RUN, read_only = false)
+    dir = "cache/exp2_$(name)_sumstats_$(run)"
+    mkpath(dir)
+    map = read_only ? asyncmap : pmap
+    @showprogress map(prms) do prm
+        cache("$dir/$(stringify(prm))") do
             df = simulate_exp2(make_policies, prm)
             x = exp2_sumstats(make_trials(df), make_fixations(df))
             GC.gc()
@@ -31,6 +34,7 @@ function compute_sumstats(name, make_policies, prms)
     end;
 end
 
+
 # %% ==================== load data ====================
 
 pretest = CSV.read("../data/processed/exp2/pretest.csv", DataFrame, missingstring="NA")
@@ -38,7 +42,11 @@ trials = CSV.read("../data/processed/exp2/trials.csv", DataFrame, missingstring=
 fixations = CSV.read("../data/processed/exp2/fixations.csv", DataFrame, missingstring="NA")
 
 pretest = @rsubset pretest :practice == false :block == 3
-trials = @rsubset trials :n_pres > 0
+trials = @chain trials begin
+    @rsubset :n_pres > 0
+    @rsubset :response_type != "intrusion"
+    @rtransform :choose_first = :response_type == "correct" ? :choose_first : missing
+end
 
 @everywhere trials = $trials
 @everywhere pretest = $pretest
@@ -47,15 +55,23 @@ trials = @rsubset trials :n_pres > 0
 target = exp2_sumstats(trials, fixations);
 
 cutoff = @chain trials begin
-    @rsubset :response_type == "correct"
+    @rsubset :response_type != "timeout" && :response_type != "intrusion"
     @with quantile(:rt, .95)
+    fld(200)
+    Int
+end
+
+full_timecourse(ss) = @chain ss.unrolled begin
+    @orderby :pretest_accuracy_first, :pretest_accuracy_second
+    @with combinedims(:timecourse)[1:cutoff, : , :]
 end
 
 function loss(ss)
-    ss.accuracy > .8 || return Inf  #
-    (ismissing(ss) || ismissing(ss.unrolled)) && return Inf
-    l = mae(target.unrolled(time= <(cutoff)), ss.unrolled(time= <(cutoff)))
-    ismissing(l) || isnan(l) ? Inf : l
+    mae(full_timecourse(target), full_timecourse(ss))
+    # ss.accuracy > .8 || return Inf  #
+    # (ismissing(ss) || ismissing(ss.unrolled)) && return Inf
+    # l = mae(target.unrolled(time= <(cutoff)), ss.unrolled(time= <(cutoff)))
+    # ismissing(l) || isnan(l) ? Inf : l
 end
 
 # %% ==================== optimal ====================
@@ -67,23 +83,24 @@ println("--- optimal ---")
 )
 
 opt_prms = sobol(N_SOBOL, Box(
-    drift_μ = (-1, 1),
+    drift_μ = (0.5, 1),
     noise = (.5, 2.5),
     drift_σ = (1, 3),
     threshold = (5, 15),
-    sample_cost = (0, .1),
-    switch_cost = (0, .05),
-    strength_drift_μ = 0.,
-    strength_drift_σ = 0.,
+    sample_cost = (0, .01),
+    switch_cost = (0, .03),
+    strength_drift_μ = 0,
+    strength_drift_σ = (0., 1.),
     judgement_noise=1,
 ))
+# opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms[JOBS], read_only=true);
 
-opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms[JOBS]);
+htoopt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms);
 
 # %% --------
 if !CACHE_ONLY
     opt_prm, opt_ss, tbl, full_loss = minimize_loss(loss, opt_sumstats, opt_prms);
-    display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ])))
+    show(select(tbl, Not([:strength_drift_μ, :strength_drift_σ]))[1:10, :])
     let
         df = simulate_exp2(optimal_policies, opt_prm)
         trials = make_trials(df); fixations = make_fixations(df)
@@ -123,10 +140,12 @@ emp_sumstats = compute_sumstats("emp", empirical_policies, emp_prms[JOBS])
 
 if !CACHE_ONLY
     emp_prm, emp_ss, tbl, full_loss = minimize_loss(loss, emp_sumstats, emp_prms);
-    display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ])))
-    df = simulate_exp2(empirical_policies, emp_prm)
-    trials = make_trials(df); fixations = make_fixations(df)
-    @show loss(exp2_sumstats(trials, fixations))
-    CSV.write("results/exp2/empirical_trials.csv", trials)
-    CSV.write("results/exp2/empirical_fixations.csv", fixations)
+    show(select(tbl, Not([:strength_drift_μ, :strength_drift_σ]))[1:10, :])
+    let
+        df = simulate_exp2(empirical_policies, emp_prm)
+        trials = make_trials(df); fixations = make_fixations(df)
+        @show loss(exp2_sumstats(trials, fixations))
+        CSV.write("results/exp2/empirical_trials.csv", trials)
+        CSV.write("results/exp2/empirical_fixations.csv", fixations)
+    end
 end

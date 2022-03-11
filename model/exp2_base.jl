@@ -27,7 +27,7 @@ function simulate_exp2(pre_pol, crit_pol, N=500000;
         # presentation_times .+= (crit_pol.m.switch_cost / crit_pol.m.sample_cost) * ms_per_sample
         presentation_times .+= rand(duration_noise, length(presentation_times))
         (;response_type = sim.b.focused == -1 ? "empty" : "correct",
-          choose_first = sim.b.focused == 1,
+          choose_first = sim.b.focused == -1 ? missing : sim.b.focused == 1,
           pretest_accuracy..., 
           strength_first = s[1], strength_second = s[2],
           presentation_times
@@ -81,16 +81,20 @@ function unroll_trial!(P, durations, choice; dt)
         start = stop + 1
         start > max_step && return
     end
-    P[start:max_step, choice+2] .+= 1
+    if ismissing(choice)
+        P[start:max_step, 5] .+= 1        
+    else
+        P[start:max_step, choice+2] .+= 1
+    end
 end
 
 function unroll_time(fixations; dt=ms_per_sample, maxt=15000)
     @chain fixations begin
         # @rsubset :response_type == "correct"
-        @rtransform :rel_pretest_accuracy = :pretest_accuracy_first - :pretest_accuracy_second
-        groupby(:rel_pretest_accuracy)
+        # @rtransform :rel_pretest_accuracy = :pretest_accuracy_first - :pretest_accuracy_second
+        groupby([:pretest_accuracy_first, :pretest_accuracy_second])
         combine(_) do d
-            P = zeros(Int(maxt/dt), 4)
+            P = zeros(Int(maxt/dt), 5)
             grp = groupby(d, :trial_id)
             for d in grp
                 choice = 2 - d.choose_first[1]
@@ -99,13 +103,14 @@ function unroll_time(fixations; dt=ms_per_sample, maxt=15000)
             P ./= length(grp)
             Ref(P)  # prevents unrolling the array
         end
-        @orderby :rel_pretest_accuracy
-        @with combinedims(:x1)
-        @catch_missing KeyedArray(_,
-            time=dt:dt:maxt, 
-            event=[:fix1, :fix2, :choose1, :choose2], 
-            rel_pretest_accuracy=-1:.5:1
-        )
+        DataFrames.rename(:x1 => :timecourse)
+        # @orderby :pretest_accuracy_first :pretest_accuracy_second
+        # @with combinedims(:x1)
+        # @catch_missing KeyedArray(_,
+        #     time=dt:dt:maxt, 
+        #     event=[:fix1, :fix2, :choose1, :choose2, :skip],
+        #     rel_pretest_accuracy=-1:.5:1
+        # )
     end 
 end
 
@@ -114,11 +119,10 @@ function exp2_sumstats(trials, fixations)
 
     tri = @chain trials begin
         # @rsubset :response_type == "correct" 
-        groupby([:wid, :pretest_accuracy_first, :pretest_accuracy_second])
+        groupby([:wid, :pretest_accuracy_first, :pretest_accuracy_second, :choose_first])
         @combine begin
             :rt_μ = mean(:rt)
             :rt_σ = std(:rt)
-            :choose_first = mean(:choose_first)
             :prop_first = mean(:total_first ./ (:total_first .+ :total_second))
             :total_first = mean(:total_first)
             :total_second = mean(:total_second)

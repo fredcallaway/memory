@@ -8,9 +8,20 @@ using ProgressMeter
 
 ms_per_sample = 200
 
+function mean_error(f, x, y)
+    size(x) == size(y) || return Inf
+    l = mean(f.(x .- y))
+    isfinite(l) || return Inf
+    l
+end
+
 squared(x) = x^2
-mse(x, y) = size(x) != size(y) ? Inf : mean(squared.(x .- y))
-mae(x, y) = size(x) != size(y) ? Inf : mean(abs.(x .- y))
+mae(x, y) = mean_error(abs, x, y)
+mse(x, y) = mean_error(squared, x, y)
+
+
+
+
 load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
 stringify(nt::NamedTuple) = replace(string(map(x->round(x; digits=8), nt::NamedTuple)), ([" ", "(", ")"] .=> "")...)
 
