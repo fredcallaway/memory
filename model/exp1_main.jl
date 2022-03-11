@@ -1,12 +1,12 @@
 if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
-
+# %% --------
 @everywhere include("common.jl")
 @everywhere include("exp1_base.jl")
 mkpath("results/exp1")
 
-N_SOBOL = 10_000
+N_SOBOL = 50_000
 # %% --------
 function compute_sumstats(name, make_policies, prms; read_only = false)
     mkpath("cache/exp1_$(name)_sumstats")
@@ -47,11 +47,11 @@ opt_prms = sobol(N_SOBOL, Box(
     threshold = (3, 10),
     sample_cost = (0, .03),
     strength_drift_μ = 0,
-    strength_drift_σ = 0,
+    strength_drift_σ = (0, 1),
     judgement_noise=1,
-))
+));
 
-opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms)
+opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms);
 
 # %% --------
 
