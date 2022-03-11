@@ -112,8 +112,8 @@ pol = OptimalPolicy(B)
 
 evidences = collect(-m.threshold:B.dv:m.threshold)
 idx = Int.(range(1, length(evidences), length=5))
-
-figure() do
+# %% --------
+figure("exp1_policy") do
     heatmap(
         B.V[1, :, :] .> -3, 
         c=:RdBu_11, cbar=false,
