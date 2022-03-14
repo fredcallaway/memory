@@ -25,12 +25,12 @@ mse(x, y) = mean_error(squared, x, y)
 load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
 stringify(nt::NamedTuple) = replace(string(map(x->round(x; digits=8), nt::NamedTuple)), ([" ", "(", ")"] .=> "")...)
 
-macro bywrap(x, what, val)
+macro bywrap(x, what, val, default=missing)
     arg = :(:_val = $val)
     esc(quote
         b = $(DataFramesMeta.by_helper(x, what, arg))
         what_ = $what isa Symbol ? ($what,) : $what
-        wrapdims(b, :_val, what_..., sort=true)
+        wrapdims(b, :_val, what_..., sort=true; default=$default)
     end)
 end
 
@@ -44,7 +44,7 @@ function sample_strengths(pol, N=10000; strength_drift=Normal(0, .5))
 end
 
 function pretest_mdp(prm)
-    time_cost = (ms_per_sample / 1000) * (.25 / 15)
+    time_cost = @isdefined(PRETEST_COST) ? (ms_per_sample / 1000) * (.25 / 15) : 0.
     MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
         prm.threshold, prm.noise, sample_cost=prm.sample_cost + time_cost,
         prior=Normal(prm.drift_μ, prm.drift_σ),

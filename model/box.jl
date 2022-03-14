@@ -74,7 +74,7 @@ function grid(n::Int, box::Box)
 end
 
 function sobol(n::Int, box::Box)
-    seq = skip(SobolSeq(n_free(box)), n)
+    seq = SobolSeq(n_free(box))
     [box(Sobol.next!(seq)) for i in 1:n]
 end
 
