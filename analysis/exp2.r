@@ -36,7 +36,7 @@ fixations = load_model_human("exp2", "fixations") %>%
 # %% ==================== overall proportion and timecourse ====================
 
 timecourse = fixations %>% 
-    # filter(n_pres >= 2) %>% 
+    filter(n_pres >= 2) %>%
     transmute(trial_id, name, wid, fix_first, duration,
               rel_pretest_accuracy = pretest_accuracy_first - pretest_accuracy_second) %>%
     group_by(trial_id) %>%
@@ -54,7 +54,7 @@ sum_timecourse = timecourse %>%
     participant_means(fix_first, rel_pretest_accuracy, time)
 
 plt_overall = df %>%
-    # filter(n_pres >= 2) %>%
+    filter(n_pres >= 2) %>%
     mutate(x = factor(rel_pretest_accuracy), y = total_first / (total_first + total_second)) %>% 
     ggplot(aes(x, y)) +
     # geom_hline(yintercept=0.5, size=.5) +
@@ -112,7 +112,7 @@ nonfinal = fixations %>%
 
 plt_first = nonfinal %>% 
     filter(presentation == 1) %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>% 
+    # group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>% 
     plot_effect(fixated, duration, "Non-Final First", collapse=T) +
     scale_x_continuous(n.breaks=3) +
     labs(x="Pretest Accuracy of First Cue", y="Fixation Duration", colour="Fixation Type")
@@ -212,32 +212,3 @@ plt_last_duration = fixations %>%
     # scale_x_continuous(breaks=seq(-1,5,1))
 
 savefig("last_duration", 3, 1)
-
-# %% ====================  ====================
-fixations %>% 
-    filter(presentation < 5) %>% 
-    mutate(final = if_else(n_pres == presentation, "final", "non-final")) %>% 
-    plot_effect(presentation, duration, final)
-
-savefig("by_fixation", 3, 1)
-
-# %% ==================== heatmap ====================
-
-nonfinal %>% 
-    filter(presentation != n_pres) %>% 
-    filter(presentation > 1) %>% 
-    # filter(between(duration, -3, 3)) %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration, scale=T)) %>%
-    group_by(name, fixated, nonfixated) %>% 
-    # filter(n() > 10) %>% 
-    summarise(duration=mean(duration, na.rm=T)) %>%
-    ggplot(aes(fixated, nonfixated, fill=duration)) +
-    geom_tile() +
-    facet_wrap(~name)
-
-savefig("heatmap", 3, 1)
-
- 
-    # facet_grid(presentation~name, labeller=labeller(presentation=c("1"="First", "2"="Second", "3"="Third")))
-
-

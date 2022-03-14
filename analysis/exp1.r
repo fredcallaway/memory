@@ -10,6 +10,37 @@ df = load_model_human("exp1", "trials") %>%
         response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")
     )
 
+# %% ==================== reaction times ====================
+
+acc_rt = df %>%
+    plot_effect(pretest_accuracy, rt, response_type) +
+    labs(x="Pretest Accuracy", y='Reaction Time') +
+    # coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
+    scale_x_continuous(n.breaks=3)
+
+judge_rt = df %>% 
+    plot_effect(judgement, rt, response_type) +
+    labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Reaction Time') +
+    # coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
+    scale_x_continuous(n.breaks=5)
+
+(judge_rt / acc_rt) +
+    plot_layout(guides = "collect") + 
+    plot_annotation(tag_levels = 'A') & 
+    theme(
+        plot.tag.position = c(0, 1),
+        panel.grid.major.y = element_line(color="#EDEDED"),
+    ) &
+    scale_colour_manual("Response Type", values=c(
+        `Skipped`="#DE79AA",
+        `Recalled`="#3B77B3"
+        # `Recalled`="#3BB365"
+    ), aesthetics=c("fill", "colour")) &
+    coord_cartesian(xlim=c(NULL), ylim=c(0, 3750))
+
+fig("exp1/rt", 3.5*S, 2*S)
+
+
 # %% ==================== cummulative probabilities ====================
 
 plot_cum = function(cond, y) {
@@ -63,41 +94,6 @@ fig("exp1/cum_probs", 3.5*S, 2.2*S)
 #         `0.5`="#DE79AA",
 #         `1`="#FF92C7"
 #     ), aesthetics=c("fill", "colour"))
-
-
-# %% ==================== reaction times ====================
-
-acc_rt = df %>%
-    plot_effect(pretest_accuracy, rt, response_type) +
-    labs(x="Pretest Accuracy", y='Reaction Time') +
-    # coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
-    scale_x_continuous(n.breaks=3)
-
-judge_rt = df %>% 
-    plot_effect(judgement, rt, response_type) +
-    labs(x="Metamemory Judgement", y='Reaction Time') +
-    # coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
-    scale_x_continuous(n.breaks=5)
-
-(judge_rt / acc_rt) +
-    plot_layout(guides = "collect") + 
-    plot_annotation(tag_levels = 'A') & 
-    theme(
-        plot.tag.position = c(0, 1),
-        panel.grid.major.y = element_line(color="#EDEDED"),
-    ) &
-    scale_colour_manual("Response Type", values=c(
-        `Skipped`="#DE79AA",
-        `Recalled`="#3B77B3"
-        # `Recalled`="#3BB365"
-    ), aesthetics=c("fill", "colour")) &
-    coord_cartesian(xlim=c(NULL), ylim=c(0, 3750))
-
-fig("exp1/rt", 3.5*S, 2*S)
-
-
-
-
 
 
 
