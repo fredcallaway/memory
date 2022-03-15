@@ -6,7 +6,7 @@ end
 @everywhere include("exp1_base.jl")
 mkpath("results/exp1")
 
-N_SOBOL = 50_000
+N_SOBOL = 10_000
 # %% --------
 function compute_sumstats(name, make_policies, prms; read_only = false)
     mkpath("cache/exp1_$(name)_sumstats")
@@ -28,8 +28,8 @@ trials = load_data("exp1/trials")
 
 target = exp1_sumstats(trials);
 
-function loss(ss)
-    crossentropy(target, normalize(ss))
+function loss(ss; ε=1e-6)
+    crossentropy(target.hist, normalize(ss.hist .+ ε))
 end
 
 # %% ==================== optimal ====================
@@ -41,7 +41,6 @@ println("--- optimal ---")
     OptimalPolicy(exp1_mdp(prm)),
 )
 
-N_SOBOL = 50000
 opt_prms = sobol(N_SOBOL, Box(
     drift_μ = (-0.5, 0.5),
     noise = (0.5, 2.),
@@ -54,43 +53,13 @@ opt_prms = sobol(N_SOBOL, Box(
 ));
 
 opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms);
-# %% --------
-acc_rt(ss) = @bywrap ss.rt [:pretest_accuracy, :response_type] mean(:μ, Weights(:n))
-judge_rt(ss) = @bywrap ss.rt [:judgement, :response_type] mean(:μ, Weights(:n))
-acc_judge_rt(ss) = @bywrap ss.rt [:pretest_accuracy, :judgement] mean(:μ, Weights(:n))
-
-function loss(ss; ε=1e-3)
-    mse(acc_rt(target), acc_rt(ss)) + mse(judge_rt(target), judge_rt(ss))    
-end
-
-opt_prm, opt_ss, tbl, full_loss = minimize_loss(loss, opt_sumstats, opt_prms) 
-judge_rt(opt_ss)
-judge_rt(target)
-acc_rt(opt_ss)
-acc_rt(target)
 
 # %% --------
-
-function loss(ss; ε=1e-3)
-    crossentropy(target.hist, normalize(ss.hist .+ ε))
-end
 opt_prm, opt_ss, tbl, full_loss = minimize_loss(loss, opt_sumstats, opt_prms) 
-
-
 display(select(tbl, Not([:strength_drift_μ, :judgement_noise]))[1:13, :])
 df = simulate_exp1(optimal_policies, opt_prm)
 @show loss(exp1_sumstats(df))
 CSV.write("results/exp1/optimal_trials.csv", df)
-
-# %% --------
-
-figure() do
-    plot(ssum(target(response_type="empty", pretest_accuracy=0.5), :judgement))
-end
-
-figure() do
-    plot(ssum(target("empty"), :judgement))
-end
 
 # %% ==================== empirical ====================
 println("--- empirical ---")
@@ -104,12 +73,13 @@ println("--- empirical ---")
         RandomStoppingPolicy(exp1_mdp(prm), emp_crit_stop_dist),
     )
 end
+
 emp_prms = sobol(N_SOBOL, Box(
     drift_μ = (-0.5, 1.0),
-    noise = (2., 4.),
-    drift_σ = (0.5, 1.5),
+    noise = (0.5, 2.),
+    drift_σ = (1, 2),
     threshold = (7, 15),
-    sample_cost = (.01, .05),
+    sample_cost = 0.,
     strength_drift_μ = 0,
     strength_drift_σ = (0, 1),
     judgement_noise=1,
@@ -121,7 +91,7 @@ emp_sumstats = compute_sumstats("emp", empirical_policies, emp_prms);
 # %% --------
 
 emp_prm, emp_ss, tbl, full_loss = minimize_loss(loss, emp_sumstats, emp_prms);
-display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise, :sample_cost]))[1:13, :])
+display(select(tbl, Not([:strength_drift_μ, :judgement_noise, :sample_cost]))[1:13, :])
 df = simulate_exp1(empirical_policies, emp_prm)
 @show loss(exp1_sumstats(df))
 CSV.write("results/exp1/empirical_trials.csv", df)

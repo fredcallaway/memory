@@ -79,15 +79,15 @@ function initialize_keyed(val; keys...)
     KeyedArray(fill(val, (length(v) for (k, v) in keys)...); keys...)
 end
 
-function make_hist(trials::DataFrame)
+function make_hist(trials::DataFrame; dt=ms_per_sample, maxt=15000)
     X = initialize_keyed(0.,
-        rt=200:200:15000, 
+        rt=dt:dt:maxt, 
         response_type=["correct", "empty"], 
         judgement=1:5,
         pretest_accuracy=0:0.5:1
     )
     for t in eachrow(trials)
-        rt = min(Int(cld(t.rt, 200)), 25)
+        rt = min(Int(cld(t.rt, dt)), size(X, 1))
         rtype = Int(t.response_type == "empty") + 1
         pre = Int(1 + t.pretest_accuracy * 2)
         X[rt, rtype, t.judgement, pre] += 1
