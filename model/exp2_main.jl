@@ -23,17 +23,7 @@ end
 @everywhere pretest = $pretest
 @everywhere fixations = $fixations
 
-# %% ==================== optimal ====================
-println("--- optimal ---")
-
-@everywhere optimal_policies(prm) = (
-    OptimalPolicy(pretest_mdp(prm)),
-    OptimalPolicy(exp2_mdp(prm)),
-)
-
-# fitted parameter from exp1
-prm = (drift_μ = 0.111328125, noise = 1.087109375, drift_σ = 1.6177734375, threshold = 8.728515625, sample_cost = 0.009599609375, strength_drift_μ = -0.0791015625, strength_drift_σ = 0.0404296875, judgement_noise = 1)
-prm (;prm..., switch_cost=.01)
+# %% ==================== duration smoothing ====================
 
 function nonfinal_duration_hist(fixations; dt=ms_per_sample, maxt=10000)
     durations = @chain fixations begin
@@ -70,24 +60,50 @@ function optimize_duration_noise(target, model)
     end
 end
 
-opt_trials = make_trials(odf); opt_fixations = make_fixations(odf)
+function add_duration_noise!(df)
+    target = nonfinal_duration_hist(fixations)
+    model = nonfinal_duration_hist(make_fixations(df))
+    duration_noise = Gamma(optimize_duration_noise(target, model).minimizer...)
+    @show duration_noise
 
-target = nonfinal_duration_hist(fixations)
-model = nonfinal_duration_hist(opt_fixations)
-duration_noise = Gamma(optimize_duration_noise(target, model).minimizer...)
-
-# figure() do
-#     plot!(target)
-#     plot!(smooth_duration!(similar(model), model, duration_noise))
-# end
-
-for x in df.presentation_times
-    x .+= rand(duration_noise, length(x))
+    for x in df.presentation_times
+        x .+= rand(duration_noise, length(x))
+    end
 end
+
+# %% ==================== optimal ====================
+@everywhere optimal_policies(prm) = (
+    OptimalPolicy(pretest_mdp(prm)),
+    OptimalPolicy(exp2_mdp(prm)),
+)
+
+prm = deserialize("tmp/exp1_opt_prm")
+prm = (;prm..., switch_cost=.01)
+@time df = simulate_exp2(optimal_policies, prm, 1000000);
 
 opt_trials = make_trials(df); opt_fixations = make_fixations(df)
 CSV.write("results/exp2/optimal_trials.csv", opt_trials)
 CSV.write("results/exp2/optimal_fixations.csv", opt_fixations)
+
+# %% ==================== empirical ====================
+
+plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
+const emp_pretest_stop_dist = empirical_distribution(plausible_skips(pretest).rt)
+const emp_crit_stop_dist = empirical_distribution(skipmissing(plausible_skips(trials).rt))
+const emp_switch_dist = empirical_distribution(fixations.duration)
+
+empirical_policies(prm) = (
+    RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
+    RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
+)
+
+prm = deserialize("tmp/exp1_emp_prm")
+prm = (;prm..., switch_cost=NaN)
+@time df = simulate_exp2(empirical_policies, prm, 1000000);
+
+emp_trials = make_trials(df); emp_fixations = make_fixations(df)
+CSV.write("results/exp2/empirical_trials.csv", emp_trials)
+CSV.write("results/exp2/empirical_fixations.csv", emp_fixations)
 
 
 # # %% ==================== empirical ====================

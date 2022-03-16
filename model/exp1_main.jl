@@ -5,7 +5,8 @@ end
 @everywhere include("common.jl")
 @everywhere include("exp1_base.jl")
 mkpath("results/exp1")
-N_SOBOL = 10_000
+N_SOBOL = 5000
+# N_SOBOL = 10_000
 
 if isempty(ARGS) 
     CACHE_ONLY = false
@@ -21,12 +22,12 @@ end
 
 # %% --------  
 
-function compute_sumstats(name, make_policies, prms; read_only = nprocs() == 1)
+function compute_sumstats(name, make_policies, prms; read_only = false)
     mkpath("cache/exp1_$(name)_sumstats_50")
-    map_ = read_only ? asyncmap : nprocs() > 1 ? pmap : map
-    map_(prms) do prm
-        # nprocs() == 1 && (print("."); flush(stdout))
+    map = read_only ? asyncmap : pmap
+    @showprogress map(prms) do prm
         cache("cache/exp1_$(name)_sumstats_50/$(hash(prm))"; read_only) do
+            nprocs() == 1 && (print("."); flush(stdout))
             try
                 exp1_sumstats(simulate_exp1(make_policies, prm))
             catch
@@ -48,6 +49,13 @@ target = exp1_sumstats(trials);
 
 # %% ==================== likelihood ====================
 @everywhere using Optim
+
+@everywhere function smooth_uniform!(x, ε::Float64=1e-6)
+    x .*= (1 - ε * length(x))
+    x .+= ε
+    x
+end
+
 @everywhere function smooth_rt!(result, p::KeyedArray, d::Distribution, ε::Float64=1e-6)
     pd = diff([0; cdf(d, p.rt)])
     for h in axes(p, 4), i in axes(p, 3), j in axes(p, 2), z in axes(p, 1)
@@ -56,9 +64,9 @@ target = exp1_sumstats(trials);
             @inbounds p[k, j, i, h] * pd[y + 1]
         end
     end
-    result .*= (1 - ε * length(result))
-    result .+= ε
+    smooth_uniform!(x, ε)
 end
+
 
 @everywhere function optimize_rt_noise(ss)
     X = zeros(size(target.hist))
@@ -94,12 +102,14 @@ println("--- optimal ---")
 
 opt_prms = sobol(N_SOBOL, Box(
     drift_μ = (-0.5, 0.5),
-    noise = (0.1, 1.5),
-    drift_σ = (0.1, 2),
+    noise = (0.5, 1.5),
+    drift_σ = (0.5, 2),
     threshold = (2, 15),
     sample_cost = (.005, .02),
-    strength_drift_μ = (-0.3, 0),
-    strength_drift_σ = (0, 0.3),
+    # strength_drift_μ = (-0.3, 0),
+    # strength_drift_σ = (0, 0.3),
+    strength_drift_μ = 0.,
+    strength_drift_σ = 0.,
     judgement_noise=1,
 ));
 
@@ -107,13 +117,15 @@ opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms[JOBS]);
 
 # %% --------
 if !CACHE_ONLY
-    opt_prm, opt_ss, tbl, full_loss = minimize_loss(loss, opt_sumstats, opt_prms) 
-    display(select(tbl, Not([:judgement_noise]))[1:13, :])
-    df = simulate_exp1(optimal_policies, opt_prm)
-    rt_noise = Gamma(optimize_rt_noise(opt_ss).minimizer...)
-    df.rt = df.rt .+ rand(rt_noise, nrow(df))
-    CSV.write("results/exp1/optimal_trials.csv", df)
+    opt_prm, opt_ss, opt_tbl, opt_loss = minimize_loss(loss, opt_sumstats, opt_prms) 
+    display(select(opt_tbl, Not([:judgement_noise]))[1:13, :])
+    opt_df = simulate_exp1(optimal_policies, opt_prm)
+    opt_rt_noise = Gamma(optimize_rt_noise(opt_ss).minimizer...)
+    opt_df.rt = opt_df.rt .+ rand(opt_rt_noise, nrow(opt_df))
+    CSV.write("results/exp1/optimal_trials.csv", opt_df)
 end
+
+serialize("tmp/exp1_opt_prm", opt_prm)
 
 # # %% ==================== empirical ====================
 println("--- empirical ---")
@@ -136,8 +148,10 @@ emp_prms = sobol(N_SOBOL, Box(
     drift_σ = (1, 2),
     threshold = (5, 15),
     sample_cost = 0.,
-    strength_drift_μ = (-0.3, 0),
-    strength_drift_σ = (0, 0.3),
+    # strength_drift_μ = (-0.3, 0),
+    # strength_drift_σ = (0, 0.3),
+    strength_drift_μ = 0.,
+    strength_drift_σ = 0.,
     judgement_noise=1,
 ));
 
@@ -149,41 +163,55 @@ if !CACHE_ONLY
     emp_prm, emp_ss, tbl, full_loss = minimize_loss(loss, emp_sumstats, emp_prms);
     display(select(tbl, Not([:judgement_noise, :sample_cost]))[1:13, :])
 
-    df = simulate_exp1(empirical_policies, emp_prm)
-    rt_noise = Gamma(optimize_rt_noise(emp_ss).minimizer...)
-    df.rt = df.rt .+ rand(rt_noise, nrow(df))
-    CSV.write("results/exp1/empirical_trials.csv", df)
+
+    emp_df = simulate_exp1(empirical_policies, emp_prm)
+    emp_rt_noise = Gamma(optimize_rt_noise(emp_ss).minimizer...)
+    emp_df.rt = emp_df.rt .+ rand(emp_rt_noise, nrow(emp_df))
+    CSV.write("results/exp1/empirical_trials.csv", emp_df)
 end
+
+acc_rt(exp1_sumstats(emp_df))
+
+serialize("tmp/exp1_emp_prm", emp_prm)
 
 # %% ==================== decision bound ====================
 
-println("--- decision bound ---")
+# println("--- decision bound ---")
 
-@everywhere bound_policies(prm) = (
-    ConstantBoundPolicy(pretest_mdp(prm), prm.θ),
-    ConstantBoundPolicy(exp1_mdp(prm), prm.θ),
-)
+# @everywhere bound_policies(prm) = (
+#     ConstantBoundPolicy(pretest_mdp(prm), prm.θ),
+#     ConstantBoundPolicy(exp1_mdp(prm), prm.θ),
+# )
 
-bound_prms = sobol(N_SOBOL, Box(
-    drift_μ = (-1, 1),
-    noise = (1., 3.),
-    drift_σ = (0.5, 2.5),
-    threshold = (5, 15),
-    θ = (1, 15),
-    τ = (.001, 1, :log),
-    strength_drift_μ = (-0.3, 0),
-    strength_drift_σ = (0, 0.3),
-    judgement_noise=1,
-    sample_cost = 0.,
-))
+# bound_prms = sobol(N_SOBOL, Box(
+#     drift_μ = (-1, 1),
+#     noise = (1., 3.),
+#     drift_σ = (0.5, 2.5),
+#     threshold = (5, 15),
+#     θ = (1, 15),
+#     τ = (.001, 1, :log),
+#     # strength_drift_μ = (-0.3, 0),
+#     # strength_drift_σ = (0, 0.3),
+#     strength_drift_μ = 0.,
+#     strength_drift_σ = 0.,
+#     judgement_noise=1,
+#     sample_cost = 0.,
+# ))
 
-bound_sumstats = compute_sumstats("bound", bound_policies, bound_prms);
+# bound_sumstats = compute_sumstats("bound", bound_policies, bound_prms[JOBS]);
 
-# # %% --------
+# # # %% --------
 
-# bound_prm, bound_ss, tbl, full_loss = minimize_loss(loss, bound_sumstats, bound_prms);
-# display(select(tbl, Not([:strength_drift_μ, :strength_drift_σ, :judgement_noise, :sample_cost]))[1:13, :])
-# df = simulate_exp1(bound_policies, bound_prm)
+# if !CACHE_ONLY
+#     bound_prm, bound_ss, tbl, full_loss = minimize_loss(loss, bound_sumstats, bound_prms);
+#     display(select(tbl, Not([:judgement_noise, :sample_cost]))[1:13, :])
+
+#     df = simulate_exp1(bound_policies, bound_prm)
+#     rt_noise = Gamma(optimize_rt_noise(bound_ss).minimizer...)
+#     df.rt = df.rt .+ rand(rt_noise, nrow(df))
+#     CSV.write("results/exp1/bound_trials.csv", df)
+# end
+
 # @show loss(exp1_sumstats(df))
 # CSV.write("results/exp1/bound_trials.csv", df)
 

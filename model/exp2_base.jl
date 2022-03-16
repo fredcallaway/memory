@@ -7,12 +7,12 @@ function exp2_mdp(prm)
     )
 end
 
-function simulate_exp2(make_policies, prm::NamedTuple, N=500000; kws...)
+function simulate_exp2(make_policies, prm::NamedTuple, N=1_000_000; kws...)
     strength_drift = Normal(prm.strength_drift_μ, prm.strength_drift_σ)
     simulate_exp2(make_policies(prm)..., N; strength_drift)
 end
 
-function simulate_exp2(pre_pol, crit_pol, N=500000; 
+function simulate_exp2(pre_pol, crit_pol, N=1_000_000; 
                        strength_drift=Normal(0, 1e-9), duration_noise=Gamma(1e-9,1e-9))
     strengths = sample_strengths(pre_pol,  2N; strength_drift)
     pairs = map(1:2:2N) do i

@@ -42,7 +42,6 @@ function simulate_exp1(make_policies::Function, prm::NamedTuple, N=100000)
     simulate_exp1(make_policies(prm)..., N; strength_drift, prm.judgement_noise)
 end
 
-
 # %% ==================== summary statistics ====================
 
 function unroll_trial!(P, rt, response_type; dt)
