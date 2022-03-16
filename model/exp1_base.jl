@@ -75,9 +75,6 @@ function unroll_time(trials; dt=ms_per_sample, maxt=15000)
 end
 
 # %% --------
-function initialize_keyed(val; keys...)
-    KeyedArray(fill(val, (length(v) for (k, v) in keys)...); keys...)
-end
 
 function make_hist(trials::DataFrame; dt=ms_per_sample, maxt=15000)
     X = initialize_keyed(0.,

@@ -1,6 +1,6 @@
 function exp2_mdp(prm)
     time_cost = (ms_per_sample / 1000) * (.25 / 15)
-    m2 = MetaMDP{2}(;allow_stop=true, max_step=60, miss_cost=2,
+    m2 = MetaMDP{2}(;allow_stop=true, max_step=Int(10000 / ms_per_sample), miss_cost=2,
         prm.threshold, prm.noise,
         sample_cost=prm.sample_cost + time_cost, prm.switch_cost,
         prior=Normal(prm.drift_μ, prm.drift_σ),

@@ -4,9 +4,14 @@ include("optimal_policy.jl")
 include("box.jl")
 
 using DataFrames, DataFramesMeta, CSV
+using Optim
 using ProgressMeter
 
 ms_per_sample = 50
+
+function initialize_keyed(val; keys...)
+    KeyedArray(fill(val, (length(v) for (k, v) in keys)...); keys...)
+end
 
 function mean_error(f, x, y)
     size(x) == size(y) || return Inf
