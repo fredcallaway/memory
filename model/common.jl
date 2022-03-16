@@ -6,7 +6,7 @@ include("box.jl")
 using DataFrames, DataFramesMeta, CSV
 using ProgressMeter
 
-ms_per_sample = 200
+ms_per_sample = 50
 
 function mean_error(f, x, y)
     size(x) == size(y) || return Inf
@@ -18,8 +18,6 @@ end
 squared(x) = x^2
 mae(x, y) = mean_error(abs, x, y)
 mse(x, y) = mean_error(squared, x, y)
-
-
 
 
 load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
@@ -45,7 +43,7 @@ end
 
 function pretest_mdp(prm)
     time_cost = @isdefined(PRETEST_COST) ? (ms_per_sample / 1000) * (.25 / 15) : 0.
-    MetaMDP{1}(;allow_stop=true, max_step=60, miss_cost=1,
+    MetaMDP{1}(;allow_stop=true, max_step=300, miss_cost=1,
         prm.threshold, prm.noise, sample_cost=prm.sample_cost + time_cost,
         prior=Normal(prm.drift_μ, prm.drift_σ),
     )
@@ -57,7 +55,7 @@ end
 
 function minimize_loss(loss, sumstats, prms)
     ismissing(sumstats) && return Inf
-    L = @showprogress map(loss, sumstats);
+    L = @showprogress pmap(loss, sumstats);
     flat_prms = collect(prms)[:];
     flat_L = collect(L)[:];
     fit_prm = flat_prms[argmin(flat_L)]
