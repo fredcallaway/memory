@@ -19,26 +19,48 @@ fig(f, name; kws...) = figure(f, name; base="/Users/fred/Papers/meta-memory/diag
 
 # %% ==================== accumulation ====================
 
-m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.01, 
-    threshold=8, noise=1, max_step=100, prior=Normal(0, 2)
+m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.02, 
+    threshold=8, noise=1.6, max_step=100, prior=Normal(0, 2)
 )
 pol = OptimalPolicy(m)
 
-# %% --------
 
-Random.seed!(9)
 
-strengths = [-.3, 0., .5]
-colors = ["#174675", "#4081C2","#51A6FB"]
-fig("accumulation") do
-    plot(size=(500, 230), xlim=(0,80), yaxis=(-8:4:8, (-12, 9)), xlab="Time", ylab="Evidence", widen=false)
-    for (i, s) in enumerate(strengths)
-        g = simulate(pol; s=(s,), belief_log=BeliefLog2()).belief_log.beliefs
-        x = map(b-> b.evidence[1], g)
+Random.seed!(7)
+
+strengths = [0, 1.7]
+colors = ["#174675","#51A6FB"]
+sims = map(strengths) do s
+    simulate(pol; s=(s,), belief_log=BeliefLog2()).belief_log.beliefs
+end
+
+tracked = [1,]
+tracked = [1, 14, 31, 60]
+
+fig("accumulation1") do
+    plot(size=(700, 230), xlim=(0,62), yaxis=(-8:4:8, (-11, 9)), xlab="Time", ylab="Evidence", widen=false)
+    for (i, sim) in enumerate(sims)
+
+        x = map(b-> b.evidence[1], sim)
         x = min.(x, 8)
         plot!(x, color=colors[i])
     end
+
+    x = map(b-> b.evidence[1], sims[1])
+    scatter!(tracked, x[tracked], markeralpha=0, markerstrokealpha=1, markersize=10)
+
     hline!([8], color=:black)
+end
+
+# %% --------
+
+for (i, b) in enumerate(sims[1][tracked])
+    fig("b$i", widen=false, yaxis=true, size=(150,120), framestyle=:axes) do
+        plot!(ylim=(0,2.5), xlim=(-2,2), xticks=-2:2)
+        vline!([0], color=:black, lw=1)
+        plot!(posterior(m, b)[1], color=colors[1], yticks=false, yaxis=false, xlabel="Strength")
+         # ylabel="Probability", 
+    end
 end
 
 # %% --------
