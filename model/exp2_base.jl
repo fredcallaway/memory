@@ -1,6 +1,6 @@
 function exp2_mdp(prm)
-    time_cost = (ms_per_sample / 1000) * (.25 / 15)
-    m2 = MetaMDP{2}(;allow_stop=true, max_step=Int(10000 / ms_per_sample), miss_cost=2,
+    time_cost = @isdefined(PRETEST_COST) ? (MS_PER_SAMPLE / MAX_TIME) * .25 : 0
+    m2 = MetaMDP{2}(;allow_stop=true, max_step=MAX_STEP, miss_cost=2,
         prm.threshold, prm.noise,
         sample_cost=prm.sample_cost + time_cost, prm.switch_cost,
         prior=Normal(prm.drift_μ, prm.drift_σ),
@@ -23,8 +23,8 @@ function simulate_exp2(pre_pol, crit_pol, N=1_000_000;
 
     map(pairs) do (pretest_accuracy, s)
         sim = simulate(crit_pol; s, fix_log=FullFixLog())
-        presentation_times = sim.fix_log.fixations .* float(ms_per_sample)
-        # presentation_times .+= (crit_pol.m.switch_cost / crit_pol.m.sample_cost) * ms_per_sample
+        presentation_times = sim.fix_log.fixations .* float(MS_PER_SAMPLE)
+        # presentation_times .+= (crit_pol.m.switch_cost / crit_pol.m.sample_cost) * MS_PER_SAMPLE
         presentation_times .+= rand(duration_noise, length(presentation_times))
         (;response_type = sim.b.focused == -1 ? "empty" : "correct",
           choose_first = sim.b.focused == -1 ? missing : sim.b.focused == 1,
@@ -61,13 +61,13 @@ function make_fixations(df)
         @rtransform(:presentation = 1:(:n_pres), :wid = "optimal")
         DataFrames.flatten([:presentation_times, :presentation])
         DataFrames.rename(:presentation_times => :duration)
-        select(names(fixations))
+        select(names(human_fixations))
     end
 end
 
 # %% ==================== duration smoothing ====================
 
-function nonfinal_duration_hist(fixations; dt=ms_per_sample, maxt=10000)
+function nonfinal_duration_hist(fixations; dt=MS_PER_SAMPLE, maxt=10000)
     durations = @chain fixations begin
         @rsubset :presentation ≠ :n_pres
         @with :duration
@@ -93,16 +93,15 @@ function smooth_duration!(result, p::KeyedArray, d::Distribution; ε=1e-6)
     result
 end
 
-function mle_duration_noise(model_df::DataFrame, human_fixations::DataFrame)
+function optimize_duration_noise(model_df::DataFrame, human_fixations::DataFrame)
     target = nonfinal_duration_hist(human_fixations)
     model = nonfinal_duration_hist(make_fixations(model_df))
     X = zeros(length(model))
-    res = optimize([10., 10.]) do x
+    optimize([10., 10.]) do x
         any(xi < 0 for xi in x) && return Inf
         smooth_duration!(X, model, Gamma(x...))
         crossentropy(target, X)
     end
-    Gamma(res.minimizer...)
 end
 
 function add_duration_noise!(df, d)
@@ -132,7 +131,7 @@ function unroll_trial!(P, durations, choice; dt)
     end
 end
 
-function unroll_time(fixations; dt=ms_per_sample, maxt=15000)
+function unroll_time(fixations; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
     @chain fixations begin
         @rsubset :response_type == "correct"
         groupby([:pretest_accuracy_first, :pretest_accuracy_second, :choose_first])

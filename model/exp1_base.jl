@@ -21,7 +21,7 @@ function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000;
         post = posterior(crit_pol.m, sim.b)[1]
         (;
             response_type = sim.b.focused == -1 ? "empty" : "correct",
-            rt=sim.fix_log.rt * ms_per_sample,
+            rt=sim.fix_log.rt * MS_PER_SAMPLE,
             judgement=post.μ,
             pretest_accuracy,
         )
@@ -30,8 +30,8 @@ function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000;
 end
 
 function exp1_mdp(prm)
-    time_cost = (ms_per_sample / 1000) * .1
-    MetaMDP{1}(;allow_stop=true, max_step=Int(10000 / ms_per_sample), miss_cost=3,
+    time_cost = (MS_PER_SAMPLE / 1000) * .1
+    MetaMDP{1}(;allow_stop=true, max_step=MAX_STEP, miss_cost=3,
         prm.threshold, prm.noise, sample_cost=prm.sample_cost + time_cost,
         prior=Normal(prm.drift_μ, prm.drift_σ),
     )
@@ -52,7 +52,7 @@ function unroll_trial!(P, rt, response_type; dt)
     P[n_step+1:max_step, outcome] .+= 1
 end
 
-function unroll_time(trials; dt=ms_per_sample, maxt=15000)
+function unroll_time(trials; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
     @chain trials begin
         groupby(:pretest_accuracy)
         combine(_) do d
@@ -75,7 +75,7 @@ end
 
 # %% --------
 
-function make_hist(trials::DataFrame; dt=ms_per_sample, maxt=15000)
+function make_hist(trials::DataFrame; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
     X = initialize_keyed(0.,
         rt=dt:dt:maxt, 
         response_type=["correct", "empty"], 

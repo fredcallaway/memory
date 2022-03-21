@@ -7,7 +7,9 @@ using DataFrames, DataFramesMeta, CSV
 using Optim
 using ProgressMeter
 
-ms_per_sample = 50
+const MAX_TIME = 15000
+const MS_PER_SAMPLE = 50
+const MAX_STEP = Int(MAX_TIME / MS_PER_SAMPLE)
 
 function initialize_keyed(val; keys...)
     KeyedArray(fill(val, (length(v) for (k, v) in keys)...); keys...)
@@ -47,15 +49,15 @@ function sample_strengths(pol, N=10000; strength_drift=Normal(0, .5))
 end
 
 function pretest_mdp(prm)
-    time_cost = @isdefined(PRETEST_COST) ? (ms_per_sample / 1000) * (.25 / 15) : 0.
-    MetaMDP{1}(;allow_stop=true, max_step=300, miss_cost=1,
+    time_cost = @isdefined(PRETEST_COST) ? (MS_PER_SAMPLE / MAX_TIME) * .25 : 0
+    MetaMDP{1}(;allow_stop=true, max_step=MAX_STEP, miss_cost=1,
         prm.threshold, prm.noise, sample_cost=prm.sample_cost + time_cost,
         prior=Normal(prm.drift_μ, prm.drift_σ),
     )
 end
 
 function empirical_distribution(x)
-    fit(DiscreteNonParametric, max.(1, round.(Int, x ./ ms_per_sample)))
+    fit(DiscreteNonParametric, max.(1, round.(Int, x ./ MS_PER_SAMPLE)))
 end
 
 function compute_loss(loss, sumstats, prms)
