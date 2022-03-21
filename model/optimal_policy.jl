@@ -20,7 +20,8 @@ struct BackwardsInduction{N,N2,N3}
     Q::Array{Float64,N3}  # 2+2N
 end
 
-function BackwardsInduction(m::MetaMDP{N}; dv=.01, compute=true) where {N}
+function BackwardsInduction(m::MetaMDP{N}; dv::Float64=.02m.threshold, compute=true, verbose=false) where {N}
+    verbose && println("Computing transition matrix")
     T = transition_matrix(m, dv)
     @assert round(m.threshold / dv) ≈ m.threshold / dv
     e_max = round(Int, 2m.threshold / dv + 1)
@@ -32,10 +33,11 @@ function BackwardsInduction(m::MetaMDP{N}; dv=.01, compute=true) where {N}
     else
         error("Not implemented")
     end
+    verbose && println("Allocating value functions")
     V = fill(NaN, N, sz...)  # last_action, e1, (e2), t1, (t2)
     Q = fill(NaN, N, N, sz...)  # action, last_action, e1, (e2), t1, (t2)
     b = BackwardsInduction(m, dv, T, V, Q)
-    compute && compute_value_functions!(b)
+    compute && compute_value_functions!(b; verbose)
     b
 end
 
@@ -78,7 +80,7 @@ function Base.show(io::IO, model::BackwardsInduction)
     print(io, "BackwardsInduction for ", model.m)
 end
 
-function compute_value_functions!(model::BackwardsInduction{1})
+function compute_value_functions!(model::BackwardsInduction{1}; verbose=true)
     @unpack dv, T, V, Q = model
     @unpack allow_stop, max_step, threshold, sample_cost, switch_cost, miss_cost = model.m
     t_max = max_step + 1
@@ -117,7 +119,8 @@ function compute_value_functions!(model::BackwardsInduction{1})
     end
 end
 
-function compute_value_functions!(model::BackwardsInduction{2})
+function compute_value_functions!(model::BackwardsInduction{2}; verbose=true)
+    verbose && println("Computing value functions")
     @unpack dv, T, V, Q = model
     @unpack allow_stop, max_step, threshold, sample_cost, switch_cost, miss_cost = model.m
     t_max = max_step + 1
@@ -136,9 +139,10 @@ function compute_value_functions!(model::BackwardsInduction{2})
     V[:, e_max, :, :, :] .= 0.
     V[:, :, e_max, :, :] .= 0.
 
-    # return
+    progress = Progress(t_max; desc="Backwards induction " enabled=verbose)
     # iterate backward in time
     for tt in t_max-1:-1:1
+        ProgressMeter.next!(progress)
         # iterate over states
         for t1 in 1:tt
             t2 = (tt-1) - (t1-1) + 1
