@@ -4,7 +4,7 @@ suppressPackageStartupMessages(source("setup.r"))
 suppressPackageStartupMessages(source("stats_base.r"))
 
 pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
-df = load_model_human("exp1", "trials") %>% 
+df = load_model_human("exp1", "trials", n=30) %>% 
     mutate(
         rt = rt / 1000,
         skip=response_type=="empty", correct=response_type=="correct",

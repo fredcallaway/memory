@@ -1,7 +1,7 @@
 suppressPackageStartupMessages(source("setup.r"))
 SIZE = 2.5
-MAKE_PDF = FALSE
-OUT = "exp2_err"
+MAKE_PDF = TRUE
+OUT = "exp2"
 
 savefig = function(name, width, height) {
     fig(glue("{OUT}/{name}"), width*SIZE, height*SIZE, pdf=MAKE_PDF)
@@ -40,8 +40,7 @@ timecourse = fixations %>%
     transmute(trial_id, name, wid, fix_first, duration,
               rel_pretest_accuracy = pretest_accuracy_first - pretest_accuracy_second) %>%
     group_by(trial_id) %>%
-    mutate(step_size = if_else(name == "Human", 200, 200)) %>% 
-    # mutate(step_size = 200) %>% 
+    mutate(step_size = if_else(name == "Human", 50, 50)) %>% 
     mutate(n_step = diff(c(0, round(cumsum(duration/step_size))))) %>% 
     uncount(n_step) %>% 
     group_by(trial_id) %>% 
@@ -92,12 +91,10 @@ plt_timecourse = sum_timecourse %>%
     )
 savefig("overall_timecourse", 3.5, 2)
 
-    
-
 # %% ==================== fixation durations ====================
-
 nonfinal = fixations %>% 
-    filter(presentation != n_pres) %>% 
+    filter(last_fix == 0) %>% 
+    mutate(type="Non-Final") %>% 
     mutate(
         fixated = case_when(
             mod(presentation, 2) == 1 ~ pretest_accuracy_first,
@@ -108,107 +105,41 @@ nonfinal = fixations %>%
             mod(presentation, 2) == 0 ~ pretest_accuracy_first,
         )
     ) %>% mutate(relative = fixated - nonfixated)
+
 # %% --------
 
-plt_first = nonfinal %>% 
-    filter(presentation == 1) %>% 
-    # group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>% 
-    plot_effect(fixated, duration, "Non-Final First", collapse=T) +
+plt_number = fixations %>% 
+    filter(presentation < 6) %>% 
+    mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
+    plot_effect(presentation, duration, type) +
+    labs(x="Fixation Number", y="Duration (s)")
+
+plt_fixated = nonfinal %>% 
+    # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
+    plot_effect(fixated, duration, type) +
     scale_x_continuous(n.breaks=3) +
-    labs(x="Pretest Accuracy of First Cue", y="Fixation Duration", colour="Fixation Type")
+    labs(x="Pretest Accuracy of Fixated Cue", y="Duration (s)", colour="Fixation Type")
 
-plt_other = nonfinal %>% 
+plt_nonfixated = nonfinal %>% 
     filter(presentation > 1) %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>%
-    plot_effect(nonfixated, duration, "Non-Final Non-First", collapse=T) +
-    labs(x="Pretest Accuracy of Non-Fixated Cue", y="Fixation Duration", colour="Fixation Type")
+    # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>%
+    plot_effect(nonfixated, duration, type) +
+    scale_x_continuous(n.breaks=3) +
+    labs(x="Pretest Accuracy of Non-Fixated Cue", y="Duration (s)", colour="Fixation Type")
 
-(plt_first / plt_other) +
+(plt_number / plt_fixated / plt_nonfixated) +
     plot_layout(guides = "collect") +
     plot_annotation(tag_levels = 'A') & 
     theme(plot.tag.position = c(0, 1)) &
     scale_colour_manual(values=c(
-        "Non-Final First"="#DCBCF8", 
-        "Non-Final Non-First"="#AF7BDC"
-    ))
-savefig("nonfinal_fixations", 3.2, 2)
+        "Final"="#89D37F", 
+        "Non-Final"="#AF7BDC"
+        # "final"="#F8E500", #8FC786
+        # "non-final"="#17D6CC"
+    ), aesthetics=c("fill", "colour"), name="Fixation Type")
 
-# %% --------
-
-plt_first = nonfinal %>% 
-    filter(presentation == 1) %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>% 
-    plot_effect(fixated, duration, "Non-Final First", collapse=F) +
-    scale_x_continuous(n.breaks=3) +
-    labs(x="Pretest Accuracy of First Cue", y="Z-scored\nFixation Duration", colour="Fixation Type")
-
-plt_other = nonfinal %>% 
-    filter(presentation > 1) %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration, scale=F)) %>%
-    plot_effect(relative, duration, "Non-Final Non-First", collapse=F) +
-    labs(x="Relative Pretest Accuracy of Fixated Cue", y="Z-scored\nFixation Duration", colour="Fixation Type")
-
-(plt_first / plt_other) +
-    plot_layout(guides = "collect") +
-    plot_annotation(tag_levels = 'A') & 
-    theme(plot.tag.position = c(0, 1)) &
-    scale_colour_manual(values=c(
-        "Non-Final First"="#DCBCF8", 
-        "Non-Final Non-First"="#AF7BDC"
-    ))
-savefig("nonfinal_fixations_alt", 3.2, 2)
-
-# %% --------
-
-plt_first = nonfinal %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
-    plot_effect(fixated, duration, "Non-Final", collapse=T) +
-    scale_x_continuous(n.breaks=3) +
-    labs(x="Pretest Accuracy of Fixated Cue", y="Fixation Duration", colour="Fixation Type")
-
-plt_other = nonfinal %>% 
-    filter(presentation > 1) %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>%
-    plot_effect(nonfixated, duration, "Non-Final Non-Initial", collapse=T) +
-    labs(x="Pretest Accuracy of Non-Fixated Cue", y="Fixation Duration", colour="Fixation Type")
-
-(plt_first / plt_other) +
-    plot_layout(guides = "collect") +
-    plot_annotation(tag_levels = 'A') & 
-    theme(plot.tag.position = c(0, 1)) &
-    scale_colour_manual(values=c(
-        "Non-Final"="#DCBCF8", 
-        "Non-Final Non-Initial"="#AF7BDC"
-    ))
-
-savefig("nonfinal_fixations_alt2", 3.2, 2)
-
-# %% --------
-
-nonfinal %>% 
-    filter(presentation > 1) %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration)) %>%
-    plot_effect(relative, duration, "Non-Final Non-First", collapse=T) +
-    labs(x="Relative Pretest Accuracy of Fixated Cue", y="Z-scored\nFixation Duration", colour="Fixation Type")
-
-savefig("nonfinal_fixations_relative", 3.2, 1)
+savefig("fixation_durations", 3.2, 2.5)
 
 # %% ==================== last fixation duration ====================
 
-plt_last_duration = fixations %>% 
-    filter(duration <= 5000) %>%
-    mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
-    ggplot(aes(duration/1000, fill=type, y = ..width..*..density..)) +
-    geom_histogram(position="identity", breaks=seq(0, 5.001, .200), alpha=0.5) +
-    facet_grid(~name) +
-    # theme(legend.position="None") +
-    scale_colour_manual(values=c(
-        "Final"="#87DE7A", 
-        "Non-Final"="#AF7BDC"
-        # "final"="#F8E500", 
-        # "non-final"="#17D6CC"
-    ), aesthetics=c("fill", "colour"), name="Fixation Type") +
-    labs(x="Fixation Duration (s)", y="Proportion")
-    # scale_x_continuous(breaks=seq(-1,5,1))
 
-savefig("last_duration", 3, 1)

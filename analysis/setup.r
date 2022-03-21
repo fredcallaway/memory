@@ -102,16 +102,24 @@ load_human = function(exp, name) {
         mutate(name = 'Human')
 }
 
-load_model_human = function(exp, name, random='empirical') {
+load_model_human = function(exp, name, random='empirical', n=1) {
     bind_rows(
         read_csv(glue('../data/processed/{exp}/{name}.csv'), 
             col_types = cols()) %>% mutate(name='Human'),
-        read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
-            col_types = cols()) %>% mutate(name='Optimal'),
+        map(seq(n), ~ 
+            read_csv(glue('../model/results/{exp}/optimal_{name}/{.x}.csv'), col_types = cols()) %>% 
+            mutate(name='optimal', wid = glue('optimal-{.x}'))
+         ),
+        # read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
+        #     col_types = cols()) %>% mutate(name='Optimal'),
         read_csv(glue('../model/results/{exp}/{random}_{name}.csv'), 
-            col_types = cols()) %>% mutate(name='Random'),
+            col_types = cols()) %>% mutate(name='random'),
     ) %>% 
-    mutate(name = factor(name, levels=c("Optimal", "Human", "Random"), ordered=T))
+    mutate(name = recode_factor(name, 
+        "optimal" = "Optimal Meta", 
+        "human" = "Human",
+        "random" = "No Meta"
+    ), ordered=T)
 }
 
 # %% ==================== Saving results ====================
@@ -190,7 +198,7 @@ plot_effect = function(df, x, y, color, min_n=10, geom="pointrange", collapse=T)
         count({{color}}, {{x}}) %>% 
         filter(n > min_n)
 
-    warn("Using Normal approximation for confidence intervals", .frequency="once", .frequency_id="normconf")
+    # warn("Using Normal approximation for confidence intervals", .frequency="once", .frequency_id="normconf")
     
     rng = dat %>% summarise(rng = max({{x}}) - min({{x}})) %>% with(rng[1])
     dodge = position_dodge2(.06 * rng)
@@ -199,7 +207,7 @@ plot_effect = function(df, x, y, color, min_n=10, geom="pointrange", collapse=T)
         right_join(enough_data) %>% 
         ggplot(aes({{x}}, {{y}}, color={{color}})) +
             stat_summary(fun=mean, geom="line", position=dodge) +
-            stat_summary(fun.data=mean_cl_normal, geom=geom, position=dodge) +
+            stat_summary(fun.data=mean_cl_boot, geom=geom, position=dodge) +
             facet_wrap(~name)
             # theme(legend.position="none") +
             # pal +

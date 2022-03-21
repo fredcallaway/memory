@@ -4,7 +4,7 @@ MAKE_PDF = TRUE
 # %% ==================== load data ====================
 
 pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
-df = load_model_human("exp1", "trials") %>% 
+df = load_model_human("exp1", "trials", n=10) %>% 
     mutate(
         skip=response_type=="empty", correct=response_type=="correct",
         response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")
@@ -35,26 +35,22 @@ judge_rt = df %>%
         `Skipped`="#DE79AA",
         `Recalled`="#3B77B3"
         # `Recalled`="#3BB365"
-    ), aesthetics=c("fill", "colour")) &
-    coord_cartesian(xlim=c(NULL), ylim=c(0, 3750))
+    ), aesthetics=c("fill", "colour")) & coord_cartesian(xlim=c(NULL), ylim=c(1000, 3100))
 
 fig("exp1/rt", 3.5*S, 2*S)
-
 
 # %% ==================== cummulative probabilities ====================
 
 plot_cum = function(cond, y) {
-    seq(0, 5000, 200) %>% 
+    seq(0, 5000, 50) %>% 
         map(function(cutoff) {
-            df %>% 
+            df %>%
                 mutate(cutoff = cutoff) %>% 
                 filter({{cond}}) %>% 
-                mutate(y = as.numeric({{y}}))
+                group_by(name, wid, pretest_accuracy, cutoff) %>% 
+                summarise(y = mean({{y}}), .groups="keep")
         }) %>% 
         bind_rows %>% 
-        participant_means(y, cutoff, pretest_accuracy) %>% 
-        # group_by(name, cutoff, pretest_accuracy) %>% 
-        # summarise(y=mean(y)) %>% 
         mutate(pretest_accuracy=factor(pretest_accuracy)) %>% 
         ggplot(aes(cutoff/1000, y, group=pretest_accuracy)) +
             stat_summary(aes(color=pretest_accuracy), fun=mean, geom="line", size=.9) +
@@ -87,13 +83,13 @@ p_skip = plot_cum(!(correct & (rt <= cutoff)), skip & (rt <= cutoff)) +
 
 fig("exp1/cum_probs", 3.5*S, 2.2*S)
 
-# plot_cum(!(correct & (rt <= cutoff)), rt >= cutoff) +
-#     labs(x="Time (s)", y="Probability of Continuing\n Search Given No Recall") +
-#     scale_colour_manual("Pretest\nAccuracy", values=c(
-#         `0`="#B8648D",
-#         `0.5`="#DE79AA",
-#         `1`="#FF92C7"
-#     ), aesthetics=c("fill", "colour"))
+plot_cum(!(correct & (rt <= cutoff)), rt >= cutoff) +
+    labs(x="Time (s)", y="Probability of Continuing\n Search Given No Recall") +
+    scale_colour_manual("Pretest\nAccuracy", values=c(
+        `0`="#B8648D",
+        `0.5`="#DE79AA",
+        `1`="#FF92C7"
+    ), aesthetics=c("fill", "colour"))
 
 
 
