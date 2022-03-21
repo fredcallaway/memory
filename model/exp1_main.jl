@@ -5,8 +5,9 @@ end
 @everywhere include("common.jl")
 @everywhere include("exp1_base.jl")
 mkpath("results/exp1")
-N_SOBOL = 5000
-# N_SOBOL = 10_000
+mkpath("tmp")
+# N_SOBOL = 5000
+N_SOBOL = 50_000
 
 if isempty(ARGS) 
     CACHE_ONLY = false
@@ -22,14 +23,14 @@ end
 
 # %% --------  
 
-function compute_sumstats(name, make_policies, prms; read_only = false)
-    mkpath("cache/exp1_$(name)_sumstats_50")
+function compute_sumstats(name, make_policies, prms; N=100000, read_only = false)
+    mkpath("cache/exp1_$(name)_sumstats_$N")
     map = read_only ? asyncmap : pmap
-    @showprogress map(prms) do prm
-        cache("cache/exp1_$(name)_sumstats_50/$(hash(prm))"; read_only) do
+    @showprogress "sumstats" map(prms) do prm
+        cache("cache/exp1_$(name)_sumstats_$N/$(hash(prm))"; read_only) do
             nprocs() == 1 && (print("."); flush(stdout))
             try
-                exp1_sumstats(simulate_exp1(make_policies, prm))
+                exp1_sumstats(simulate_exp1(make_policies, prm, N))
             catch
                 missing
             end
@@ -64,9 +65,8 @@ end
             @inbounds p[k, j, i, h] * pd[y + 1]
         end
     end
-    smooth_uniform!(x, ε)
+    smooth_uniform!(result, ε)
 end
-
 
 @everywhere function optimize_rt_noise(ss)
     X = zeros(size(target.hist))
@@ -91,6 +91,35 @@ end
     res.minimum
 end
 
+function fit_exp1_model(name, make_policies, prms; n_top=1000, n_sim_top=1_000_000)
+    sumstats = compute_sumstats(name, make_policies, prms);
+    tbl = compute_loss(loss, sumstats, prms);
+    display(select(tbl, Not([:judgement_noise]))[1:13, :])
+
+    top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
+    top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
+    top_tbl = compute_loss(loss, top_sumstats, top_prms)
+    display(select(top_tbl, Not([:judgement_noise]))[1:13, :])
+
+    rt_noise = pmap(eachrow(top_tbl)) do row
+        Gamma(optimize_rt_noise(row.ss).minimizer...)
+    end
+    top_tbl.rt_α = getfield.(rt_noise, :α)
+    top_tbl.rt_θ = getfield.(rt_noise, :θ)
+
+    mkpath("results/exp1/$(name)_trials/")
+    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:100])) do (i, row)
+        rt_noise = Gamma(row.rt_α, row.rt_θ)
+        prm = NamedTuple(row)
+        sim = simulate_exp1(make_policies, prm, 1_000_000)
+        sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
+        CSV.write("results/exp1/$(name)_trials/$i.csv", sim)
+    end
+
+    serialize("tmp/exp1_fits_$name", top_tbl)
+    top_tbl
+end
+
 # %% ==================== optimal ====================
 
 println("--- optimal ---")
@@ -102,10 +131,10 @@ println("--- optimal ---")
 
 opt_prms = sobol(N_SOBOL, Box(
     drift_μ = (-0.5, 0.5),
-    noise = (0.5, 1.5),
+    noise = (0.1, 2.),
     drift_σ = (0.5, 2),
-    threshold = (2, 15),
-    sample_cost = (.005, .02),
+    threshold = (1, 20),
+    sample_cost = (.001, .02),
     # strength_drift_μ = (-0.3, 0),
     # strength_drift_σ = (0, 0.3),
     strength_drift_μ = 0.,
@@ -113,7 +142,7 @@ opt_prms = sobol(N_SOBOL, Box(
     judgement_noise=1,
 ));
 
-opt_sumstats = compute_sumstats("opt", optimal_policies, opt_prms[JOBS]);
+opt_tbl = fit_exp1_model("optimal", optimal_policies, opt_prms)
 
 # %% --------
 if !CACHE_ONLY
@@ -144,9 +173,9 @@ end
 
 emp_prms = sobol(N_SOBOL, Box(
     drift_μ = (-0.5, 0.5),
-    noise = (0.5, 2.),
+    noise = (0.1, 2.),
     drift_σ = (1, 2),
-    threshold = (5, 15),
+    threshold = (5, 20),
     sample_cost = 0.,
     # strength_drift_μ = (-0.3, 0),
     # strength_drift_σ = (0, 0.3),
@@ -163,14 +192,11 @@ if !CACHE_ONLY
     emp_prm, emp_ss, tbl, full_loss = minimize_loss(loss, emp_sumstats, emp_prms);
     display(select(tbl, Not([:judgement_noise, :sample_cost]))[1:13, :])
 
-
     emp_df = simulate_exp1(empirical_policies, emp_prm)
     emp_rt_noise = Gamma(optimize_rt_noise(emp_ss).minimizer...)
     emp_df.rt = emp_df.rt .+ rand(emp_rt_noise, nrow(emp_df))
     CSV.write("results/exp1/empirical_trials.csv", emp_df)
 end
-
-acc_rt(exp1_sumstats(emp_df))
 
 serialize("tmp/exp1_emp_prm", emp_prm)
 
