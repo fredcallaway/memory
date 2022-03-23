@@ -76,19 +76,16 @@ end
 # %% --------
 
 function make_hist(trials::DataFrame; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
-    X = initialize_keyed(0.,
-        rt=dt:dt:maxt, 
-        response_type=["correct", "empty"], 
-        judgement=1:5,
-        pretest_accuracy=0:0.5:1
-    )
-    for t in eachrow(trials)
-        rt = min(Int(cld(t.rt, dt)), size(X, 1))
-        rtype = Int(t.response_type == "empty") + 1
-        pre = Int(1 + t.pretest_accuracy * 2)
-        X[rt, rtype, t.judgement, pre] += 1
+    @chain trials begin
+        @rtransform :rt = quantize(:rt, dt)
+        wrap_counts(
+            rt=dt:dt:maxt, 
+            response_type=["correct", "empty"], 
+            judgement=1:5,
+            pretest_accuracy=0:0.5:1
+        ) 
+        normalize!
     end
-    X ./= sum(X)
 end
 
 function aggregate_rt(trials)

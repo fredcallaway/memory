@@ -51,12 +51,6 @@ target = exp1_sumstats(trials);
 # %% ==================== likelihood ====================
 @everywhere using Optim
 
-@everywhere function smooth_uniform!(x, ε::Float64=1e-6)
-    x .*= (1 - ε * length(x))
-    x .+= ε
-    x
-end
-
 @everywhere function smooth_rt!(result, p::KeyedArray, d::Distribution, ε::Float64=1e-6)
     pd = diff([0; cdf(d, p.rt)])
     for h in axes(p, 4), i in axes(p, 3), j in axes(p, 2), z in axes(p, 1)
