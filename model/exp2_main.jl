@@ -30,10 +30,39 @@ end
     OptimalPolicy(exp2_mdp(prm)),
 )
 
+# %% ==================== simple ====================
+
+name = "optimal"
+n_top = 2
+top_table = deserialize("tmp/exp1_fits_$name")
+exp1_top = eachrow(top_table[1:n_top, 1:8])
+
+prm = (;exp1_top[1]..., switch_cost = .01)
+m = exp2_mdp(prm)
+B = BackwardsInduction(m; verbose=true)
+
+pre_pol = OptimalPolicy(pretest_mdp(prm))
+crit_pol = OptimalPolicy(B)
+
+# %% --------
+
+sim = simulate_exp2(pre_pol, crit_pol, 100_000)
+trials = make_trials(sim); fixations = make_fixations(sim);
+ss = exp2_sumstats(trials, fixations)
+
+res = optimize_duration_noise(sim, human_fixations) # FIXME should be done on separate simulation?
+dur_noise = Gamma(res.minimizer...)
+add_duration_noise!(sim, dur_noise)
+
+trials = make_trials(sim); fixations = make_fixations(sim)
+CSV.write("results/exp2/optimal_trials.csv", trials)
+CSV.write("results/exp2/optimal_fixations.csv", fixations)
+
+
 # %% ==================== Fit pretest ====================
 
 name = "optimal"
-n_top = 3
+n_top = 2
 top_table = deserialize("tmp/exp1_fits_$name")
 exp1_top = eachrow(top_table[1:n_top, 1:8])
 prms = map(product(exp1_top, 0:.1:1, -1:.1:0)) do (prm, μ_shift, σ_shift)
@@ -125,17 +154,19 @@ end
 
 updated_prms = prms[[idx_acc; idx_both; idx_rt]][:]
 
-updated_prms = map(product(updated_prms, 0:.005:.04)) do (prm, switch_cost)
+updated_prms = map(product(updated_prms, 0:.0025:.02)) do (prm, switch_cost)
     (;prm..., switch_cost)
 end
 
 sumstats = compute_sumstats("optimal", optimal_policies, updated_prms);
 
-# %% --------
+# %% ==================== loss ====================
+
+const ss_human = exp2_sumstats(human_trials, human_fixations);
 
 nfix_hist(ss) = @chain ss.tri begin
     @rsubset :n_pres ≤ 7
-    wrap_pivot(:n, sum, n_pres=1:100)
+    wrap_pivot(:n, sum, n_pres=1:7)
     normalize    
 end
 
@@ -181,15 +212,14 @@ nfix_hist(final_sumstats[6])
 nfix_hist(ss_human)
 
 
+
+
 # %% ==================== fit joint ====================
 
-name = "optimal"
-n_top = 3
-top_table = deserialize("tmp/exp1_fits_$name")
-exp1_top = eachrow(top_table[1:n_top, 1:8])
-prms = map(product(exp1_top, 0:.002:.01, .1:.05:.4)) do (prm, switch_cost, μ_bonus)
-    drift_μ = prm.drift_μ + μ_bonus
-    (;prm..., switch_cost, drift_μ)
+prms = map(product(exp1_top, 0:.1:1, -1:.1:0, 0:.01:.01)) do (prm, μ_shift, σ_shift, switch_cost)
+    drift_μ = prm.drift_μ + μ_shift
+    drift_σ = prm.drift_σ + σ_shift
+    (;prm..., drift_μ, drift_σ, switch_cost)
 end
 
 sumstats = compute_sumstats("optimal", optimal_policies, prms);
@@ -211,7 +241,7 @@ function make_hist(ss)
 end
 
 # %% --------
-const ss_human = exp2_sumstats(human_trials, human_fixations);
+# const ss_human = exp2_sumstats(human_trials, human_fixations);
 const human_hist = make_hist(ss_human);
 
 @everywhere function loss(ss)
@@ -224,6 +254,7 @@ L = map(loss, sumstats)
 tbl = DataFrame(prms[argmin(L, dims=(2,3))][:])
 display(select(tbl, Not([:judgement_noise, :strength_drift_μ, :strength_drift_σ])))
 
+# %% --------
 ss = sumstats[argmin(L)]
 
 ss = sumstats[1, 2, 1]
