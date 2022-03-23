@@ -34,7 +34,6 @@ function compute_sumstats(name, make_policies, prms; run=RUN, read_only = false)
     end;
 end
 
-
 # %% ==================== load data ====================
 
 pretest = CSV.read("../data/processed/exp2/pretest.csv", DataFrame, missingstring="NA")

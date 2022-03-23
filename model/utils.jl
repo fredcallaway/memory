@@ -3,6 +3,7 @@ using AxisKeys
 using SplitApplyCombine
 import Base.Iterators: product
 using Statistics
+using DataFrames, DataFramesMeta, CSV
 
 # %% ==================== Project-specific ====================
 
@@ -68,6 +69,22 @@ function grid(;kws...)
     KeyedArray(X; kws...)
 end
 
+function wrap_counts(df::DataFrame; dims...)
+    @chain df begin
+        groupby(collect(keys(dims)))
+        combine(nrow => :n)
+        AxisKeys.populate!(initialize_keyed(0.; dims...), _, :n)
+    end
+end
+
+function wrap_pivot(df::DataFrame, val, f; dims...)
+    @chain df begin
+        groupby(collect(keys(dims)))
+        combine(val => f => :_val)
+        AxisKeys.populate!(initialize_keyed(0.; dims...), _, :_val)
+    end
+end
+
 function keyed(name, xs)
     KeyedArray(xs; Dict(name => xs)...)
 end
@@ -114,3 +131,4 @@ nanreduce(f, x) = f(filter(!isnan, x))
 nanmean(x) = nanreduce(mean, x)
 nanstd(x) = nanreduce(std, x)
 normalize(x) = x ./ sum(x)
+normalize!(x) = x ./= sum(x)

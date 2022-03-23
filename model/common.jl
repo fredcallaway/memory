@@ -3,7 +3,6 @@ include("mdp.jl")
 include("optimal_policy.jl")
 include("box.jl")
 
-using DataFrames, DataFramesMeta, CSV
 using Optim
 using ProgressMeter
 
@@ -11,8 +10,15 @@ const MAX_TIME = 15000
 const MS_PER_SAMPLE = 50
 const MAX_STEP = Int(MAX_TIME / MS_PER_SAMPLE)
 
+quantize(x, q=MS_PER_SAMPLE) = q * round(x ./ q)
 function initialize_keyed(val; keys...)
     KeyedArray(fill(val, (length(v) for (k, v) in keys)...); keys...)
+end
+
+function smooth_uniform!(x, ε::Float64=1e-6)
+    x .*= (1 - ε)
+    x .+= (ε / length(x))
+    x
 end
 
 function mean_error(f, x, y)
@@ -39,7 +45,7 @@ macro bywrap(x, what, val, default=missing)
     end)
 end
 
-function sample_strengths(pol, N=10000; strength_drift=Normal(0, .5))
+function sample_strengths(pol, N=10000; strength_drift=Normal(0, 0))
     map(1:N) do i
         s = sample_state(pol.m)
         pretest_accuracy = mean(simulate(pol; s).b.focused == 1 for i in 1:2)

@@ -139,7 +139,7 @@ function compute_value_functions!(model::BackwardsInduction{2}; verbose=true)
     V[:, e_max, :, :, :] .= 0.
     V[:, :, e_max, :, :] .= 0.
 
-    progress = Progress(t_max; desc="Backwards induction " enabled=verbose)
+    progress = Progress(t_max; desc="Backwards induction ", enabled=verbose)
     # iterate backward in time
     for tt in t_max-1:-1:1
         ProgressMeter.next!(progress)
