@@ -12,10 +12,11 @@ N_SOBOL = 50_000
 # %% --------  
 
 function compute_sumstats(name, make_policies, prms; N=100000, read_only = false)
-    mkpath("cache/exp1_$(name)_sumstats_$N")
+    dir = "cache/exp1_$(name)_sumstats_$(MS_PER_SAMPLE)_$N"
+    mkpath(dir)
     map = read_only ? asyncmap : pmap
     @showprogress "sumstats" map(prms) do prm
-        cache("cache/exp1_$(name)_sumstats_$(MS_PER_SAMPLE)_$N/$(hash(prm))"; read_only) do
+        cache("$dir/$(hash(prm))"; read_only) do
             nprocs() == 1 && (print("."); flush(stdout))
             try
                 exp1_sumstats(simulate_exp1(make_policies, prm, N))
@@ -82,7 +83,6 @@ function fit_exp1_model(name, make_policies, prms; n_top=1000, n_sim_top=1_000_0
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
     top_tbl = compute_loss(loss, top_sumstats, top_prms)
-    serialize("tmp/exp1_top_tbl_$name", top_tbl)
     display(select(top_tbl, Not([:judgement_noise]))[1:13, :])
 
     rt_noise = pmap(eachrow(top_tbl)) do row
@@ -92,7 +92,7 @@ function fit_exp1_model(name, make_policies, prms; n_top=1000, n_sim_top=1_000_0
     top_tbl.rt_θ = getfield.(rt_noise, :θ)
 
     mkpath("results/exp1/$(name)_trials/")
-    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:100])) do (i, row)
+    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:10])) do (i, row)
         rt_noise = Gamma(row.rt_α, row.rt_θ)
         prm = NamedTuple(row)
         sim = simulate_exp1(make_policies, prm, 1_000_000)
@@ -106,7 +106,7 @@ end
 
 # %% ==================== optimal ====================
 
-println("--- optimal ---")
+print_header("optimal")
 
 @everywhere optimal_policies(prm) = (
     OptimalPolicy(pretest_mdp(prm)),
@@ -130,7 +130,7 @@ optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_prms)
 
 # # %% ==================== empirical ====================
 
-println("--- empirical ---")
+print_header("empirical")
 
 @everywhere begin
     @isdefined(emp_pretest_stop_dist) || const emp_pretest_stop_dist = empirical_distribution(@subset(pretest, :response_type .== "empty").rt)

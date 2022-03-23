@@ -24,6 +24,14 @@ end
 
 # %% ==================== General Purpose ====================
 
+function print_header(txt; color=:magenta)
+    display_width = displaysize(stdout)[2]
+    n_dash = fld(display_width - length(txt) - 2, 2)
+    printstyled('-'^n_dash; color, bold=true)
+    print(' ', txt, ' ')
+    printstyled('-'^n_dash; color, bold=true)
+end
+
 macro catch_missing(expr)
     esc(quote
         try

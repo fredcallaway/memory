@@ -7,7 +7,7 @@ using Optim
 using ProgressMeter
 
 const MAX_TIME = 15000
-const MS_PER_SAMPLE = 50
+const MS_PER_SAMPLE = 100
 const MAX_STEP = Int(MAX_TIME / MS_PER_SAMPLE)
 
 quantize(x, q=MS_PER_SAMPLE) = q * round(x ./ q)
