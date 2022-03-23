@@ -23,6 +23,24 @@ end
 @everywhere human_pretest = $human_pretest
 @everywhere human_fixations = $human_fixations
 
+const ss_human = exp2_sumstats(human_trials, human_fixations);
+
+function compute_sumstats(name, make_policies, prms; read_only = false)
+    dir = "cache/exp2_$(name)_sumstats"
+    mkpath(dir)
+    map = read_only ? asyncmap : pmap
+    @showprogress map(prms) do prm
+        cache("$dir/$(hash(prm))"; read_only) do
+            sim = simulate_exp2(make_policies, prm)
+            res = optimize_duration_noise(sim, human_fixations)
+            add_duration_noise!(sim, Gamma(res.minimizer...))
+            x = exp2_sumstats(make_trials(sim), make_fixations(sim))
+            GC.gc()
+            (;x..., duration_opt=res)
+        end
+    end;
+end
+
 # %% ==================== optimal ====================
 
 @everywhere optimal_policies(prm) = (
@@ -30,15 +48,64 @@ end
     OptimalPolicy(exp2_mdp(prm)),
 )
 
-# %% ==================== simple ====================
-
 name = "optimal"
-n_top = 2
+n_top = 10
 top_table = deserialize("tmp/exp1_fits_$name")
 exp1_top = eachrow(top_table[1:n_top, 1:8])
 
-prm = (;exp1_top[1]..., switch_cost = .01)
-m = exp2_mdp(prm)
+prms = map(product(exp1_top, 0:.001:.01)) do (prm, switch_cost)
+    (;prm..., switch_cost)
+end
+
+sumstats = compute_sumstats("optimal", optimal_policies, prms)
+target_fix = @with ss_human.tri mean(:n_pres, Weights(:n))
+
+# %% --------
+nfix_hist(ss) = @chain ss.tri begin
+    @rtransform :n_pres = min(7, :n_pres)
+    @rsubset !ismissing(:choose_first)
+    wrap_pivot(:n, sum, n_pres=1:7)
+    normalize!
+end
+
+L = map(sumstats) do ss
+    crossentropy(nfix_hist(ss_human), smooth_uniform!(nfix_hist(ss), .01))
+end
+
+argmin(L; dims=2)
+
+# %% --------
+
+mkpath("results/exp2/optimal_trials/")
+mkpath("results/exp2/optimal_fixations/")
+
+function do_sims(prms)
+    @showprogress "simulate" pmap(enumerate(prms)) do (i, prm)
+        # _, j = findmin(minimum, dur_opts[i, :])
+        # dur_noise = Gamma(dur_opts[i, j].minimizer...)
+    
+        sim = simulate_exp2(optimal_policies, prm)
+        
+        res = optimize_duration_noise(sim, human_fixations) # FIXME should be done on separate simulation?
+        dur_noise = Gamma(res.minimizer...)
+        add_duration_noise!(sim, dur_noise)
+
+        trials = make_trials(sim); fixations = make_fixations(sim)
+        CSV.write("results/exp2/optimal_trials/$i.csv", trials)
+        CSV.write("results/exp2/optimal_fixations/$i.csv", fixations)
+        exp2_sumstats(trials, fixations)
+    end
+end
+
+do_sims(prms[argmin(L; dims=2)]);  # TODO: plot the results
+
+
+
+# %% --------
+
+
+prm = (;exp1_top[1]..., switch_cost = 0.005)
+m = exp2_mdp(prm, maxt=15000)
 B = BackwardsInduction(m; verbose=true)
 
 pre_pol = OptimalPolicy(pretest_mdp(prm))
@@ -147,7 +214,7 @@ function compute_sumstats(name, make_policies, prms; read_only = false)
             add_duration_noise!(sim, Gamma(res.minimizer...))
             x = exp2_sumstats(make_trials(sim), make_fixations(sim))
             GC.gc()
-            (;x..., duration_loss=res.minimum)
+            (;x..., duration_opt=res)
         end
     end;
 end

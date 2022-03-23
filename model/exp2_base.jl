@@ -1,4 +1,4 @@
-function exp2_mdp(prm; maxt=10000)
+function exp2_mdp(prm; maxt=MAX_TIME)
     time_cost = @isdefined(PRETEST_COST) ? (MS_PER_SAMPLE / MAX_TIME) * .25 : 0
     m2 = MetaMDP{2}(;allow_stop=true, max_step=Int(maxt / MS_PER_SAMPLE), miss_cost=2,
         prm.threshold, prm.noise,
