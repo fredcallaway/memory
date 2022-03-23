@@ -6,20 +6,8 @@ end
 @everywhere include("exp1_base.jl")
 mkpath("results/exp1")
 mkpath("tmp")
-# N_SOBOL = 5000
-N_SOBOL = 50_000
 
-if isempty(ARGS) 
-    CACHE_ONLY = false
-    JOBS = 1:N_SOBOL
-else  # precomputing with batch compute
-    CACHE_ONLY = true
-    JOBS = let
-        chunk_size = 100
-        j = parse(Int, ARGS[1])
-        range(1 + chunk_size * (j-1), length=chunk_size)
-    end
-end
+N_SOBOL = 50_000
 
 # %% --------  
 
@@ -27,7 +15,7 @@ function compute_sumstats(name, make_policies, prms; N=100000, read_only = false
     mkpath("cache/exp1_$(name)_sumstats_$N")
     map = read_only ? asyncmap : pmap
     @showprogress "sumstats" map(prms) do prm
-        cache("cache/exp1_$(name)_sumstats_$N/$(hash(prm))"; read_only) do
+        cache("cache/exp1_$(name)_sumstats_$(MS_PER_SAMPLE)_$N/$(hash(prm))"; read_only) do
             nprocs() == 1 && (print("."); flush(stdout))
             try
                 exp1_sumstats(simulate_exp1(make_policies, prm, N))
@@ -88,11 +76,13 @@ end
 function fit_exp1_model(name, make_policies, prms; n_top=1000, n_sim_top=1_000_000)
     sumstats = compute_sumstats(name, make_policies, prms);
     tbl = compute_loss(loss, sumstats, prms);
+    serialize("tmp/exp1_tbl_$name", tbl)
     display(select(tbl, Not([:judgement_noise]))[1:13, :])
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
     top_tbl = compute_loss(loss, top_sumstats, top_prms)
+    serialize("tmp/exp1_top_tbl_$name", top_tbl)
     display(select(top_tbl, Not([:judgement_noise]))[1:13, :])
 
     rt_noise = pmap(eachrow(top_tbl)) do row
@@ -123,11 +113,11 @@ println("--- optimal ---")
     OptimalPolicy(exp1_mdp(prm)),
 )
 
-opt_prms = sobol(N_SOBOL, Box(
+optimal_prms = sobol(N_SOBOL, Box(
     drift_μ = (-0.5, 0.5),
     noise = (0.1, 2.),
     drift_σ = (0.5, 2),
-    threshold = (1, 20),
+    threshold = (2, 20),
     sample_cost = (.001, .02),
     # strength_drift_μ = (-0.3, 0),
     # strength_drift_σ = (0, 0.3),
@@ -136,24 +126,11 @@ opt_prms = sobol(N_SOBOL, Box(
     judgement_noise=1,
 ));
 
-opt_tbl = fit_exp1_model("optimal", optimal_policies, opt_prms)
-
-# %% --------
-if !CACHE_ONLY
-    opt_prm, opt_ss, opt_tbl, opt_loss = minimize_loss(loss, opt_sumstats, opt_prms) 
-    display(select(opt_tbl, Not([:judgement_noise]))[1:13, :])
-    opt_df = simulate_exp1(optimal_policies, opt_prm)
-    opt_rt_noise = Gamma(optimize_rt_noise(opt_ss).minimizer...)
-    opt_df.rt = opt_df.rt .+ rand(opt_rt_noise, nrow(opt_df))
-    CSV.write("results/exp1/optimal_trials.csv", opt_df)
-end
-
-serialize("tmp/exp1_opt_prm", opt_prm)
+optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_prms)
 
 # # %% ==================== empirical ====================
-println("--- empirical ---")
 
-# %% --------
+println("--- empirical ---")
 
 @everywhere begin
     @isdefined(emp_pretest_stop_dist) || const emp_pretest_stop_dist = empirical_distribution(@subset(pretest, :response_type .== "empty").rt)
@@ -165,11 +142,11 @@ println("--- empirical ---")
     )
 end
 
-emp_prms = sobol(N_SOBOL, Box(
+empirical_prms = sobol(N_SOBOL, Box(
     drift_μ = (-0.5, 0.5),
     noise = (0.1, 2.),
-    drift_σ = (1, 2),
-    threshold = (5, 20),
+    drift_σ = (0.5, 2),
+    threshold = (2, 20),
     sample_cost = 0.,
     # strength_drift_μ = (-0.3, 0),
     # strength_drift_σ = (0, 0.3),
@@ -178,63 +155,34 @@ emp_prms = sobol(N_SOBOL, Box(
     judgement_noise=1,
 ));
 
-emp_sumstats = compute_sumstats("emp", empirical_policies, emp_prms[JOBS]);
+empirical_tbl = fit_exp1_model("optimal", optimal_policies, empirical_prms)
 
-# # %% --------
-
-if !CACHE_ONLY
-    emp_prm, emp_ss, tbl, full_loss = minimize_loss(loss, emp_sumstats, emp_prms);
-    display(select(tbl, Not([:judgement_noise, :sample_cost]))[1:13, :])
-
-    emp_df = simulate_exp1(empirical_policies, emp_prm)
-    emp_rt_noise = Gamma(optimize_rt_noise(emp_ss).minimizer...)
-    emp_df.rt = emp_df.rt .+ rand(emp_rt_noise, nrow(emp_df))
-    CSV.write("results/exp1/empirical_trials.csv", emp_df)
-end
-
-serialize("tmp/exp1_emp_prm", emp_prm)
 
 # %% ==================== decision bound ====================
 
-# println("--- decision bound ---")
+println("--- decision bound ---")
 
-# @everywhere bound_policies(prm) = (
-#     ConstantBoundPolicy(pretest_mdp(prm), prm.θ),
-#     ConstantBoundPolicy(exp1_mdp(prm), prm.θ),
-# )
+@everywhere bound_policies(prm) = (
+    ConstantBoundPolicy(pretest_mdp(prm), prm.θ),
+    ConstantBoundPolicy(exp1_mdp(prm), prm.θ),
+)
 
-# bound_prms = sobol(N_SOBOL, Box(
-#     drift_μ = (-1, 1),
-#     noise = (1., 3.),
-#     drift_σ = (0.5, 2.5),
-#     threshold = (5, 15),
-#     θ = (1, 15),
-#     τ = (.001, 1, :log),
-#     # strength_drift_μ = (-0.3, 0),
-#     # strength_drift_σ = (0, 0.3),
-#     strength_drift_μ = 0.,
-#     strength_drift_σ = 0.,
-#     judgement_noise=1,
-#     sample_cost = 0.,
-# ))
+bound_prms = sobol(N_SOBOL, Box(
+    drift_μ = (-0.5, 0.5),
+    noise = (0.1, 2.),
+    drift_σ = (0.5, 2),
+    threshold = (2, 20),
+    sample_cost = 0.,
+    θ = (1, 15),
+    τ = (.001, 1, :log),
+    # strength_drift_μ = (-0.3, 0),
+    # strength_drift_σ = (0, 0.3),
+    strength_drift_μ = 0.,
+    strength_drift_σ = 0.,
+    judgement_noise=1,
+))
 
-# bound_sumstats = compute_sumstats("bound", bound_policies, bound_prms[JOBS]);
-
-# # # %% --------
-
-# if !CACHE_ONLY
-#     bound_prm, bound_ss, tbl, full_loss = minimize_loss(loss, bound_sumstats, bound_prms);
-#     display(select(tbl, Not([:judgement_noise, :sample_cost]))[1:13, :])
-
-#     df = simulate_exp1(bound_policies, bound_prm)
-#     rt_noise = Gamma(optimize_rt_noise(bound_ss).minimizer...)
-#     df.rt = df.rt .+ rand(rt_noise, nrow(df))
-#     CSV.write("results/exp1/bound_trials.csv", df)
-# end
-
-# @show loss(exp1_sumstats(df))
-# CSV.write("results/exp1/bound_trials.csv", df)
-
+bound_sumstats = compute_sumstats("bound", bound_policies, bound_prms);
 
 println("Done!")
 
