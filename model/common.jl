@@ -10,7 +10,7 @@ const MAX_TIME = 15000
 const MS_PER_SAMPLE = 100
 const MAX_STEP = Int(MAX_TIME / MS_PER_SAMPLE)
 
-quantize(x, q=MS_PER_SAMPLE) = q * round(x ./ q)
+quantize(x, q=MS_PER_SAMPLE) = q * cld(x, q)
 function initialize_keyed(val; keys...)
     KeyedArray(fill(val, (length(v) for (k, v) in keys)...); keys...)
 end
