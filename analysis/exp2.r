@@ -17,11 +17,11 @@ filt = switch(OUT,
     quote(response_type == "correct")
 )
 
-df = load_model_human("exp2", "trials") %>% 
+df = load_model_human("exp2", "trials", n=5) %>% 
     filter(eval(filt)) %>% 
     mutate(rel_pretest_accuracy = pretest_accuracy_first - pretest_accuracy_second)
 
-fixations = load_model_human("exp2", "fixations") %>%
+fixations = load_model_human("exp2", "fixations", n=5) %>%
     filter(eval(filt)) %>% 
     mutate(
         last_fix = as.numeric(presentation == n_pres),
@@ -91,6 +91,7 @@ plt_timecourse = sum_timecourse %>%
     )
 savefig("overall_timecourse", 3.5, 2)
 
+
 # %% ==================== fixation durations ====================
 nonfinal = fixations %>% 
     filter(last_fix == 0) %>% 
@@ -118,6 +119,14 @@ plt_fixated = nonfinal %>%
     # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
     plot_effect(fixated, duration, type) +
     scale_x_continuous(n.breaks=3) +
+    theme(legend.position="none") +
+    labs(x="Pretest Accuracy of Fixated Cue", y="Duration (s)", colour="Fixation Type")
+
+nonfinal %>% 
+    participant_means(duration, fixated, type)
+
+    scale_x_continuous(n.breaks=3) +
+    theme(legend.position="none") +
     labs(x="Pretest Accuracy of Fixated Cue", y="Duration (s)", colour="Fixation Type")
 
 plt_nonfixated = nonfinal %>% 
@@ -125,6 +134,7 @@ plt_nonfixated = nonfinal %>%
     # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>%
     plot_effect(nonfixated, duration, type) +
     scale_x_continuous(n.breaks=3) +
+    theme(legend.position="none") +
     labs(x="Pretest Accuracy of Non-Fixated Cue", y="Duration (s)", colour="Fixation Type")
 
 (plt_number / plt_fixated / plt_nonfixated) +
@@ -139,6 +149,34 @@ plt_nonfixated = nonfinal %>%
     ), aesthetics=c("fill", "colour"), name="Fixation Type")
 
 savefig("fixation_durations", 3.2, 2.5)
+
+# %% --------
+
+
+
+# # %% --------
+
+# layout <- c(
+#   area(1, 1, 1, 5),
+#   area(1, 6, 1, 6),
+#   area(2, 1, 2, 3),
+#   area(2, 4, 2, 6)
+# )
+# plot(layout)
+# # %% --------
+
+# (plt_number + guide_area() + plt_fixated + plt_nonfixated) +
+#     # plot_layout(design=layout) +
+#     # plot_annotation(tag_levels = 'A') & 
+#     # theme(plot.tag.position = c(0, 1)) &
+#     scale_colour_manual(values=c(
+#         "Final"="#89D37F", 
+#         "Non-Final"="#AF7BDC"
+#         # "final"="#F8E500", #8FC786
+#         # "non-final"="#17D6CC"
+#     ), aesthetics=c("fill", "colour"), name="Fixation Type")
+
+# savefig("fixation_durations", 3.2, 2)
 
 # %% ==================== last fixation duration ====================
 

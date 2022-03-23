@@ -105,13 +105,13 @@ load_human = function(exp, name) {
 load_model_human = function(exp, name, random='empirical', n=1) {
     bind_rows(
         read_csv(glue('../data/processed/{exp}/{name}.csv'), 
-            col_types = cols()) %>% mutate(name='Human'),
+            col_types = cols()) %>% mutate(name='human'),
         map(seq(n), ~ 
             read_csv(glue('../model/results/{exp}/optimal_{name}/{.x}.csv'), col_types = cols()) %>% 
             mutate(name='optimal', wid = glue('optimal-{.x}'))
          ),
         # read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
-        #     col_types = cols()) %>% mutate(name='Optimal'),
+        #     col_types = cols()) %>% mutate(name='optimal'),
         read_csv(glue('../model/results/{exp}/{random}_{name}.csv'), 
             col_types = cols()) %>% mutate(name='random'),
     ) %>% 
