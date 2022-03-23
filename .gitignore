@@ -29,3 +29,8 @@ model/exp2_scratch.jl
 model/exp2_2step.jl
 model/alt_fitting.jl
 analysis/exp1_scratch.r
+analysis/qualitative.r
+model/exp1.sbatch
+model/exp1_qual.jl
+model/figs/accumulation.png
+model/figs/strength_dist.png
