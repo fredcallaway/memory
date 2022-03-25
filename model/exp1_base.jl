@@ -12,7 +12,7 @@ function discretize_judgement!(df, noise)
     df
 end
 
-function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100000; 
+function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100_000; 
                        strength_drift=Normal(0, 1e-9), judgement_noise=0.)
 
     strengths = sample_strengths(pre_pol,  N; strength_drift)
@@ -37,7 +37,7 @@ function exp1_mdp(prm)
     )
 end
 
-function simulate_exp1(make_policies::Function, prm::NamedTuple, N=100000)
+function simulate_exp1(make_policies::Function, prm::NamedTuple, N=100_000)
     strength_drift = Normal(prm.strength_drift_μ, prm.strength_drift_σ)
     simulate_exp1(make_policies(prm)..., N; strength_drift, prm.judgement_noise)
 end
