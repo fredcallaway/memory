@@ -220,7 +220,7 @@ function act(pol::OptimalPolicy, b::Belief)
     end
 end
 
-struct SoftOptimalPolicy
+struct SoftOptimalPolicy <: Policy
     m::MetaMDP
     B::BackwardsInduction
     β::Float64
