@@ -34,3 +34,9 @@ model/exp1.sbatch
 model/exp1_qual.jl
 model/figs/accumulation.png
 model/figs/strength_dist.png
+<<<<<<< Updated upstream
+model/diagnostics.jl
+model/generate_timecourse.jl
+=======
+>>>>>>> Stashed changes
+analysis/Rplots.pdf
