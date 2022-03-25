@@ -24,7 +24,6 @@ options(
     "jtools-digits"=3,
     "max.print"=100
 )
-WIDTH = 7.5; HEIGHT = 2.5
 
 RED =  "#E41A1C" 
 BLUE =  "#377EB8" 
@@ -110,15 +109,19 @@ load_model_human = function(exp, name, random='empirical', n=1) {
             read_csv(glue('../model/results/{exp}/optimal_{name}/{.x}.csv'), col_types = cols()) %>% 
             mutate(name='optimal', wid = glue('optimal-{.x}'))
          ),
+        map(seq(n), ~ 
+            read_csv(glue('../model/results/{exp}/empirical_{name}/{.x}.csv'), col_types = cols()) %>% 
+            mutate(name='empirical', wid = glue('empirical-{.x}'))
+         ),
         # read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
         #     col_types = cols()) %>% mutate(name='optimal'),
-        read_csv(glue('../model/results/{exp}/{random}_{name}.csv'), 
-            col_types = cols()) %>% mutate(name='random'),
+        # read_csv(glue('../model/results/{exp}/{random}_{name}.csv'), 
+        #     col_types = cols()) %>% mutate(name='empirical'),
     ) %>% 
     mutate(name = recode_factor(name, 
         "optimal" = "Optimal Meta", 
         "human" = "Human",
-        "random" = "No Meta"
+        "empirical" = "No Meta"
     ), ordered=T)
 }
 
@@ -211,6 +214,19 @@ plot_effect = function(df, x, y, color, min_n=10, geom="pointrange", collapse=T)
             facet_wrap(~name)
             # theme(legend.position="none") +
             # pal +
+}
+
+plot_effect_continuous = function(data, x, y, color) {
+    data %>% 
+        ungroup() %>% 
+        mutate(color = ordered({{color}})) %>% 
+        participant_means({{y}}, {{x}}, color) %>% 
+        ggplot(aes({{x}}, {{y}}, group=color)) +
+            stat_summary(aes(color=color), fun=mean, geom="line", size=.9) +
+            stat_summary(fun.data=mean_cl_boot, geom="ribbon", alpha=0.08) +
+            facet_wrap(~name) 
+            # + 
+            # theme(panel.grid.major.x = element_line(color="#EDEDED"))
 }
 
 # %% ==================== Tidy regressions ====================

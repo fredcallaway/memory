@@ -1,10 +1,12 @@
 suppressPackageStartupMessages(source("setup.r"))
 S = 2.7
 MAKE_PDF = TRUE
+STEP_SIZE = 100
+
 # %% ==================== load data ====================
 
-pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
-df = load_model_human("exp1", "trials", n=10) %>% 
+# pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
+df = load_model_human("exp1", "trials") %>% 
     mutate(
         skip=response_type=="empty", correct=response_type=="correct",
         response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")
@@ -14,13 +16,14 @@ df = load_model_human("exp1", "trials", n=10) %>%
 
 acc_rt = df %>%
     plot_effect(pretest_accuracy, rt, response_type) +
-    labs(x="Pretest Accuracy", y='Reaction Time') +
+    labs(x="Pretest Accuracy", y='Response Time (s)') +
     # coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
-    scale_x_continuous(n.breaks=3)
+    scale_x_continuous(labels = scales::percent, n.breaks=3)
+    # scale_x_continuous(n.breaks=3)
 
 judge_rt = df %>% 
     plot_effect(judgement, rt, response_type) +
-    labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Reaction Time') +
+    labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Response Time (s)') +
     # coord_cartesian(xlim=c(NULL), ylim=c(-1.5, 1.5)) +
     scale_x_continuous(n.breaks=5)
 
@@ -37,12 +40,18 @@ judge_rt = df %>%
         # `Recalled`="#3BB365"
     ), aesthetics=c("fill", "colour")) & coord_cartesian(xlim=c(NULL), ylim=c(1000, 3100))
 
-fig("exp1/rt", 3.5*S, 2*S)
+fig("exp1/rt", 3.5*S, 2.2*S)
 
 # %% ==================== cummulative probabilities ====================
 
+cutoff = df %>% 
+    filter(name == "Human") %>% 
+    with(quantile(rt, .99, na.rm=T)) %>% 
+    {STEP_SIZE * round(. / STEP_SIZE)}
+
+
 plot_cum = function(cond, y) {
-    seq(0, 5000, 50) %>% 
+    seq(0, cutoff, STEP_SIZE) %>% 
         map(function(cutoff) {
             df %>%
                 mutate(cutoff = cutoff) %>% 
@@ -50,14 +59,10 @@ plot_cum = function(cond, y) {
                 group_by(name, wid, pretest_accuracy, cutoff) %>% 
                 summarise(y = mean({{y}}), .groups="keep")
         }) %>% 
-        bind_rows %>% 
-        mutate(pretest_accuracy=factor(pretest_accuracy)) %>% 
-        ggplot(aes(cutoff/1000, y, group=pretest_accuracy)) +
-            stat_summary(aes(color=pretest_accuracy), fun=mean, geom="line", size=.9) +
-            stat_summary(fun.data=mean_cl_boot, geom="ribbon", alpha=0.08) +
-            # geom_line(size=.9) +
-            facet_wrap(~name) +
-            scale_x_continuous(n.breaks=6)
+        bind_rows %>%
+        mutate(x = cutoff / 1000) %>% 
+        plot_effect_continuous(x, y, pretest_accuracy) +
+        scale_x_continuous(n.breaks=6)
 }
 
 p_correct = plot_cum(TRUE, correct & rt <= cutoff) +
@@ -82,19 +87,4 @@ p_skip = plot_cum(!(correct & (rt <= cutoff)), skip & (rt <= cutoff)) +
     coord_cartesian(xlim=c(NULL), ylim=c(0, 1))
 
 fig("exp1/cum_probs", 3.5*S, 2.2*S)
-
-plot_cum(!(correct & (rt <= cutoff)), rt >= cutoff) +
-    labs(x="Time (s)", y="Probability of Continuing\n Search Given No Recall") +
-    scale_colour_manual("Pretest\nAccuracy", values=c(
-        `0`="#B8648D",
-        `0.5`="#DE79AA",
-        `1`="#FF92C7"
-    ), aesthetics=c("fill", "colour"))
-
-
-
-
-
-
-
 

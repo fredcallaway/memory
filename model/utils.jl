@@ -30,6 +30,7 @@ function print_header(txt; color=:magenta)
     printstyled('-'^n_dash; color, bold=true)
     print(' ', txt, ' ')
     printstyled('-'^n_dash; color, bold=true)
+    print("\n")
 end
 
 macro catch_missing(expr)

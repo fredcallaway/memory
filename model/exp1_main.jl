@@ -155,12 +155,12 @@ empirical_prms = sobol(N_SOBOL, Box(
     judgement_noise=1,
 ));
 
-empirical_tbl = fit_exp1_model("optimal", optimal_policies, empirical_prms)
+empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_prms)
 
 
 # %% ==================== decision bound ====================
 
-println("--- decision bound ---")
+print_header("decision bound")
 
 @everywhere bound_policies(prm) = (
     ConstantBoundPolicy(pretest_mdp(prm), prm.θ),
@@ -182,7 +182,17 @@ bound_prms = sobol(N_SOBOL, Box(
     judgement_noise=1,
 ))
 
-bound_sumstats = compute_sumstats("bound", bound_policies, bound_prms);
+bound_sumstats = fit_exp1_model("bound", bound_policies, bound_prms);
 
 println("Done!")
+
+
+# %% --------
+
+opt_tbl = deserialize("tmp/exp1_fits_optimal")
+opt_tbl.loss[1]
+
+bound_tbl = deserialize("tmp/exp1_fits_bound")
+bound_tbl.loss[1]
+
 
