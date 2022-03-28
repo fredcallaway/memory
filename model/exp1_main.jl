@@ -4,25 +4,25 @@ end
 # %% --------
 @everywhere include("common.jl")
 @everywhere include("exp1_base.jl")
-mkpath("results/exp1")
+mkpath("results/noise_exp1")
 mkpath("tmp")
 
-N_SOBOL = 50_000
+N_SOBOL = 20_000
 
 # %% --------  
 
 function compute_sumstats(name, make_policies, prms; N=100000, read_only = false)
-    dir = "cache/exp1_$(name)_sumstats_$(MS_PER_SAMPLE)_$N"
+    dir = "cache/noise_exp1_$(name)_sumstats_$(MS_PER_SAMPLE)_$N"
     mkpath(dir)
     map = read_only ? asyncmap : pmap
     @showprogress "sumstats" map(prms) do prm
         cache("$dir/$(hash(prm))"; read_only) do
             nprocs() == 1 && (print("."); flush(stdout))
-            try
+            # try
                 exp1_sumstats(simulate_exp1(make_policies, prm, N))
-            catch
-                missing
-            end
+            # catch
+                # missing
+            # end
         end
     end;
 end
@@ -77,7 +77,7 @@ end
 function fit_exp1_model(name, make_policies, prms; n_top=1000, n_sim_top=1_000_000)
     sumstats = compute_sumstats(name, make_policies, prms);
     tbl = compute_loss(loss, sumstats, prms);
-    serialize("tmp/exp1_tbl_$name", tbl)
+    serialize("tmp/noise_exp1_tbl_$name", tbl)
     display(select(tbl, Not([:judgement_noise]))[1:13, :])
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
@@ -91,16 +91,16 @@ function fit_exp1_model(name, make_policies, prms; n_top=1000, n_sim_top=1_000_0
     top_tbl.rt_α = getfield.(rt_noise, :α)
     top_tbl.rt_θ = getfield.(rt_noise, :θ)
 
-    mkpath("results/exp1/$(name)_trials/")
+    mkpath("results/noise_exp1/$(name)_trials/")
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:10])) do (i, row)
         rt_noise = Gamma(row.rt_α, row.rt_θ)
         prm = NamedTuple(row)
         sim = simulate_exp1(make_policies, prm, 1_000_000)
         sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
-        CSV.write("results/exp1/$(name)_trials/$i.csv", sim)
+        CSV.write("results/noise_exp1/$(name)_trials/$i.csv", sim)
     end
 
-    serialize("tmp/exp1_fits_$name", top_tbl)
+    serialize("tmp/noise_exp1_fits_$name", top_tbl)
     top_tbl
 end
 
@@ -119,10 +119,7 @@ optimal_prms = sobol(N_SOBOL, Box(
     drift_σ = (0.5, 2),
     threshold = (2, 20),
     sample_cost = (.001, .02),
-    # strength_drift_μ = (-0.3, 0),
-    # strength_drift_σ = (0, 0.3),
-    strength_drift_μ = 0.,
-    strength_drift_σ = 0.,
+    strength_noise=(0,1),
     judgement_noise=1,
 ));
 
@@ -148,10 +145,7 @@ empirical_prms = sobol(N_SOBOL, Box(
     drift_σ = (0.5, 2),
     threshold = (2, 20),
     sample_cost = 0.,
-    # strength_drift_μ = (-0.3, 0),
-    # strength_drift_σ = (0, 0.3),
-    strength_drift_μ = 0.,
-    strength_drift_σ = 0.,
+    strength_noise=(0,1),
     judgement_noise=1,
 ));
 
@@ -175,10 +169,7 @@ bound_prms = sobol(N_SOBOL, Box(
     sample_cost = 0.,
     θ = (1, 15),
     τ = (.001, 1, :log),
-    # strength_drift_μ = (-0.3, 0),
-    # strength_drift_σ = (0, 0.3),
-    strength_drift_μ = 0.,
-    strength_drift_σ = 0.,
+    strength_noise=(0,1),
     judgement_noise=1,
 ))
 
@@ -190,9 +181,9 @@ println("Done!")
 # %% --------
 
 opt_tbl = deserialize("tmp/exp1_fits_optimal")
-opt_tbl.loss[1]
+# opt_tbl.loss[1]
 
-bound_tbl = deserialize("tmp/exp1_fits_bound")
-bound_tbl.loss[1]
+# bound_tbl = deserialize("tmp/noise_exp1_fits_bound")
+# bound_tbl.loss[1]
 
 

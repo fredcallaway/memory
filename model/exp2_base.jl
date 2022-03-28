@@ -8,13 +8,11 @@ function exp2_mdp(prm; maxt=MAX_TIME)
 end
 
 function simulate_exp2(make_policies, prm::NamedTuple, N=1_000_000; kws...)
-    strength_drift = Normal(prm.strength_drift_μ, prm.strength_drift_σ)
-    simulate_exp2(make_policies(prm)..., N; strength_drift)
+    simulate_exp2(make_policies(prm)..., N; prm.strength_noise)
 end
 
-function simulate_exp2(pre_pol, crit_pol, N=1_000_000; 
-                       strength_drift=Normal(0, 1e-9), duration_noise=Gamma(1e-9,1e-9))
-    strengths = sample_strengths(pre_pol,  2N; strength_drift)
+function simulate_exp2(pre_pol, crit_pol, N=1_000_000; strength_noise=0.)
+    strengths = sample_strengths(pre_pol,  2N; strength_noise)
     pairs = map(1:2:2N) do i
         s1, pretest_accuracy_first = strengths[i]
         s2, pretest_accuracy_second = strengths[i+1]
@@ -25,7 +23,6 @@ function simulate_exp2(pre_pol, crit_pol, N=1_000_000;
         sim = simulate(crit_pol; s, fix_log=FullFixLog())
         presentation_times = sim.fix_log.fixations .* float(MS_PER_SAMPLE)
         # presentation_times .+= (crit_pol.m.switch_cost / crit_pol.m.sample_cost) * MS_PER_SAMPLE
-        presentation_times .+= rand(duration_noise, length(presentation_times))
         (;response_type = sim.b.focused == -1 ? "empty" : "correct",
           choose_first = sim.b.focused == -1 ? missing : sim.b.focused == 1,
           pretest_accuracy..., 

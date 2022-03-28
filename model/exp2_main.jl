@@ -4,7 +4,7 @@ end
 
 @everywhere include("common.jl")
 @everywhere include("exp2_base.jl")
-mkpath("results/exp2")
+mkpath("results/noise_exp2")
 
 # %% ==================== load data ====================
 
@@ -26,7 +26,7 @@ end
 const ss_human = exp2_sumstats(human_trials, human_fixations);
 
 function compute_sumstats(name, make_policies, prms; read_only = false)
-    dir = "cache/exp2_$(name)_sumstats"
+    dir = "cache/noise_exp2_$(name)_sumstats"
     mkpath(dir)
     map = read_only ? asyncmap : pmap
     @showprogress map(prms) do prm
@@ -41,16 +41,16 @@ function compute_sumstats(name, make_policies, prms; read_only = false)
     end;
 end
 
-function write_sims(name, make_policies; n_top=10)
-    top_table = deserialize("tmp/exp1_fits_$name")
+function write_sims(name, make_policies; n_top=5)
+    top_table = deserialize("tmp/noise_exp1_fits_$name")
     exp1_top = eachrow(top_table[1:n_top, 1:8])
 
     prms = map(exp1_top) do prm
         (;prm..., switch_cost=prm.sample_cost)
     end
 
-    mkpath("results/exp2/$(name)_trials/")
-    mkpath("results/exp2/$(name)_fixations/")
+    mkpath("results/noise_exp2/$(name)_trials/")
+    mkpath("results/noise_exp2/$(name)_fixations/")
 
     @showprogress "simulate" pmap(enumerate(prms)) do (i, prm)
         pre_pol, crit_pol = make_policies(prm)
@@ -62,8 +62,8 @@ function write_sims(name, make_policies; n_top=10)
         add_duration_noise!(sim, dur_noise)
 
         trials = make_trials(sim); fixations = make_fixations(sim)
-        CSV.write("results/exp2/$(name)_trials/$i.csv", trials)
-        CSV.write("results/exp2/$(name)_fixations/$i.csv", fixations)
+        CSV.write("results/noise_exp2/$(name)_trials/$i.csv", trials)
+        CSV.write("results/noise_exp2/$(name)_fixations/$i.csv", fixations)
         ss = exp2_sumstats(trials, fixations)
         (;ss..., res)
     end
@@ -77,25 +77,25 @@ end
 )
 
 optimal_results = write_sims("optimal", optimal_policies)
-serialize("tmp/exp2_optimal_results", optimal_results)
+serialize("tmp/noise_exp2_optimal_results", optimal_results)
 
 
 
-# %% ==================== empirical ====================
+# # %% ==================== empirical ====================
 
-@everywhere begin
-    plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
-    const emp_pretest_stop_dist = empirical_distribution(plausible_skips(human_pretest).rt)
-    const emp_crit_stop_dist = empirical_distribution(skipmissing(plausible_skips(human_trials).rt))
-    const emp_switch_dist = empirical_distribution(human_fixations.duration)
+# @everywhere begin
+#     plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
+#     const emp_pretest_stop_dist = empirical_distribution(plausible_skips(human_pretest).rt)
+#     const emp_crit_stop_dist = empirical_distribution(skipmissing(plausible_skips(human_trials).rt))
+#     const emp_switch_dist = empirical_distribution(human_fixations.duration)
 
-    empirical_policies(prm) = (
-        RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
-        RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
-    )
-end
-empirical_results = write_sims("empirical", empirical_policies)
+#     empirical_policies(prm) = (
+#         RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
+#         RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
+#     )
+# end
+# empirical_results = write_sims("empirical", empirical_policies)
 
-mean(Gamma(empirical_results[1].res.minimizer...))
+# mean(Gamma(empirical_results[1].res.minimizer...))
 
 
