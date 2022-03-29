@@ -105,8 +105,7 @@ end
 
 function add_duration_noise!(df, d)
     for x in df.presentation_times
-        n = min(length(x), 2)
-        x[1:n] .+= rand(d, n)
+        x .+= rand(d, length(x))
     end
 end
 

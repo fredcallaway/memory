@@ -56,9 +56,9 @@ function write_sims(name, make_policies; n_top=5)
     @showprogress "simulate" pmap(enumerate(prms)) do (i, prm)
         pre_pol, crit_pol = make_policies(prm)
         sim = simulate_exp2(pre_pol, crit_pol)
-        # res = optimize_duration_noise(sim, human_fixations)
-        # dur_noise = Gamma(res.minimizer...)
-        dur_noise = Gamma(prm.rt_α, prm.rt_θ)
+        res = optimize_duration_noise(sim, human_fixations)
+        dur_noise = Gamma(res.minimizer...)
+
         sim = simulate_exp2(pre_pol, crit_pol)
         add_duration_noise!(sim, dur_noise)
 
@@ -80,6 +80,8 @@ end
 
 optimal_results = write_sims("optimal", optimal_policies)
 serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
+
+
 
 # # %% ==================== empirical ====================
 
