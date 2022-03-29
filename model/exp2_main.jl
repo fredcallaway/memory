@@ -55,7 +55,7 @@ function write_sims(name, make_policies; n_top=5)
 
     @showprogress "simulate" pmap(enumerate(prms)) do (i, prm)
         pre_pol, crit_pol = make_policies(prm)
-        sim = simulate_exp2(pre_pol, crit_pol)
+        sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
         res = optimize_duration_noise(sim, human_fixations)
         dur_noise = Gamma(res.minimizer...)
 

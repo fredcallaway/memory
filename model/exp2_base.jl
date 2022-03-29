@@ -8,11 +8,11 @@ function exp2_mdp(prm; maxt=MAX_TIME)
 end
 
 function simulate_exp2(make_policies, prm::NamedTuple, N=1_000_000; kws...)
-    simulate_exp2(make_policies(prm)..., N; prm.strength_noise)
+    simulate_exp2(make_policies(prm)..., N; prm.within_σ, prm.between_σ)
 end
 
-function simulate_exp2(pre_pol, crit_pol, N=1_000_000; strength_noise=0.)
-    strengths = sample_strengths(pre_pol,  2N; strength_noise)
+function simulate_exp2(pre_pol, crit_pol, N=1_000_000; within_σ, between_σ)
+    strengths = sample_strengths(pre_pol,  2N; within_σ, between_σ)
     pairs = map(1:2:2N) do i
         s1, pretest_accuracy_first = strengths[i]
         s2, pretest_accuracy_second = strengths[i+1]
