@@ -104,11 +104,28 @@ nonfinal = fixations %>%
 
 # %% --------
 
-plt_number = fixations %>% 
-    filter(presentation < 6) %>% 
+# plt_number = fixations %>% 
+#     filter(presentation < 6) %>% 
+#     mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
+#     plot_effect(presentation, duration, type) +
+#     labs(x="Fixation Number", y="Duration (s)")
+
+
+plt_last_duration = fixations %>% 
+    filter(duration <= 5000) %>%
     mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
-    plot_effect(presentation, duration, type) +
-    labs(x="Fixation Number", y="Duration (s)")
+    ggplot(aes(duration/1000, fill=type, y = ..width..*..density..)) +
+    geom_histogram(position="identity", breaks=seq(0, 5.001, .200), alpha=0.5) +
+    facet_grid(~name) +
+    # theme(legend.position="None") +
+    scale_colour_manual(values=c(
+        "Final"="#87DE7A", 
+        "Non-Final"="#AF7BDC"
+        # "final"="#F8E500", 
+        # "non-final"="#17D6CC"
+    ), aesthetics=c("fill", "colour"), name="Fixation Type") +
+    labs(x="Fixation Duration (s)", y="Proportion")
+    # scale_x_continuous(breaks=seq(-1,5,1))
 
 plt_fixated = nonfinal %>% 
     # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
@@ -139,7 +156,7 @@ bottom = (plt_fixated +
     scale_x_continuous(labels = scales::percent, n.breaks=3) &
     theme(legend.position="none")
 
-(plt_number / bottom) + 
+(plt_last_duration / bottom) + 
     plot_layout(design=layout) +
     plot_annotation(tag_levels = 'A') & 
     theme(plot.tag.position = c(0, 1)) &

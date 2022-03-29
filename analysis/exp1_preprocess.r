@@ -3,6 +3,7 @@ VERSIONS = c('v6.5D')
 
 suppressPackageStartupMessages(source("setup.r"))
 source("preprocess_common.r")  # defines all pretest and agg_pretest
+write_tex = tex_writer("stats/exp1")
 
 # %% ==================== Load  ====================
 
@@ -16,11 +17,15 @@ all_trials = load_data('simple-recall-penalized') %>%
     select(-judgement_type)
 
 # %% ==================== Exclusions ====================
-
 excl = all_trials %>% 
     group_by(wid) %>%
     summarise(skip_rate=mean(response_type == "empty")) %>% 
     mutate(keep=skip_rate < .9)
+
+length(excl) %>% write_tex("N_recruit")
+sum(!excl$keep) %>% write_tex("N_exclude")
+sum(excl$keep) %>% write_tex("N_final")
+
 keep_wids = excl %>% filter(keep) %>% with(wid)
 pretest = all_pretest %>% filter(wid %in% keep_wids)
 trials = all_trials %>% 

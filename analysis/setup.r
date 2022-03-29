@@ -106,11 +106,11 @@ load_model_human = function(exp, name, random='empirical', n=1) {
         read_csv(glue('../data/processed/{exp}/{name}.csv'), 
             col_types = cols()) %>% mutate(name='human'),
         map(seq(n), ~ 
-            read_csv(glue('../model/results/{exp}/optimal_{name}/{.x}.csv'), col_types = cols()) %>% 
+            read_csv(glue('../model/results/noise_{exp}/optimal_{name}/{.x}.csv'), col_types = cols()) %>% 
             mutate(name='optimal', wid = glue('optimal-{.x}'))
          ),
         map(seq(n), ~ 
-            read_csv(glue('../model/results/{exp}/empirical_{name}/{.x}.csv'), col_types = cols()) %>% 
+            read_csv(glue('../model/results/noise_{exp}/empirical_{name}/{.x}.csv'), col_types = cols()) %>% 
             mutate(name='empirical', wid = glue('empirical-{.x}'))
          ),
         # read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
@@ -119,9 +119,9 @@ load_model_human = function(exp, name, random='empirical', n=1) {
         #     col_types = cols()) %>% mutate(name='empirical'),
     ) %>% 
     mutate(name = recode_factor(name, 
-        "optimal" = "Optimal Meta", 
+        "optimal" = "Optimal Metamemory", 
         "human" = "Human",
-        "empirical" = "No Meta"
+        "empirical" = "No Meta-Control"
     ), ordered=T)
 }
 
