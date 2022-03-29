@@ -45,18 +45,18 @@ macro bywrap(x, what, val, default=missing)
     end)
 end
 
-function sample_strengths(pol, N=10000; strength_noise=0.)
-
-    prenoise_prior = mutate(pol.m.prior, σ=√(pol.m.prior.σ^2 - strength_noise^2))
-    noise = Normal(0, strength_noise)
+function sample_strengths(pol, N=10000; between_σ, within_σ)
+    @assert pol.m.prior.σ^2 ≈ between_σ^2 + within_σ^2
+    underlying_strength_dist = Normal(pol.m.prior.μ, between_σ)
+    trial_strength_shift = Normal(0, within_σ)
 
     map(1:N) do i
-        prenoise_strength = rand(prenoise_prior)
+        underlying_strength = rand(underlying_strength_dist)
         pretest_accuracy = 2 \ mapreduce(+, 1:2) do i
-            s = (prenoise_strength + rand(noise),)
+            s = (underlying_strength + rand(trial_strength_shift),)
             simulate(pol; s).b.focused == 1
         end
-        strength = prenoise_strength + rand(noise)
+        strength = underlying_strength + rand(trial_strength_shift)
         (strength, pretest_accuracy)
     end
 end

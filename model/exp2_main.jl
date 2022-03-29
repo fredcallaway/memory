@@ -2,9 +2,10 @@ if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
 
+RUN = "mar29"
 @everywhere include("common.jl")
 @everywhere include("exp2_base.jl")
-mkpath("results/noise_exp2")
+mkpath("results/$(RUN)_exp2")
 
 # %% ==================== load data ====================
 
@@ -26,7 +27,7 @@ end
 const ss_human = exp2_sumstats(human_trials, human_fixations);
 
 function compute_sumstats(name, make_policies, prms; read_only = false)
-    dir = "cache/noise_exp2_$(name)_sumstats"
+    dir = "cache/$(RUN)_exp2_$(name)_sumstats"
     mkpath(dir)
     map = read_only ? asyncmap : pmap
     @showprogress map(prms) do prm
@@ -42,15 +43,15 @@ function compute_sumstats(name, make_policies, prms; read_only = false)
 end
 
 function write_sims(name, make_policies; n_top=5)
-    top_table = select(deserialize("tmp/noise_exp1_fits_$name"), Not(:ss))
+    top_table = select(deserialize("tmp/$(RUN)_exp1_fits_$name"), Not(:ss))
     exp1_top = eachrow(top_table)[1:n_top]
 
     prms = map(exp1_top) do prm
         (;prm..., switch_cost=prm.sample_cost)
     end
 
-    mkpath("results/noise_exp2/$(name)_trials/")
-    mkpath("results/noise_exp2/$(name)_fixations/")
+    mkpath("results/$(RUN)_exp2/$(name)_trials/")
+    mkpath("results/$(RUN)_exp2/$(name)_fixations/")
 
     @showprogress "simulate" pmap(enumerate(prms)) do (i, prm)
         pre_pol, crit_pol = make_policies(prm)
@@ -58,15 +59,15 @@ function write_sims(name, make_policies; n_top=5)
         # res = optimize_duration_noise(sim, human_fixations)
         # dur_noise = Gamma(res.minimizer...)
         dur_noise = Gamma(prm.rt_α, prm.rt_θ)
-
         sim = simulate_exp2(pre_pol, crit_pol)
         add_duration_noise!(sim, dur_noise)
 
         trials = make_trials(sim); fixations = make_fixations(sim)
-        CSV.write("results/noise_exp2/$(name)_trials/$i.csv", trials)
-        CSV.write("results/noise_exp2/$(name)_fixations/$i.csv", fixations)
+        CSV.write("results/$(RUN)_exp2/$(name)_trials/$i.csv", trials)
+        CSV.write("results/$(RUN)_exp2/$(name)_fixations/$i.csv", fixations)
         ss = exp2_sumstats(trials, fixations)
-        (;ss..., res)
+        ss
+        # (;ss..., res)
     end
 end
 
@@ -78,7 +79,7 @@ end
 )
 
 optimal_results = write_sims("optimal", optimal_policies)
-serialize("tmp/noise_exp2_optimal_results", optimal_results)
+serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
 
 # # %% ==================== empirical ====================
 
