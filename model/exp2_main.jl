@@ -42,8 +42,8 @@ function compute_sumstats(name, make_policies, prms; read_only = false)
 end
 
 function write_sims(name, make_policies; n_top=5)
-    top_table = deserialize("tmp/noise_exp1_fits_$name")
-    exp1_top = eachrow(top_table[1:n_top, 1:8])
+    top_table = select(deserialize("tmp/noise_exp1_fits_$name"), Not(:ss))
+    exp1_top = eachrow(top_table)[1:n_top]
 
     prms = map(exp1_top) do prm
         (;prm..., switch_cost=prm.sample_cost)
@@ -55,8 +55,9 @@ function write_sims(name, make_policies; n_top=5)
     @showprogress "simulate" pmap(enumerate(prms)) do (i, prm)
         pre_pol, crit_pol = make_policies(prm)
         sim = simulate_exp2(pre_pol, crit_pol)
-        res = optimize_duration_noise(sim, human_fixations)
-        dur_noise = Gamma(res.minimizer...)
+        # res = optimize_duration_noise(sim, human_fixations)
+        # dur_noise = Gamma(res.minimizer...)
+        dur_noise = Gamma(prm.rt_α, prm.rt_θ)
 
         sim = simulate_exp2(pre_pol, crit_pol)
         add_duration_noise!(sim, dur_noise)
@@ -78,8 +79,6 @@ end
 
 optimal_results = write_sims("optimal", optimal_policies)
 serialize("tmp/noise_exp2_optimal_results", optimal_results)
-
-
 
 # # %% ==================== empirical ====================
 
