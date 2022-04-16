@@ -3,7 +3,9 @@ SIZE = 2.7
 MAKE_PDF = TRUE
 STEP_SIZE = 100
 
+RUN = "mar30"
 OUT = "exp2"
+# OUT = glue("{RUN}_exp2_alt")
 
 savefig = function(name, width, height) {
     fig(glue("{OUT}/{name}"), width*SIZE, height*SIZE, pdf=MAKE_PDF)
@@ -14,17 +16,12 @@ system(glue('mkdir -p figs/{OUT}'))
 
 pretest = read_csv('../data/processed/exp2/pretest.csv', col_types = cols())
 
-filt = switch(OUT, 
-    exp2_err = quote(response_type != "intrusion"), 
-    quote(response_type == "correct")
-)
-
-df = load_model_human("exp2", "trials") %>% 
-    filter(eval(filt)) %>% 
+df = load_model_human(RUN, "exp2", "trials") %>% 
+    filter(response_type == "correct") %>% 
     mutate(rel_pretest_accuracy = pretest_accuracy_first - pretest_accuracy_second)
 
-fixations = load_model_human("exp2", "fixations") %>%
-    filter(eval(filt)) %>% 
+fixations = load_model_human(RUN, "exp2", "fixations") %>%
+    filter(response_type == "correct") %>% 
     mutate(
         last_fix = as.numeric(presentation == n_pres),
         fix_first = presentation %% 2,
@@ -35,7 +32,7 @@ fixations = load_model_human("exp2", "fixations") %>%
         )
     )
 
-# %% ==================== overall proportion and timecourse ====================
+# # %% ==================== overall proportion and timecourse ====================
 
 timecourse = fixations %>% 
     # filter(n_pres >= 2) %>%
@@ -50,28 +47,8 @@ timecourse = fixations %>%
 
 
 # %% --------
-
-plt_overall = df %>%
-    filter(n_pres >= 2) %>%
-    mutate(x = factor(rel_pretest_accuracy), y = total_first / (total_first + total_second)) %>% 
-    ggplot(aes(x, y)) +
-    stat_summary(fun=mean, group=0, geom="line", colour="#DADADA") +
-    stat_summary(aes(color=x), fun.data=mean_cl_boot) +
-    facet_wrap(~name) +
-    theme(legend.position="none") +
-    labs(x="Relative Pretest Accuracy of First Cue", y="Proportion Fixation\nTime on First Cue")
-
-cutoff = df %>% filter(name == "Human") %>% with(quantile(rt, .95, na.rm=T) / 1000)
-plt_timecourse = timecourse %>% 
-    filter(time < cutoff) %>% 
-    plot_effect_continuous(time, fix_first, rel_pretest_accuracy) +
-    labs(x="Time (s)", y="Probability Fixate First Cue")
-
-(plt_overall / plt_timecourse) +
-    plot_layout(guides = "collect") +
-    plot_annotation(tag_levels = 'A') & 
-    theme(plot.tag.position = c(0, 1)) &
-    coord_cartesian(xlim=c(NULL), ylim=c(0, 1)) &
+style = list(
+    coord_cartesian(xlim=c(NULL), ylim=c(0, 1)),
     scale_colour_manual(
         values=c(
             "#d7191c",
@@ -84,6 +61,33 @@ plt_timecourse = timecourse %>%
         aesthetics=c("colour"),
         name="Relative\nPretest\nAccuracy"
     )
+)
+
+plt_overall = df %>%
+    filter(n_pres >= 2) %>%
+    mutate(x = factor(rel_pretest_accuracy), y = total_first / (total_first + total_second)) %>% 
+    ggplot(aes(x, y)) +
+    stat_summary(fun=mean, group=0, geom="line", colour="#DADADA") +
+    stat_summary(aes(color=x), fun.data=mean_cl_boot) +
+    facet_wrap(~name) +
+    theme(legend.position="none") +
+    style +
+    labs(x="Relative Pretest Accuracy of First Cue", y="Proportion Fixation\nTime on First Cue")
+savefig("overall", 3.2, 1)
+
+cutoff = df %>% filter(name == "Human") %>% with(quantile(rt, .95, na.rm=T) / 1000)
+plt_timecourse = timecourse %>% 
+    filter(time < cutoff) %>% 
+    plot_effect_continuous(time, fix_first, rel_pretest_accuracy) +
+    style +
+    labs(x="Time (s)", y="Probability Fixate First Cue")
+savefig("timecourse", 3.5, 1)
+
+(plt_overall / plt_timecourse) +
+    plot_layout(guides = "collect") +
+    plot_annotation(tag_levels = 'A') & 
+    theme(plot.tag.position = c(0, 1))
+
 savefig("overall_timecourse", 3.5, 2)
 
 # %% ==================== fixation durations ====================
@@ -102,15 +106,6 @@ nonfinal = fixations %>%
         )
     ) %>% mutate(relative = fixated - nonfixated)
 
-# %% --------
-
-# plt_number = fixations %>% 
-#     filter(presentation < 6) %>% 
-#     mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
-#     plot_effect(presentation, duration, type) +
-#     labs(x="Fixation Number", y="Duration (s)")
-
-
 plt_last_duration = fixations %>% 
     filter(duration <= 5000) %>%
     mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
@@ -127,12 +122,27 @@ plt_last_duration = fixations %>%
     labs(x="Fixation Duration (s)", y="Proportion")
     # scale_x_continuous(breaks=seq(-1,5,1))
 
+
+plt_number = fixations %>% 
+    filter(presentation < 6) %>% 
+    mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
+    plot_effect(presentation, duration, type) +
+    labs(x="Fixation Number", y="Duration (s)")
+
+short_names = .  %>% mutate(name = recode_factor(name, 
+    "Optimal Metamemory" = "Optimal", 
+    "Human" = "Human",
+    "No Meta-Level Control" = "No Control"
+), ordered=T)
+
 plt_fixated = nonfinal %>% 
+    short_names %>% 
     # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
     plot_effect(fixated, duration, type) +
     labs(x="Pretest Accuracy of Fixated Cue", y="Duration (s)", colour="Fixation Type")
 
 plt_nonfixated = nonfinal %>% 
+    short_names %>% 
     filter(presentation > 1) %>% 
     # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>%
     plot_effect(nonfixated, duration, type) +
@@ -156,7 +166,7 @@ bottom = (plt_fixated +
     scale_x_continuous(labels = scales::percent, n.breaks=3) &
     theme(legend.position="none")
 
-(plt_last_duration / bottom) + 
+(plt_number / bottom) + 
     plot_layout(design=layout) +
     plot_annotation(tag_levels = 'A') & 
     theme(plot.tag.position = c(0, 1)) &
@@ -180,3 +190,5 @@ savefig("fixation_durations", 3.5, 2)
 #     ), aesthetics=c("fill", "colour"), name="Fixation Type")
 
 # savefig("fixation_durations", 3.5, 2.5)
+
+cc

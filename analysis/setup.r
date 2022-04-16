@@ -89,6 +89,10 @@ ensure_column <- function(data, col) {
 
 zscore = function(x) as.vector(scale(x))
 
+n_pct = function(x) {
+    glue("{sum(x)} ({round(100*mean(x))}\\%)")
+}
+
 midbins = function(x, breaks) {
     bin_ids = cut(x, breaks, labels=FALSE)
     left = breaks[-length(breaks)]
@@ -101,16 +105,16 @@ load_human = function(exp, name) {
         mutate(name = 'Human')
 }
 
-load_model_human = function(exp, name, random='empirical', n=1) {
+load_model_human = function(run, exp, name, random='empirical', n=1) {
     bind_rows(
         read_csv(glue('../data/processed/{exp}/{name}.csv'), 
             col_types = cols()) %>% mutate(name='human'),
         map(seq(n), ~ 
-            read_csv(glue('../model/results/noise_{exp}/optimal_{name}/{.x}.csv'), col_types = cols()) %>% 
+            read_csv(glue('../model/results/{run}_{exp}/optimal_{name}/{.x}.csv'), col_types = cols()) %>% 
             mutate(name='optimal', wid = glue('optimal-{.x}'))
          ),
         map(seq(n), ~ 
-            read_csv(glue('../model/results/noise_{exp}/empirical_{name}/{.x}.csv'), col_types = cols()) %>% 
+            read_csv(glue('../model/results/{run}_{exp}/empirical_{name}/{.x}.csv'), col_types = cols()) %>% 
             mutate(name='empirical', wid = glue('empirical-{.x}'))
          ),
         # read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
@@ -120,8 +124,8 @@ load_model_human = function(exp, name, random='empirical', n=1) {
     ) %>% 
     mutate(name = recode_factor(name, 
         "optimal" = "Optimal Metamemory", 
+        "empirical" = "No Meta-Level Control",
         "human" = "Human",
-        "empirical" = "No Meta-Control"
     ), ordered=T)
 }
 

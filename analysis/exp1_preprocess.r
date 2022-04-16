@@ -22,15 +22,18 @@ excl = all_trials %>%
     summarise(skip_rate=mean(response_type == "empty")) %>% 
     mutate(keep=skip_rate < .9)
 
-length(excl) %>% write_tex("N_recruit")
-sum(!excl$keep) %>% write_tex("N_exclude")
-sum(excl$keep) %>% write_tex("N_final")
+nrow(excl) %>% write_tex("N/recruited")
+sum(!excl$keep) %>% write_tex("N/excluded")
+sum(excl$keep) %>% write_tex("N/final")
 
 keep_wids = excl %>% filter(keep) %>% with(wid)
 pretest = all_pretest %>% filter(wid %in% keep_wids)
-trials = all_trials %>% 
-    filter(wid %in% keep_wids)  %>% 
-    filter(response_type %in% c("correct","empty"))
+trials = all_trials %>% filter(wid %in% keep_wids) 
+
+trials = trials %>% 
+    mutate(drop = response_type %nin% c("correct","empty")) %T>% 
+    with(write_tex(n_pct(drop), "N/error")) %>% 
+    filter(!drop)
 
 # %% ==================== Select and augment ====================
 
@@ -44,6 +47,7 @@ pretest = pretest %>% select(wid, block, word, response_type, rt)
 
 write_csv(pretest, '../data/processed/exp1/pretest.csv')
 write_csv(trials, '../data/processed/exp1/trials.csv')
+write_csv(excl, '../data/processed/exp1/participants.csv')
 
 
 

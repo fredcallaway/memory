@@ -1,8 +1,6 @@
 suppressPackageStartupMessages(source("setup.r"))
 suppressPackageStartupMessages(source("stats_base.r"))
 
-S = 2.5
-MAKE_PDF = TRUE
 write_tex = tex_writer("stats/exp2")
 
 # %% ==================== load data ====================
@@ -27,38 +25,7 @@ fixations = load_human("exp2", "fixations") %>%
 fmt_percent = function(prop) glue("{round(100 * prop)}\\%")
 
 
-# %% ==================== descriptive stats ====================
-
-# write_tex("N/recruited", length(unique(multi_raw$wid)))
-# write_tex("N/recruited", length(unique(multi$wid)) + N_drop_acc)
-# write_tex("N/drop_acc", N_drop_acc)
-# write_tex("N/analysed", length(unique(multi$wid)))
-
-# %% --------
-
-# simple %>% 
-#     group_by(wid) %>% 
-#     filter(block == max(block)) %>% 
-#     filter(n() == 80) %>% 
-#     count(response_type) %>% 
-#     mutate(prop=prop.table(n)) %>% 
-#     group_by(response_type) %>% 
-#     summarise(mean=mean(prop), sd=sd(prop)) %>%
-#     rowwise() %>% group_walk(~ with(.x, 
-#         write_tex("simple_response_pct/{response_type}", "{100*mean:.1}\\% $\\pm$ {100*sd:.1}\\%")
-#     ))
-
-# %% --------
-# human %>% 
-#     filter(n_pres >= 2) %>% 
-#     lmer(prop_first ~ rel_pretest_accuracy * last_pres + (rel_pretest_accuracy * last_pres | wid), data=.) %>% 
-#     tidy %>% 
-#     filter((term != "(Intercept)") & (are_na(effect) | effect == "fixed")) %>% 
-#     rowwise() %>% group_walk(~ with(.x,
-#         write_tex("overall_interaction/{term}", regression_tex())
-#     ))
-
-# %% --------
+# %% ==================== overall proportion ====================
 
 trials %>%
     filter(n_pres > 1) %>% 
@@ -66,7 +33,7 @@ trials %>%
     regress(prop_first ~ rel_pretest_accuracy) %>% 
     write_model("prop_first")
 
-# %% --------
+# %% ==================== last fixation confound ====================
 
 trials %>%
     filter(n_pres > 1) %>% 
@@ -79,14 +46,6 @@ trials %>%
 
 # %% --------
 
-trials %>%
-    filter(n_pres > 1) %>% 
-    mutate(prop_first = total_first / (total_first + total_second)) %>% 
-    regress(prop_first ~ pretest_accuracy_first + pretest_accuracy_second) %>% 
-    summ
-
-# %% --------
-
 trials %>% 
     # filter(n_pres > 1) %>% 
     with(mean(choose_first == mod(n_pres, 2))) %>% 
@@ -94,19 +53,26 @@ trials %>%
     write_tex("prop_choose_last")
 
 # %% --------
+
 fixations %>% 
-    # filter(n_pres > 1) %>% 
+    filter(n_pres > 1) %>% 
     group_by(name, wid, trial_id, is_final=presentation==n_pres) %>% 
     summarise(x=sum(duration)) %>%
     mutate(prop = x / sum(x)) %>%
     filter(is_final) %>% 
     participant_means(prop) %>%
-    with(mean(prop)) %>% 
+    with(mean(prop)) %>% s
     fmt_percent %>% 
     write_tex("prop_last_duration")
 
+# %% ==================== duration by number and finality ====================
 
-# %% ==================== fixation durations ====================
+fixations %>% 
+    mutate(final = 1*(presentation == n_pres)) %>% 
+    regress(duration ~ final + presentation) %>% 
+    write_model("duration")
+
+# %% ==================== nonfinal durations ====================
 
 nonfinal = fixations %>% 
     filter(presentation != n_pres) %>% 
@@ -120,6 +86,18 @@ nonfinal = fixations %>%
             mod(presentation, 2) == 0 ~ pretest_accuracy_first,
         )
     ) %>% mutate(relative = fixated - nonfixated)
+
+# %% --------
+
+nonfinal %>% 
+    regress(duration ~ fixated) %>% 
+    write_model("nonfinal")
+
+nonfinal %>% 
+    filter(presentation > 1) %>% 
+    regress(duration ~ nonfixated) %>% 
+    write_model("nonfinal")
+
 
 # %% --------
 nonfinal %>%
@@ -143,6 +121,18 @@ nonfinal %>%
     summarise(mean(duration))
 
 
+
+# simple %>% 
+#     group_by(wid) %>% 
+#     filter(block == max(block)) %>% 
+#     filter(n() == 80) %>% 
+#     count(response_type) %>% 
+#     mutate(prop=prop.table(n)) %>% 
+#     group_by(response_type) %>% 
+#     summarise(mean=mean(prop), sd=sd(prop)) %>%
+#     rowwise() %>% group_walk(~ with(.x, 
+#         write_tex("simple_response_pct/{response_type}", "{100*mean:.1}\\% $\\pm$ {100*sd:.1}\\%")
+#     ))
 
 
 

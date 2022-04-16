@@ -1,9 +1,8 @@
 VERSIONS = c('v5.6')
-DROP_ACC = TRUE
-DROP_ERROR = TRUE
 
 suppressPackageStartupMessages(source("setup.r"))
 source("preprocess_common.r")  # defines all pretest and agg_pretest
+write_tex = tex_writer("stats/exp2")
 
 # %% ==================== Load ====================
 
@@ -19,12 +18,23 @@ all_trials = load_data('multi-recall') %>%
 
 excl = all_trials %>% 
     group_by(wid) %>% 
-    summarise(accuracy=mean(response_type=="correct")) %>% 
-    mutate(keep = accuracy > 0.5)
+    summarise(accuracy=mean(response_type=="correct"), n_trial=n()) %>% 
+    mutate(incomplete=n_trial != 19, many_error=accuracy < 0.5) %>% 
+    mutate(keep = !many_error) %>% 
+    filter(!incomplete)  # NOTE: not counting these as "recruited" maybe not ideal
+
+nrow(excl) %>% write_tex("N/recruited")
+n_pct(!excl$keep) %>% write_tex("N/excluded")
+sum(excl$keep) %>% write_tex("N/final")
+
 keep_wids = excl %>% filter(keep) %>% with(wid)
 pretest = all_pretest %>% filter(wid %in% keep_wids)
 trials = all_trials %>% filter(wid %in% keep_wids)
 
+trials = trials %>% 
+    mutate(drop = response_type != "correct") %T>% 
+    with(write_tex(n_pct(drop), "N/error")) %>% 
+    filter(!drop)
 
 # %% ==================== Select and Augment ====================
 
