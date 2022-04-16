@@ -188,6 +188,7 @@ function belief2index(B::BackwardsInduction{2}, b::Belief{2})
     e1, e2 = map(b.evidence) do ev
         max(1, round(Int, (ev + B.m.threshold) / B.dv + 1))
     end
+        
     t1, t2 = b.time .+ 1
     (b.focused, e1, e2, t1, t2)
 end
@@ -212,6 +213,7 @@ OptimalPolicy(m::MetaMDP, dv::Float64=.02m.threshold) = OptimalPolicy(m, Backwar
 
 function act(pol::OptimalPolicy, b::Belief)
     qs = @view pol.B.Q[:, belief2index(pol.B, b)...]
+    # @assert all(isfinite, qs)
     q, a = findmax(qs)
     if pol.m.allow_stop && q < -pol.m.miss_cost
         0
@@ -231,6 +233,7 @@ SoftOptimalPolicy(B::BackwardsInduction, β) = SoftOptimalPolicy(B.m, B, β)
 
 function act(pol::SoftOptimalPolicy, b::Belief)
     qs = @view pol.B.Q[:, belief2index(pol.B, b)...]
+    @assert all(isfinite, qs)
     if pol.m.allow_stop
         sample(Weights(softmax(pol.β .* [-pol.m.miss_cost; qs]))) - 1
     else

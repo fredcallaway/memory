@@ -10,7 +10,8 @@ function figure(f, name="tmp"; base="figs", pdf=false, kws...)
     plot(;kws...)
     f()
     dt = Dates.format(now(), "m-d-H-M-S")
-    p = ".fighist/$dt-$name.png"
+    flatname = replace(name, "/" => "-")
+    p = ".fighist/$dt-$flatname.png"
     savefig(p)
     if name != "tmp"
         if pdf

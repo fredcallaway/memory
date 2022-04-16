@@ -1,5 +1,54 @@
+using Random
 
-# %% ==================== Policy Heatmap ====================
+include("utils.jl")
+include("mdp.jl")
+include("optimal_policy.jl")
+include("figure.jl")
+
+include("common.jl")
+include("exp2_base.jl")
+
+pyplot(label="", dpi=300, size=(400,300), lw=2, grid=false, widen=true, 
+    background_color=:white, foreground_color=:black)
+
+# %% --------
+
+m = MetaMDP{2}(allow_stop=true, miss_cost=2, sample_cost=.01, switch_cost=.01,
+    threshold=7, noise=.5, max_step=100, prior=Normal(0, 1)
+)
+
+B = BackwardsInduction(m; dv=0.2, verbose=true)
+
+# %% ==================== accumulation ====================
+
+Random.seed!(15)
+pol = OptimalPolicy(B)
+# colors = RGB.([.2, .6])
+figure(size=(700, 300), widen=false) do
+    plot!(
+        xlabel="time",
+        ylabel="recall progress",
+        ylim=(-7.3, 7.3),
+        xlim=(0,61),
+    )
+    θs = (0.25, 0.45)
+    sim = simulate(pol; s=θs, belief_log=BeliefLog2())
+
+    beliefs = sim.belief_log.beliefs
+    
+    for i in 1:2
+        plot!(min.(m.threshold, map(b-> b.evidence[i], beliefs)))
+    end
+    hline!([m.threshold], color=:black)
+
+    cs = getfield.(beliefs, :focused)
+    switches = findall(diff(cs) .!= 0)
+
+    vline!(findall(diff(cs) .!= 0), color=:gray, lw=0.5)
+end
+
+
+# %% ==================== policy heatmap ====================
 
 # m = MetaMDP{2}(sample_cost=.1, threshold=4, noise=2, switch_cost=.1,
 #         max_step=30, prior=Normal(0.5, 2)
@@ -9,13 +58,145 @@
 #         max_step=30, prior=Normal(0.5, 2)
 # )
 
-m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.03, switch_cost=.03,
-    threshold=14, noise=2, max_step=60, prior=Normal(1, 1)
+# m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.03, switch_cost=.03,
+#     threshold=14, noise=2, max_step=100, prior=Normal(1, 1)
+# )
+
+m = MetaMDP{2}(allow_stop=true, miss_cost=2, sample_cost=.01, switch_cost=.01,
+    threshold=7, noise=.5, max_step=100, prior=Normal(0, 1)
 )
 
-B = BackwardsInduction(m; dv=0.2)
+B = BackwardsInduction(m; dv=0.2, verbose=true)
 
-countmap([simulate(OptimalPolicy(B)).b.focused for i in 1:1000])
+# %% --------
+
+colors = [
+    colorant"#D473A2",
+    colorant"#3B77B3",
+    colorant"#EAD56F",
+]
+
+evidences = collect(-m.threshold:B.dv:m.threshold)
+to_idx_space(x) = cld(length(evidences), 2) + x / B.dv
+# idx = Int.(range(1, length(evidences), length=5))
+
+function plot_policy(e2, t2; kws...)
+    Q = B.Q[:, 1, :, e2, :, t2]
+    V = B.V[1, :, e2, :, t2]
+    delta = Q[1, :, :] - Q[2, :, :]
+    X = fill(RGBA(0.,0.,0.,0.), size(delta))
+    X[delta .≥ 0] .= colors[2]
+    X[delta .< 0] .= colors[3]
+    X[(V .≈ -m.miss_cost)] .= colors[1]
+    plot(X;
+        yflip=false, 
+        widen=false,
+        xlab=" ", ylab=" ",
+        yticks=[],
+        xticks=[],
+        kws...
+    )
+end
+
+function get_evidence(m, μ, t)
+    λ_obs = m.noise ^ -2
+    λ_prior = m.prior.σ^-2
+    μ_prior = m.prior.μ
+    λ = λ_obs * t + λ_prior
+    (μ * λ - μ_prior * λ_prior) / λ_obs
+end
+
+function policy_fig(ev2, t2)
+    b = Belief{2}(1, 1, [0., ev2], [0, t2])
+    e2, t2 = belief2index(B, b)[[3, 5]]
+    figure("exp2_policy_$(ev2)_$t2") do
+        plot_policy(e2, t2,
+            size=(300,300),
+            xlab="time on current memory", 
+            ylab="recall progress",
+            xlim=(1, 91),
+        )
+
+        μ2 = posterior(m, ev2, t2).μ
+        x = 0:(100-t2)
+        y = to_idx_space.(get_evidence.([m], μ2, x))
+        plot!(x, y, color=:white, lw=2, ls=:dash, ylim=to_idx_space.([-m.threshold, m.threshold]))
+    end
+end
+
+# %% --------
+
+policy_fig(-1, 10)
+policy_fig(1, 10)
+policy_fig(0, 10)
+
+
+# %% ==================== policy (e1 x e2) ====================
+
+
+function plot_policy(t1, t2; kws...)
+    Q = B.Q[:, 1, :, :, t1, t2]
+    V = B.V[1, :, :, t1, t2]
+    delta = Q[1, :, :] - Q[2, :, :]
+    X = fill(RGBA(0.,0.,0.,0.), size(delta))
+    X[delta .≥ 0] .= colors[2]
+    X[delta .< 0] .= colors[3]
+    X[(V .≈ -m.miss_cost)] .= colors[1]
+    plot(X;
+        yflip=false, 
+        widen=false,
+        # ylab="progress on current",
+        # xlab="progress on other",
+        # yticks=(idx, string.(evidences[idx])),
+        # xticks=(idx, string.(evidences[idx])),
+        xlab=" ", ylab=" ",
+        yticks=[],
+        xticks=[],
+        kws...
+    )
+
+end
+figure("exp2_policy_25") do
+    plot_policy(25, 25)
+        size=(300,300),
+        ylab="recall progress on current target", 
+        xlab="recall progress on other target")
+end
+# %% --------
+figure("exp2_policy_multi") do
+    pp = [plot_policy(t1, t2) for t2 in [5, 25, 50], t1 in [50, 25, 5]]
+    plot!(pp[4], ylab="time on current target")
+    plot!(pp[8], xlab="time on other target")
+    plot!(pp...;
+        layout=(3, 3), size=(400, 400)
+    )
+end
+# %% --------
+function demo(x, y)
+    plot(xticks=[], yticks=[])
+    annotate!(.5, .5, text("$x, $y", 20))
+end
+
+figure() do
+    plots = [demo(t1, t2) for t1 in [5, 25, 50], t2 in [50, 25, 5]]
+    plot(plots...)
+
+end
+
+# %% --------
+figure() do
+    plot!(
+        plot_policy(10, 10, xlab=""),
+        plot_policy(20, 10, ylab=""),
+        plot_policy(30, 10, xlab="", ylab=""),
+        layout=(1,3), size=(750, 250)
+    )
+end
+
+# %% ==================== old ====================
+# %% --------
+
+
 
 # %% --------
 pol = OptimalPolicy(B)

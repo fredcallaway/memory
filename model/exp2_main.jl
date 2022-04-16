@@ -2,7 +2,7 @@ if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
 
-RUN = "mar29"
+RUN = "mar30"
 @everywhere include("common.jl")
 @everywhere include("exp2_base.jl")
 mkpath("results/$(RUN)_exp2")
@@ -59,7 +59,7 @@ function write_sims(name, make_policies; n_top=5)
         res = optimize_duration_noise(sim, human_fixations)
         dur_noise = Gamma(res.minimizer...)
 
-        sim = simulate_exp2(pre_pol, crit_pol)
+        sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
         add_duration_noise!(sim, dur_noise)
 
         trials = make_trials(sim); fixations = make_fixations(sim)
@@ -85,18 +85,18 @@ serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
 
 # # %% ==================== empirical ====================
 
-# @everywhere begin
-#     plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
-#     const emp_pretest_stop_dist = empirical_distribution(plausible_skips(human_pretest).rt)
-#     const emp_crit_stop_dist = empirical_distribution(skipmissing(plausible_skips(human_trials).rt))
-#     const emp_switch_dist = empirical_distribution(human_fixations.duration)
+@everywhere begin
+    plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
+    const emp_pretest_stop_dist = empirical_distribution(plausible_skips(human_pretest).rt)
+    const emp_crit_stop_dist = empirical_distribution(skipmissing(plausible_skips(human_trials).rt))
+    const emp_switch_dist = empirical_distribution(human_fixations.duration)
 
-#     empirical_policies(prm) = (
-#         RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
-#         RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
-#     )
-# end
-# empirical_results = write_sims("empirical", empirical_policies)
+    empirical_policies(prm) = (
+        RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
+        RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
+    )
+end
+empirical_results = write_sims("empirical", empirical_policies)
 
 # mean(Gamma(empirical_results[1].res.minimizer...))
 

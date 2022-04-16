@@ -78,6 +78,10 @@ function grid(;kws...)
     KeyedArray(X; kws...)
 end
 
+function initialize_keyed(val; keys...)
+    KeyedArray(fill(val, (length(v) for (k, v) in keys)...); keys...)
+end
+
 function wrap_counts(df::DataFrame; dims...)
     @chain df begin
         groupby(collect(keys(dims)))
@@ -86,12 +90,21 @@ function wrap_counts(df::DataFrame; dims...)
     end
 end
 
-function wrap_pivot(df::DataFrame, val, f; dims...)
+function wrap_pivot(df::DataFrame, val, f; dims...) 
     @chain df begin
         groupby(collect(keys(dims)))
         combine(val => f => :_val)
         AxisKeys.populate!(initialize_keyed(0.; dims...), _, :_val)
     end
+end
+
+macro bywrap(x, what, val, default=missing)
+    arg = :(:_val = $val)
+    esc(quote
+        b = $(DataFramesMeta.by_helper(x, what, arg))
+        what_ = $what isa Symbol ? ($what,) : $what
+        wrapdims(b, :_val, what_..., sort=true; default=$default)
+    end)
 end
 
 function keyed(name, xs)

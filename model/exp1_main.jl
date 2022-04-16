@@ -8,7 +8,7 @@ mkpath("results/exp1")
 mkpath("tmp")
 
 N_SOBOL = 100_000
-RUN = "mar29"
+RUN = "mar30"
 
 # %% --------  
 
@@ -21,7 +21,7 @@ function compute_sumstats(name, make_policies, prms; N=100000, read_only = false
             try
                 exp1_sumstats(simulate_exp1(make_policies, prm, N))
             catch
-                println("Error, skipping")
+                # println("Error, skipping")
                 missing
             end
         end
@@ -123,11 +123,11 @@ sample_params(box) = map(reparameterize, sobol(N_SOBOL, box))
 
 optimal_prms = sample_params(Box(
     drift_μ = (-0.5, 0.5),
-    noise = (0, 2.),
+    noise = (0, 2),
     threshold = (1, 10),
     sample_cost = (0, .02),
     between_σ = (0, 2),
-    within_σ=(0,0.5),
+    within_σ=0,
     judgement_noise=1,
 ));
 
@@ -149,11 +149,11 @@ end
 
 empirical_prms = sample_params(Box(
     drift_μ = (-0.5, 0.5),
-    noise = (0, 2.),
+    noise = (0, 2),
     threshold = (1, 10),
     sample_cost = 0,
     between_σ = (0, 2),
-    within_σ=(0,0.5),
+    within_σ=0,
     judgement_noise=1,
 ));
 

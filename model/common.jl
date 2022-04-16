@@ -11,9 +11,6 @@ const MS_PER_SAMPLE = 100
 const MAX_STEP = Int(MAX_TIME / MS_PER_SAMPLE)
 
 quantize(x, q=MS_PER_SAMPLE) = q * cld(x, q)
-function initialize_keyed(val; keys...)
-    KeyedArray(fill(val, (length(v) for (k, v) in keys)...); keys...)
-end
 
 function smooth_uniform!(x, ε::Float64=1e-6)
     x .*= (1 - ε)
@@ -35,15 +32,6 @@ mse(x, y) = mean_error(squared, x, y)
 
 load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
 stringify(nt::NamedTuple) = replace(string(map(x->round(x; digits=8), nt::NamedTuple)), ([" ", "(", ")"] .=> "")...)
-
-macro bywrap(x, what, val, default=missing)
-    arg = :(:_val = $val)
-    esc(quote
-        b = $(DataFramesMeta.by_helper(x, what, arg))
-        what_ = $what isa Symbol ? ($what,) : $what
-        wrapdims(b, :_val, what_..., sort=true; default=$default)
-    end)
-end
 
 function sample_strengths(pol, N=10000; between_σ, within_σ)
     @assert pol.m.prior.σ^2 ≈ between_σ^2 + within_σ^2

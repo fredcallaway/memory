@@ -24,6 +24,7 @@ figure(xlim=(0,40), yaxis=(-8:4:8, (-8, 8)), widen=true, xlab="Time", ylab="Evid
     hline!([8], color=:black)
 end
 
+
 # %% ==================== MDP state plots ====================
 
 m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.2, 
@@ -98,8 +99,8 @@ m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.1,
 )
 # %% --------
 
-m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.06, 
-    threshold=7, noise=1, max_step=75, prior=Normal(0, 1)
+m = MetaMDP{1}(allow_stop=true, miss_cost=2, sample_cost=.06, 
+    threshold=7, noise=1, max_step=100, prior=Normal(0, 1)
 )
 
 # m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.03, 
@@ -107,18 +108,99 @@ m = MetaMDP{1}(allow_stop=true, miss_cost=3, sample_cost=.06,
 # )
 
 
-B = BackwardsInduction(m)
+B = BackwardsInduction(m; dv=.05)
 pol = OptimalPolicy(B)
 
 evidences = collect(-m.threshold:B.dv:m.threshold)
 idx = Int.(range(1, length(evidences), length=5))
-# %% --------
-figure("exp1_policy") do
-    heatmap(
-        B.V[1, :, :] .> -3, 
-        c=:RdBu_11, cbar=false,
-        xlab="Time",
-        ylab="Evidence",
+
+figure("exp1_policy", size=(600, 300), grid=false, widen=false) do
+    heatmap!(
+        B.V[1, :, :] .> -m.miss_cost, 
+        c=["#D473A2","#3B77B3"], cbar=false,
+        xlab="time",
+        ylab="recall progress",
         yticks=(idx, string.(evidences[idx]))
     )
 end
+
+# %% --------
+evidences = collect(-m.threshold:B.dv:m.threshold)
+
+times = 0:200
+
+
+bs = map(product(evidences, times)) do (e, t)
+    Belief{1}(t, 1, [e], [t])
+end
+
+V = map(bs) do b
+    value(B, b) > -3
+end
+
+μ = map(bs) do b
+    mean(posterior(m, b)[1])
+end
+
+σ = map(bs) do b
+    std(posterior(m, b)[1])
+end
+
+df = DataFrame((;μ, σ, V))
+
+# %% --------
+using Optim
+
+predict_v(μ, σ, θ) = cdf.(Normal.(μ, σ), θ[1]) .< θ[2]
+res = optimize([0.1, 0.1]) do θ
+    mean(predict_v(μ, σ, θ) .!= V)
+end
+res.minimizer, res.minimum
+
+# stop when  P(strength < θ1) > θ2
+
+# %% --------
+predict_v(μ, σ, θ) = μ .+ θ[1] .* σ .> θ[2]
+
+res2 = optimize(0, 1) do θ1
+    mean(predict_v(μ, σ, [θ1, 0.]) .!= V)
+end
+res2.minimizer, res2.minimum
+
+
+# %% --------
+
+quantize(x, q) = @chain x begin
+    cld(q)
+    q * _
+    round(;digits=6)
+    _ === -0. ? 0. : _
+end
+
+X = @chain df begin
+    @rtransform begin
+        :μ = quantize(:μ, .05)
+        :λ = :σ ^- 2
+    end
+    @rsubset abs(:μ) ≤ 1
+    @bywrap [:μ, :λ] mean(:V)
+end
+
+figure() do
+    heatmap(X)
+end
+
+
+# %% --------
+
+P = map(grid(μ=-1:.001:1, λ=1:201)) do (;μ, λ)
+    σ = λ^-0.5
+    predict_v(μ, σ, [.005, .7])
+end
+res.minimizer
+
+figure() do
+    heatmap(P)
+end
+
+
