@@ -177,18 +177,16 @@ function compute_value_functions!(model::BackwardsInduction{2}; verbose=true)
     end
 end
 
+round_evidence(B, e) = clip(round(Int, (e + B.m.threshold) / B.dv + 1), 1, size(B.V, 2)-1)
+
 function belief2index(B::BackwardsInduction{1}, b::Belief{1})
-    e1 = round(Int, (b.evidence[1] + B.m.threshold) / B.dv + 1)
-    e1 = max(1, e1)
+    e1 = round_evidence(B, b.evidence[1])
     t1 = b.time[1]+1
     (b.focused, e1, t1)
 end
 
 function belief2index(B::BackwardsInduction{2}, b::Belief{2})
-    e1, e2 = map(b.evidence) do ev
-        max(1, round(Int, (ev + B.m.threshold) / B.dv + 1))
-    end
-        
+    e1, e2 = map(e->round_evidence(B, e), b.evidence)
     t1, t2 = b.time .+ 1
     (b.focused, e1, e2, t1, t2)
 end
@@ -213,7 +211,7 @@ OptimalPolicy(m::MetaMDP, dv::Float64=.02m.threshold) = OptimalPolicy(m, Backwar
 
 function act(pol::OptimalPolicy, b::Belief)
     qs = @view pol.B.Q[:, belief2index(pol.B, b)...]
-    # @assert all(isfinite, qs)
+    @assert all(isfinite, qs)
     q, a = findmax(qs)
     if pol.m.allow_stop && q < -pol.m.miss_cost
         0

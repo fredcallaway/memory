@@ -148,6 +148,7 @@ unlinscale(x, low, high) = (x - low) / (high-low)
 unlogscale(x, low, high) = (log(x) - log(low)) / (log(high) - log(low))
 
 juxt(fs...) = x -> Tuple(f(x) for f in fs)
+clip(x, lo, hi) = min(hi, max(lo, x))
 
 nanreduce(f, x) = f(filter(!isnan, x))
 nanmean(x) = nanreduce(mean, x)
