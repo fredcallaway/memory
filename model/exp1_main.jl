@@ -7,8 +7,8 @@ end
 mkpath("results/exp1")
 mkpath("tmp")
 
-N_SOBOL = 100_000
-RUN = "mar30"
+N_SOBOL = 20_000
+RUN = "apr18"
 
 # %% --------  
 
@@ -86,14 +86,15 @@ function fit_exp1_model(name, make_policies, prms; n_top=5000, n_sim_top=1_000_0
     top_tbl = compute_loss(loss, top_sumstats, top_prms)
     display(select(top_tbl, Not([:judgement_noise]))[1:13, :])
 
-    rt_noise = pmap(eachrow(top_tbl)) do row
+    rt_noise = @showprogress "optimize rt noise" pmap(eachrow(top_tbl)) do row
+        ismissing(row.ss) && return (α=NaN, θ=NaN)
         Gamma(optimize_rt_noise(row.ss).minimizer...)
     end
     top_tbl.rt_α = getfield.(rt_noise, :α)
     top_tbl.rt_θ = getfield.(rt_noise, :θ)
 
     mkpath("results/$(RUN)_exp1/$(name)_trials/")
-    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:10])) do (i, row)
+    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
         rt_noise = Gamma(row.rt_α, row.rt_θ)
         prm = NamedTuple(row)
         sim = simulate_exp1(make_policies, prm, n_sim_top)
@@ -105,6 +106,13 @@ function fit_exp1_model(name, make_policies, prms; n_top=5000, n_sim_top=1_000_0
     top_tbl
 end
 
+function reparameterize(prm)
+    drift_σ = √(prm.between_σ^2 + prm.within_σ^2)
+    (;prm..., drift_σ)
+end
+
+sample_params(box) = map(reparameterize, sobol(N_SOBOL, box))
+
 # %% ==================== optimal ====================
 
 print_header("optimal")
@@ -114,12 +122,6 @@ print_header("optimal")
     OptimalPolicy(exp1_mdp(prm)),
 )
 
-function reparameterize(prm)
-    drift_σ = √(prm.between_σ^2 + prm.within_σ^2)
-    (;prm..., drift_σ)
-end
-
-sample_params(box) = map(reparameterize, sobol(N_SOBOL, box))
 
 optimal_prms = sample_params(Box(
     drift_μ = (-0.5, 0.5),
@@ -132,7 +134,6 @@ optimal_prms = sample_params(Box(
 ));
 
 optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_prms)
-
 # # %% ==================== empirical ====================
 
 print_header("empirical")

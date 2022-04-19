@@ -2,7 +2,7 @@ if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
 
-RUN = "mar30"
+RUN = "apr18"
 @everywhere include("common.jl")
 @everywhere include("exp2_base.jl")
 mkpath("results/$(RUN)_exp2")
@@ -81,8 +81,6 @@ end
 optimal_results = write_sims("optimal", optimal_policies)
 serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
 
-
-
 # # %% ==================== empirical ====================
 
 @everywhere begin
@@ -97,7 +95,5 @@ serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
     )
 end
 empirical_results = write_sims("empirical", empirical_policies)
-
-# mean(Gamma(empirical_results[1].res.minimizer...))
 
 
