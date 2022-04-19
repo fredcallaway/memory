@@ -7,7 +7,7 @@ end
 mkpath("results/exp1")
 mkpath("tmp")
 
-N_SOBOL = 20_000
+N_SOBOL = 50_000
 RUN = "apr18"
 
 # %% --------  

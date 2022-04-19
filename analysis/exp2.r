@@ -3,7 +3,7 @@ SIZE = 2.7
 MAKE_PDF = TRUE
 STEP_SIZE = 100
 
-RUN = "mar30"
+RUN = "apr18"
 OUT = "exp2"
 # OUT = glue("{RUN}_exp2_alt")
 
