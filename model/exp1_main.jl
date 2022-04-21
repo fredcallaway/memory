@@ -1,7 +1,4 @@
-if isinteractive()
-    Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
-end
-# %% --------
+
 @everywhere include("common.jl")
 @everywhere include("exp1_base.jl")
 mkpath("results/exp1")
@@ -10,22 +7,8 @@ mkpath("tmp")
 N_SOBOL = 50_000
 RUN = "apr18"
 
-# %% --------  
-
-function compute_sumstats(name, make_policies, prms; N=100000, read_only = false)
-    dir = "cache/$(RUN)_exp1_$(name)_sumstats_$N"
-    mkpath(dir)
-    map = read_only ? asyncmap : pmap
-    @showprogress "sumstats" map(prms) do prm
-        cache("$dir/$(hash(prm))"; read_only) do
-            try
-                exp1_sumstats(simulate_exp1(make_policies, prm, N))
-            catch
-                # println("Error, skipping")
-                missing
-            end
-        end
-    end;
+if isinteractive()
+    Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
 
 # %% ==================== load data ====================
@@ -38,42 +21,7 @@ target = exp1_sumstats(trials);
 @everywhere pretest = $pretest
 @everywhere target = $target
 
-# %% ==================== likelihood ====================
-@everywhere using Optim
-
-@everywhere function smooth_rt!(result, p::KeyedArray, d::Distribution, ε::Float64=1e-6)
-    pd = diff([0; cdf(d, p.rt)])
-    for h in axes(p, 4), i in axes(p, 3), j in axes(p, 2), z in axes(p, 1)
-        result[z, j, i, h] = sum(1:z) do k
-            y = z - k
-            @inbounds p[k, j, i, h] * pd[y + 1]
-        end
-    end
-    smooth_uniform!(result, ε)
-end
-
-@everywhere function optimize_rt_noise(ss)
-    X = zeros(size(target.hist))
-    optimize([10., 10.]) do x
-        any(xi < 0 for xi in x) && return Inf
-        smooth_rt!(X, ss.hist, Gamma(x...))
-        crossentropy(target.hist, X)
-    end
-end
-
-@everywhere function acc_rate(ss)
-    x = ssum(ss.hist, :rt, :judgement)
-    x ./= sum(x, dims=:response_type)
-    x("correct")
-end
-
-@everywhere function loss(ss)
-    ismissing(ss) && return Inf
-    x = acc_rate(ss)
-    (x[1] < .1 && x[3] > .85) || return Inf
-    res = optimize_rt_noise(ss)
-    res.minimum
-end
+# %% ==================== fitting pipeline ====================
 
 function fit_exp1_model(name, make_policies, prms; n_top=5000, n_sim_top=1_000_000)
     sumstats = compute_sumstats(name, make_policies, prms);
@@ -86,16 +34,17 @@ function fit_exp1_model(name, make_policies, prms; n_top=5000, n_sim_top=1_000_0
     top_tbl = compute_loss(loss, top_sumstats, top_prms)
     display(select(top_tbl, Not([:judgement_noise]))[1:13, :])
 
-    rt_noise = @showprogress "optimize rt noise" pmap(eachrow(top_tbl)) do row
-        ismissing(row.ss) && return (α=NaN, θ=NaN)
-        Gamma(optimize_rt_noise(row.ss).minimizer...)
-    end
-    top_tbl.rt_α = getfield.(rt_noise, :α)
-    top_tbl.rt_θ = getfield.(rt_noise, :θ)
+    # rt_noise = @showprogress "optimize rt noise" pmap(eachrow(top_tbl)) do row
+    #     ismissing(row.ss) && return (α=NaN, θ=NaN)
+    #     Gamma(optimize_rt_noise(row.ss).minimizer...)
+    # end
+    # top_tbl.rt_α = getfield.(rt_noise, :α)
+    # top_tbl.rt_θ = getfield.(rt_noise, :θ)
 
     mkpath("results/$(RUN)_exp1/$(name)_trials/")
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
-        rt_noise = Gamma(row.rt_α, row.rt_θ)
+        # rt_noise = Gamma(row.rt_α, row.rt_θ)
+        rt_noise = Gamma(optimize_rt_noise(row.ss).minimizer...)
         prm = NamedTuple(row)
         sim = simulate_exp1(make_policies, prm, n_sim_top)
         sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
@@ -106,13 +55,6 @@ function fit_exp1_model(name, make_policies, prms; n_top=5000, n_sim_top=1_000_0
     top_tbl
 end
 
-function reparameterize(prm)
-    drift_σ = √(prm.between_σ^2 + prm.within_σ^2)
-    (;prm..., drift_σ)
-end
-
-sample_params(box) = map(reparameterize, sobol(N_SOBOL, box))
-
 # %% ==================== optimal ====================
 
 print_header("optimal")
@@ -121,7 +63,6 @@ print_header("optimal")
     OptimalPolicy(pretest_mdp(prm)),
     OptimalPolicy(exp1_mdp(prm)),
 )
-
 
 optimal_prms = sample_params(Box(
     drift_μ = (-0.5, 0.5),
@@ -134,7 +75,8 @@ optimal_prms = sample_params(Box(
 ));
 
 optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_prms)
-# # %% ==================== empirical ====================
+
+# %% ==================== empirical ====================
 
 print_header("empirical")
 
