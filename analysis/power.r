@@ -1,31 +1,39 @@
 library(simr)
+suppressPackageStartupMessages(source("setup.r"))
+suppressPackageStartupMessages(source("stats_base.r"))
 
-VERSIONS = c('v5.6')
-DROP_HALF = FALSE
-DROP_ACC = TRUE
-DROP_ERROR = TRUE
-NORMALIZE_FIXATIONS = TRUE
-MIXED_DURATIONS = TRUE
-source("setup.r")
-source("load_data.r")
-if (!MIXED_DURATIONS) info("Using fixed effects models for fixations")
+fixations = load_human("exp2", "fixations") %>%
+    filter(response_type == "correct") %>% 
+    mutate(
+        duration = duration / 1000,
+        last_fix = as.numeric(presentation == n_pres),
+        fix_first = presentation %% 2,
+        fix_stronger = case_when(
+            pretest_accuracy_first == pretest_accuracy_second ~ NaN,
+            pretest_accuracy_first > pretest_accuracy_second ~ 1*fix_first,
+            pretest_accuracy_first < pretest_accuracy_second ~ 1*!fix_first
+        )
+    )
+
 
 # %% --------
-write_tex = tex_writer("stats")
-human %>% 
-    filter(n_pres >= 2) %>% 
-    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
-    tidy(conf.int=T) %>% 
-    filter(term == "strength_first") %>% 
-    rowwise() %>% group_walk(~ with(.x, 
-        write_tex("pilot_effect", "{100*mean:.1}\\% $\\pm$ {100*sd:.1}\\%")
-    ))
 
-# not finished
-    
-# %% --------
-
-groups = human %>% nest_by(wid, .keep=TRUE) %>% with(data)
+groups = fixations %>% 
+    filter(presentation != n_pres) %>% 
+    mutate(
+        fixated = case_when(
+            mod(presentation, 2) == 1 ~ pretest_accuracy_first,
+            mod(presentation, 2) == 0 ~ pretest_accuracy_second,
+        ),
+        nonfixated = case_when(
+            mod(presentation, 2) == 1 ~ pretest_accuracy_second,
+            mod(presentation, 2) == 0 ~ pretest_accuracy_first,
+        )
+    ) %>% 
+    mutate(relative = fixated - nonfixated) %>% 
+    select(wid, duration, fixated) %>%
+    nest_by(wid, .keep=TRUE) %>%
+    with(data)
 
 sample_p = function(N, run_model) {
     data = sample(groups, N, replace=T) %>% 
@@ -47,253 +55,24 @@ power_analysis = function(N, n_sim, run_model) {
 }
 
 # %% --------
-N = c(394)
+N = c(300, 350, 400, 450, 500)
 n_sim = 300
 
 p1 = power_analysis(N, n_sim, . %>% 
-    filter(n_pres >= 2) %>% 
-    lm(first_pres_time ~ strength_first, data=.) %>%
-    tidy %>% with(p.value[2])
-) %>% mutate(name="fixed zscore")
-
-p2 = power_analysis(N, n_sim, . %>% 
-    filter(n_pres >= 2) %>% 
-    lmer(first_pres_time_raw ~ strength_first + (strength_first|wid), data=.) %>% 
+    lmer(duration ~ fixated + (fixated|wid), data=.) %>% 
     summ %>% with(coeftable[2, "p"])
-) %>% mutate(name="mixed raw")
-
-p3 = power_analysis(N, n_sim, . %>% 
-    filter(n_pres >= 2) %>% 
-    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
-    summ %>% with(coeftable[2, "p"])
-) %>% mutate(name="mixed zscore")
-
-X = bind_rows(p1, p2, p3)
-# X = p3
-p3 %>% summarise(mean(p<.05))  #92.7
-
+)
 # %% --------
 
-X %>% ggplot(aes(p, fill=name, alpha=0.1)) +
-    geom_histogram(position="identity") + facet_grid(N ~ .) + coord_cartesian(xlim=c(0, 0.25), ylim=c(NULL))
-fig()
-
+p1 %>% 
+    group_by(N) %>%
+    summarise(power=mean(p<.05, na.rm=T)) %>% kable(digits=3)
 # %% --------
-X %>% 
-    group_by(name, N) %>%
+p1 %>% 
+    group_by(N) %>%
     summarise(power=mean(p<.05, na.rm=T)) %>% 
-    ggplot(aes(N, power, color=name)) + geom_line()
-fig("", 6, 3)
-
-# %% --------
-human %>% 
-    filter(n_pres >= 2) %>% 
-    lmer(first_pres_time_raw ~ strength_first + (strength_first|wid), data=.) %>% 
-    summ %>% with(coeftable[2, "p"])
-
-
-# %% ==================== Oct 27 ====================
-
-
-pp = power_analysis(N, n_sim, . %>% 
-    filter(n_pres >= 3) %>% 
-    lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% 
-    summ %>% with(coeftable[2, "p"])
-)
-
-mean(pp$p < .642)
-
-# %% --------
-
-
-p2 = power_analysis(N, n_sim, . %>% 
-    filter(n_pres >= 3) %>% 
-    lmer(second_pres_time ~ rel_strength + (1|wid), data=.) %>% 
-    summ %>% with(coeftable[2, "p"])
-)
-
-# %% ==================== Old ====================
-
-
-groups = human %>% nest_by(wid, .keep=TRUE) %>% with(data)
-
-sample_p = function(N) {
-    data = sample(groups, N, replace=T) %>% 
-        map(~ mutate(.x, wid=round(1e10 * runif(1)))) %>%
-        bind_rows
-    model = data %>% 
-        filter(n_pres >= 2) %>% 
-        lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.)
-    summ(model)$coeftable["strength_first", "p"]
-}
-
-results = map(N, ~ replicate(n_sim, sample_p(.x)))
-power = unlist(map(results, ~ mean(.x < .05)))
-mixed_pwr = tibble(N, power)
-
-# %% --------
-
-mixed_pwr %>% ggplot(aes(N, power)) + geom_line() + geom_hline(yintercept=0.8) + 
-    ggtitle("First Fixation Duration") + expand_limits(y=1)
-fig()
-
-# %% --------
-sample_p = function(data, N) {
-    independence_test(route_cost ~ feedback == "meta",
-                       data=resample(data, N),
-                       alternative="greater") %>% pvalue
-}
-
-# %% ==================== Previous ====================
-
-model = human %>% 
-    filter(response_type == "correct") %>% 
-    filter(n_pres > 0) %>% 
-    mutate(
-        last_pres_time = map_dbl(presentation_times, last),
-        last_rel_strength = if_else(last_pres == "first", rel_strength, 1 - rel_strength),
-        last_strength = if_else(last_pres == "first", strength_first, strength_second)
-    ) %>% 
-    lmer(last_pres_time ~ last_strength + (1|wid), data=.)
-# %% --------
-
-model = human %>% 
-    filter(n_pres >= 4) %>% 
-    lmer(third_pres_time ~ rel_strength + (rel_strength|wid), data=.)
-
-human %>% 
-    group_by(wid) %>% 
-    summarise(n=sum(n_pres > 3)) %>% 
-    ggplot(aes(n)) + geom_bar() + labs(x="Number of trials with 4 or more fixations", y="Number of participants")
-
-# %% --------
-
-avg_ptime = long %>% group_by(name,wid) %>% 
-    filter(last_fix == 0) %>% 
-    summarise(mean=mean(duration), sd=sd(duration))
-
-avg_ptime %>% 
-    ggplot(aes(fct_reorder(wid, mean), mean, ymin=mean-sd, ymax=mean+sd)) +
-    geom_pointrange()
-
-# %% --------
-
-human %>% 
-    filter(n_pres >= 2) %>% 
-    left_join(avg_ptime) %>% 
-    mutate(y=(first_pres_time-mean)/sd) %>% 
-    lm(y ~ strength_first, data=.) %>% 
-    summ(scale=T, transform.response = TRUE)
-
-# human %>% 
-#     filter(n_pres >= 2) %>% 
-#     lmer(first_pres_time ~ strength_first + (1|wid), data=.) %>% 
-#     summ(scale=T, transform.response = TRUE)
-
-human %>% 
-    filter(n_pres >= 2) %>% 
-    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
-    summ(scale=T, transform.response = TRUE)
-
-# %% --------
-
-human %>% 
-    filter(n_pres >= 3) %>% 
-    left_join(avg_ptime) %>% 
-    mutate(y=(second_pres_time-mean)/sd) %>% 
-    lm(y ~ rel_strength, data=.) %>% 
-    summ(scale=T, transform.response = T)
-
-human %>% 
-    filter(n_pres >= 3) %>% 
-    lmer(second_pres_time ~ rel_strength + (1|wid), data=.) %>% 
-    summ(scale=T, transform.response = TRUE)
-
-human %>% 
-    filter(n_pres >= 3) %>% 
-    lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% 
-    summ(scale=T, transform.response = TRUE)
-
-# %% --------
-
-human %>% 
-    filter(n_pres >= 4) %>% 
-    left_join(avg_ptime) %>% 
-    mutate(y=(third_pres_time-mean)/sd) %>% 
-    lm(y ~ rel_strength, data=.) %>% 
-    summ(scale=T, transform.response = TRUE)
-
-
-# human %>% 
-#     filter(n_pres >= 4) %>% 
-#     lmer(third_pres_time ~ rel_strength + (1|wid), data=.) %>% 
-#     summ(scale=T, transform.response = TRUE)
-
-human %>% 
-    filter(n_pres >= 4) %>% 
-    # filter(response_type %in% c("correct", "timeout")) %>% 
-    lmer(third_pres_time ~ rel_strength + (rel_strength|wid), data=.) %>% 
-    summ(scale=T, transform.response = TRUE)
-
-# %% --------
-
-human %>% 
-    filter(n_pres >= 3) %>% 
-    left_join(avg_ptime) %>% 
-    mutate(y=(first_pres_time-mean)/sd) %>% 
-    ggplot(aes(strength_first, y)) +
-    geom_smooth(method="lm") +
-    # geom_smooth(aes(group=wid), method="lm", se=F, size=0.2, color="black") +
-    stat_summary_bin(fun.data=mean_cl_boot, bins=5) +
-    labs(x="First Cue Memory Strength", y="Normalized First Fixation Time")
+    ggplot(aes(N, power)) + geom_line() + ylim(0.7, 1)
 
 fig()
-# %% --------
 
-human %>% 
-    filter(n_pres >= 2) %>% 
-    regress(strength_first, first_pres_time) # plot
-fig()
-# %% --------
-
-human %>% 
-    filter(n_pres >= 2) %>% 
-    lmer(first_pres_time ~ strength_first + (strength_first|wid), data=.) %>% 
-    summ
-
-
-# %% --------
-
-
-powerSim(model, nsim=100)
-
-pc = powerCurve(model, nsim=5, within="wid")
-
-
-human %>% 
-    filter(n_pres >= 4) %>% 
-    with(table(wid))
-
-
-
-# %% --------
-powerCurve(model)
-
-# %% --------
-model = lmer(second_pres_time ~ rel_strength + (rel_strength|wid), data=human)
-model %>% summ
-
-
-doTest(model, fixed("rel_strength"))
-powerSim(model, nsim=100)
-# %% --------
-model = lm(second_pres_time ~ -rel_strength, data=human)
-powerSim(model, nsim=100)
-
-# %% --------
-data = read_csv("SIMR_RW_example.csv")
-model1 <- glmer(Pr_rate ~ Day + (1|Doctor), family="poisson", data=data)
-powerSim(model1, nsim=100)
-
-# %% --------
 
