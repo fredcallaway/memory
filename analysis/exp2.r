@@ -131,13 +131,14 @@ plt_number = fixations %>%
 
 short_names = .  %>% mutate(name = recode_factor(name, 
     "Optimal Metamemory" = "Optimal", 
-    "Human" = "Human",
-    "No Meta-Level Control" = "No Control"
+    "No Meta-Level Control" = "No Control",
+    "Human" = "Human"
 ), ordered=T)
 
 plt_fixated = nonfinal %>% 
     short_names %>% 
     # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
+    mutate(duration=duration/1000)  %>% 
     plot_effect(fixated, duration, type) +
     labs(x="Pretest Accuracy of Fixated Cue", y="Duration (s)", colour="Fixation Type")
 
@@ -145,13 +146,14 @@ plt_nonfixated = nonfinal %>%
     short_names %>% 
     filter(presentation > 1) %>% 
     # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>%
+    mutate(duration=duration/1000)  %>% 
     plot_effect(nonfixated, duration, type) +
     labs(x="Pretest Accuracy of Non-Fixated Cue", y="Duration (s)", colour="Fixation Type")
 
 
 layout <- c(
-  area(1, 1, 1, 200),  # 200! this is obviously buggy
-  area(2, 1, 2, 201)
+  area(1, 1, 1, 201),
+  area(2, 1, 2, 200)  # 200! this is obviously buggy
 )
 
 bottom = (plt_fixated + 
@@ -162,11 +164,11 @@ bottom = (plt_fixated +
             axis.ticks.y=element_blank(),
          ) 
     ) & 
-    coord_cartesian(xlim=c(NULL), ylim=c(600, 1400)) &
+    coord_cartesian(xlim=c(NULL), ylim=c(.6, 1.6)) &
     scale_x_continuous(labels = scales::percent, n.breaks=3) &
     theme(legend.position="none")
 
-(plt_number / bottom) + 
+(bottom / plt_last_duration) + 
     plot_layout(design=layout) +
     plot_annotation(tag_levels = 'A') & 
     theme(plot.tag.position = c(0, 1)) &
@@ -190,5 +192,3 @@ savefig("fixation_durations", 3.5, 2)
 #     ), aesthetics=c("fill", "colour"), name="Fixation Type")
 
 # savefig("fixation_durations", 3.5, 2.5)
-
-cc

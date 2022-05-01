@@ -14,6 +14,7 @@ trials = load_human("exp2", "trials") %>%
 fixations = load_human("exp2", "fixations") %>%
     filter(response_type == "correct") %>% 
     mutate(
+        duration = duration / 1000,
         last_fix = as.numeric(presentation == n_pres),
         fix_first = presentation %% 2,
         fix_stronger = case_when(
@@ -61,7 +62,7 @@ fixations %>%
     mutate(prop = x / sum(x)) %>%
     filter(is_final) %>% 
     participant_means(prop) %>%
-    with(mean(prop)) %>% s
+    with(mean(prop)) %>% 
     fmt_percent %>% 
     write_tex("prop_last_duration")
 
@@ -71,6 +72,11 @@ fixations %>%
     mutate(final = 1*(presentation == n_pres)) %>% 
     regress(duration ~ final + presentation) %>% 
     write_model("duration")
+
+fixations %>% 
+    mutate(final = 1*(presentation == n_pres)) %>% 
+    regress(duration ~ final) %>% 
+    write_model("duration_final")
 
 # %% ==================== nonfinal durations ====================
 
