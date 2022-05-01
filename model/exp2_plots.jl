@@ -70,6 +70,8 @@ B = BackwardsInduction(m; dv=0.2, verbose=true)
 
 # %% --------
 
+fig(f, name; pdf=false, kws...) = figure(f, name; base="/Users/fred/Papers/meta-memory/model-diagram", pdf, kws...)
+
 colors = [
     colorant"#D473A2",
     colorant"#3B77B3",
@@ -88,47 +90,120 @@ function plot_policy(e2, t2; kws...)
     X[delta .≥ 0] .= colors[2]
     X[delta .< 0] .= colors[3]
     X[(V .≈ -m.miss_cost)] .= colors[1]
+
     plot(X;
+        aspect_ratio=.7,
+        size=(500, 300),
         yflip=false, 
         widen=false,
-        xlab=" ", ylab=" ",
+        xlab="", ylab="",
         yticks=[],
         xticks=[],
         kws...
     )
 end
 
-function get_evidence(m, μ, t)
-    λ_obs = m.noise ^ -2
-    λ_prior = m.prior.σ^-2
-    μ_prior = m.prior.μ
-    λ = λ_obs * t + λ_prior
-    (μ * λ - μ_prior * λ_prior) / λ_obs
+# function get_evidence(m, μ, t)
+#     λ_obs = m.noise ^ -2
+#     λ_prior = m.prior.σ^-2
+#     μ_prior = m.prior.μ
+#     λ = λ_obs * t + λ_prior
+#     (μ * λ - μ_prior * λ_prior) / λ_obs
+# end
+
+# function policy_fig(ev2, t2)
+#     b = Belief{2}(1, 1, [0., ev2], [0, t2])
+#     e2, t2 = belief2index(B, b)[[3, 5]]
+#     plot_policy(e2, t2,
+#         # xlab="time on attended memory", 
+#         # ylab="attended progress",
+#         # title="unattended progress = $ev2",
+#         xlim=(1, 91),
+#     )
+#     #     μ2 = posterior(m, ev2, t2).μ
+#     #     # x = 0:(100-t2)
+#     #     # y = to_idx_space.(get_evidence.([m], μ2, x))
+#     #     # plot!(x, y, color=:white, lw=2, ls=:dash, ylim=to_idx_space.([-m.threshold, m.threshold]))
+#     # end
+# end
+
+
+function plot_sim(beliefs, color=:black)
+    x = Float64[]
+    for b in beliefs
+        b.focused != 1 && break
+        push!(x, b.evidence[1])
+    end
+    # if beliefs[end].focused == -1
+    #     x = x[1:end-1]
+    # end
+    x = min.(x, m.threshold + pol.B.dv)
+    plot!(to_idx_space.(x[1:end]); color, lw=1.5)
+    
+    # x = 15 / √(1 + s^2 * 15) # trying to get length about the same (too lazy to do math right)
+    # plot!([1, x+1], to_idx_space.([0, x] .* s); color, lw=1, ls=:dash, arrow=true)
 end
 
-function policy_fig(ev2, t2)
+function plot_predictions(ev2, t2)
+    t2 = 10
     b = Belief{2}(1, 1, [0., ev2], [0, t2])
-    e2, t2 = belief2index(B, b)[[3, 5]]
-    figure("exp2_policy_$(ev2)_$t2") do
-        plot_policy(e2, t2,
-            size=(300,300),
-            xlab="time on current memory", 
-            ylab="recall progress",
-            xlim=(1, 91),
-        )
+    
+    strengths = [
+        (0., 0.),
+        (0.1, 0.)
+    ]
+    seeds = [5, 7]
 
-        μ2 = posterior(m, ev2, t2).μ
-        x = 0:(100-t2)
-        y = to_idx_space.(get_evidence.([m], μ2, x))
-        plot!(x, y, color=:white, lw=2, ls=:dash, ylim=to_idx_space.([-m.threshold, m.threshold]))
+    e2, t2 = belief2index(B, b)[[3, 5]]
+    plot_policy(e2, t2, xlim=(1, 91))            
+
+    for (s, seed, color) in zip(strengths, seeds, RGB.([0.3, .6]))
+        Random.seed!(seed)
+        beliefs = simulate(pol; b=deepcopy(b), s, belief_log=BeliefLog2()).belief_log.beliefs
+        plot_sim(beliefs, color)
     end
+end
+
+fig("exp2_policy_0") do
+    plot_predictions(0.1, 10)
+end
+
+fig("exp2_policy_1") do
+    plot_predictions(1, 10)
 end
 
 # %% --------
 
-policy_fig(-1, 10)
-policy_fig(1, 10)
+figure("exp2_policy_0") do
+    ev2, t2 = (1, 10)
+    b = Belief{2}(1, 1, [0., ev2], [0, t2])
+    
+    strengths = [
+        (0., 1.),
+        (0.1, 1.)
+    ]
+    seeds = [5, 7]
+
+    e2, t2 = belief2index(B, b)[[3, 5]]
+    plot_policy(e2, t2, xlim=(1, 91))            
+
+    for (s, seed, color) in zip(strengths, seeds, RGB.([0.3, .6]))
+        Random.seed!(seed)
+        beliefs = simulate(pol; b=deepcopy(b), s, belief_log=BeliefLog2()).belief_log.beliefs
+        plot_sim(beliefs, color)
+    end
+end
+
+
+# %% --------
+figure("exp2_policy_") do
+    
+end
+
+    b = Belief{2}(1, 1, [0., ev2], [0, t2])
+    e2, t2 = belief2index(B, b)[[3, 5]]
 policy_fig(0, 10)
+policy_fig(1, 10)
 
 
 # %% ==================== policy (e1 x e2) ====================

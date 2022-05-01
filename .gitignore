@@ -37,3 +37,4 @@ model/figs/strength_dist.png
 model/diagnostics.jl
 model/generate_timecourse.jl
 analysis/Rplots.pdf
+model/exp1_qual_beta.jl

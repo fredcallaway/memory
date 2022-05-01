@@ -89,12 +89,16 @@ idx = Int.(range(1, length(evidences), length=5))
 colors = RGB.([0.3, .6, .8, 1])
 
 function plot_policy()
-    heatmap!(
-        B.V[1, :, :] .> -m.miss_cost, 
-        c=["#D473A2","#3B77B3"], cbar=false,
-        xlab="time",
-        ylab="recall progress",
-        yticks=(idx, string.(evidences[idx]))
+    V = B.V[1, :, :]
+    X = fill(colorant"#D473A2", size(V))
+    X[V .> -m.miss_cost] .= colorant"#3B77B3"
+    plot!(X,
+        aspect_ratio=:.2,
+        yflip=false,
+        xlab="",
+        ylab="",
+        yticks=[],
+        xticks=[],
     )
 end
 
@@ -110,12 +114,6 @@ function plot_sim(i)
     x = 15 / √(1 + s^2 * 15) # trying to get length about the same (too lazy to do math right)
     plot!([1, x+1], to_idx_space.([0, x] .* s), color=colors[i], lw=1, ls=:dash, arrow=true)
 end
-
-figure("exp1_policy", size=(500, 300), grid=false, widen=false) do
-    plot_policy()
-end
-
-# %% --------
 
 fig("exp1_policy_predictions", pdf=false, size=(500, 300), grid=false, widen=false) do
     plot_policy()
