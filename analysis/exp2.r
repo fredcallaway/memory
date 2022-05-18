@@ -66,6 +66,7 @@ style = list(
 plt_overall = df %>%
     filter(n_pres >= 2) %>%
     mutate(x = factor(rel_pretest_accuracy), y = total_first / (total_first + total_second)) %>% 
+    collapse_participants(median, y, x) %>% 
     ggplot(aes(x, y)) +
     stat_summary(fun=mean, group=0, geom="line", colour="#DADADA") +
     stat_summary(aes(color=x), fun.data=mean_cl_boot) +
@@ -78,7 +79,7 @@ savefig("overall", 3.2, 1)
 cutoff = df %>% filter(name == "Human") %>% with(quantile(rt, .95, na.rm=T) / 1000)
 plt_timecourse = timecourse %>% 
     filter(time < cutoff) %>% 
-    plot_effect_continuous(time, fix_first, rel_pretest_accuracy) +
+    plot_effect_continuous(time, fix_first, rel_pretest_accuracy, mean) +
     style +
     labs(x="Time (s)", y="Probability Fixate First Cue")
 savefig("timecourse", 3.5, 1)
@@ -126,8 +127,9 @@ plt_last_duration = fixations %>%
 plt_number = fixations %>% 
     filter(presentation < 6) %>% 
     mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
-    plot_effect(presentation, duration, type) +
+    plot_effect(presentation, duration, type, median) +
     labs(x="Fixation Number", y="Duration (s)")
+savefig("number", 3.5, 1)
 
 short_names = .  %>% mutate(name = recode_factor(name, 
     "Optimal Metamemory" = "Optimal", 
@@ -139,7 +141,7 @@ plt_fixated = nonfinal %>%
     short_names %>% 
     # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
     mutate(duration=duration/1000)  %>% 
-    plot_effect(fixated, duration, type) +
+    plot_effect(fixated, duration, type, median) +
     labs(x="Pretest Accuracy of Fixated Cue", y="Duration (s)", colour="Fixation Type")
 
 plt_nonfixated = nonfinal %>% 
@@ -147,7 +149,7 @@ plt_nonfixated = nonfinal %>%
     filter(presentation > 1) %>% 
     # group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>%
     mutate(duration=duration/1000)  %>% 
-    plot_effect(nonfixated, duration, type) +
+    plot_effect(nonfixated, duration, type, median) +
     labs(x="Pretest Accuracy of Non-Fixated Cue", y="Duration (s)", colour="Fixation Type")
 
 
@@ -164,7 +166,7 @@ bottom = (plt_fixated +
             axis.ticks.y=element_blank(),
          ) 
     ) & 
-    coord_cartesian(xlim=c(NULL), ylim=c(.6, 1.6)) &
+    coord_cartesian(xlim=c(NULL), ylim=c(.6, 1.25)) &
     scale_x_continuous(labels = scales::percent, n.breaks=3) &
     theme(legend.position="none")
 

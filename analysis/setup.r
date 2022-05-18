@@ -186,19 +186,16 @@ fig = function(name="tmp", w=4, h=4, dpi=320, pdf=exists("MAKE_PDF") && MAKE_PDF
 }
 
 # %% ==================== Plotting ====================
-participant_means = function(data, y, ...) {
+collapse_participants = function(data, f, y, ...) {
     data %>% 
         group_by(name, wid, ...) %>% 
-        summarise("{{y}}" := mean({{y}}, na.rm=T)) %>% 
+        summarise("{{y}}" := f({{y}}, na.rm=T)) %>% 
         ungroup()
 }
 
-plot_effect = function(df, x, y, color, min_n=10, geom="pointrange", collapse=T) {
-    if (collapse) {
-        dat = participant_means(df, {{y}}, {{x}}, {{color}})
-    } else {
-        dat = df
-    }
+plot_effect = function(df, x, y, color, collapser, min_n=10, geom="pointrange") {
+    dat = collapse_participants(df, collapser, {{y}}, {{x}}, {{color}})
+
     enough_data = dat %>% 
         ungroup() %>% 
         filter(name == "Human") %>% 
@@ -220,11 +217,11 @@ plot_effect = function(df, x, y, color, min_n=10, geom="pointrange", collapse=T)
             # pal +
 }
 
-plot_effect_continuous = function(data, x, y, color) {
+plot_effect_continuous = function(data, x, y, color, collapser) {
     data %>% 
         ungroup() %>% 
         mutate(color = ordered({{color}})) %>% 
-        participant_means({{y}}, {{x}}, color) %>% 
+        collapse_participants(collapser, {{y}}, {{x}}, color) %>% 
         ggplot(aes({{x}}, {{y}}, group=color)) +
             stat_summary(aes(color=color), fun=mean, geom="line", size=.9) +
             stat_summary(fun.data=mean_cl_boot, geom="ribbon", alpha=0.08) +

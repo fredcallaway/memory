@@ -4,7 +4,7 @@ SIZE = 2.7
 MAKE_PDF = TRUE
 STEP_SIZE = 100
 
-RUN = "apr18"
+RUN = "may_fixedthresh_v1"
 OUT = "exp1"
 
 savefig = function(name, width, height) {
@@ -33,17 +33,17 @@ style = list(
 )
 
 acc_rt = df %>%
-    plot_effect(pretest_accuracy, rt, response_type) +
+    plot_effect(pretest_accuracy, rt, response_type, median) +
     labs(x="Pretest Accuracy", y='Response Time (s)') +
     scale_x_continuous(labels = scales::percent, n.breaks=3) +
     style
-savefig("acc_rt", 3.5, 1.1)
+# savefig("acc_rt", 3.5, 1.1)
 
 judge_rt = df %>% 
-    plot_effect(judgement, rt, response_type) +
+    plot_effect(judgement, rt, response_type, median) +
     labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Response Time (s)') +
     scale_x_continuous(n.breaks=5) + style
-savefig("judge_rt", 3.5, 1.1)
+# savefig("judge_rt", 3.5, 1.1)
 
 (judge_rt / acc_rt) +
     plot_layout(guides = "collect") + 
@@ -71,7 +71,7 @@ plot_cum = function(cond, y) {
         }) %>% 
         bind_rows %>%
         mutate(x = cutoff / 1000) %>% 
-        plot_effect_continuous(x, y, pretest_accuracy) +
+        plot_effect_continuous(x, y, pretest_accuracy, mean) +
         scale_x_continuous(n.breaks=6)
 }
 
@@ -91,7 +91,7 @@ p_skip = plot_cum(!(correct & (rt <= cutoff)), skip & (rt <= cutoff)) +
             `0.5`="#DE79AA",
             `1`="#FF92C7"
         ), aesthetics=c("fill", "colour"))
-savefig("p_skip", 3.5, 1.1)
+# savefig("p_skip", 3.5, 1.1)
 
 (p_correct / p_skip) +
     plot_annotation(tag_levels = 'A') & 
