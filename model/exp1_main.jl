@@ -5,7 +5,7 @@ mkpath("results/exp1")
 mkpath("tmp")
 
 N_SOBOL = 50_000
-RUN = "apr18"
+RUN = "may18_fixedthresh"
 
 if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
@@ -65,13 +65,13 @@ print_header("optimal")
 )
 
 optimal_prms = sample_params(Box(
-    drift_μ = (-0.5, 0.5),
-    noise = (0, 2),
-    threshold = (1, 10),
+    drift_μ = (-0.1, 0.1),
+    noise = (0, 0.5),
+    threshold = 1,
     sample_cost = (0, .02),
-    between_σ = (0, 2),
+    between_σ = (0, 0.5),
     within_σ=0,
-    judgement_noise=1,
+    judgement_noise=0.2,
 ));
 
 optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_prms)
