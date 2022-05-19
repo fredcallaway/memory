@@ -101,11 +101,13 @@ function smooth_rt!(result, p::KeyedArray, d::Distribution, ε::Float64=1e-6)
 end
 
 function optimize_rt_noise(ss)
-    X = zeros(size(target.hist))
+    human = sum(target.hist; dims=:judgement)
+    model = sum(ss.hist; dims=:judgement)
+    X = zeros(size(model))
     optimize([10., 10.]) do x
         any(xi < 0 for xi in x) && return Inf
-        smooth_rt!(X, ss.hist, Gamma(x...))
-        crossentropy(target.hist, X)
+        smooth_rt!(X, model, Gamma(x...))
+        crossentropy(human, X)
     end
 end
 

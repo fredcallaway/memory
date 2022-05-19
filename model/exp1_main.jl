@@ -31,6 +31,7 @@ function fit_exp1_model(name, make_policies, prms; n_top=5000, n_sim_top=1_000_0
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
+    
     top_tbl = compute_loss(loss, top_sumstats, top_prms)
     display(select(top_tbl, Not([:ss]))[1:13, :])
 
@@ -71,7 +72,7 @@ optimal_prms = sample_params(Box(
     sample_cost = (0, .02),
     between_σ = (0, 0.5),
     within_σ=0,
-    judgement_noise=(0, 0.5),
+    judgement_noise=0.1,
 ));
 
 optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_prms)
@@ -97,7 +98,7 @@ empirical_prms = sample_params(Box(
     sample_cost = 0,
     between_σ = (0, 0.5),
     within_σ=0,
-    judgement_noise=(0, 0.5),
+    judgement_noise=0.1,
 ));
 
 empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_prms)
