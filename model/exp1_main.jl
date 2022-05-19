@@ -27,12 +27,12 @@ function fit_exp1_model(name, make_policies, prms; n_top=5000, n_sim_top=1_000_0
     sumstats = compute_sumstats(name, make_policies, prms);
     tbl = compute_loss(loss, sumstats, prms);
     serialize("tmp/$(RUN)_exp1_tbl_$name", tbl)
-    display(select(tbl, Not([:judgement_noise]))[1:13, :])
+    display(select(tbl, Not([:ss]))[1:13, :])
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
     top_tbl = compute_loss(loss, top_sumstats, top_prms)
-    display(select(top_tbl, Not([:judgement_noise]))[1:13, :])
+    display(select(top_tbl, Not([:ss]))[1:13, :])
 
     # rt_noise = @showprogress "optimize rt noise" pmap(eachrow(top_tbl)) do row
     #     ismissing(row.ss) && return (α=NaN, θ=NaN)
@@ -71,7 +71,7 @@ optimal_prms = sample_params(Box(
     sample_cost = (0, .02),
     between_σ = (0, 0.5),
     within_σ=0,
-    judgement_noise=0.2,
+    judgement_noise=(0, 0.5),
 ));
 
 optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_prms)
@@ -91,13 +91,13 @@ print_header("empirical")
 end
 
 empirical_prms = sample_params(Box(
-    drift_μ = (-0.5, 0.5),
-    noise = (0, 2),
-    threshold = (1, 10),
+    drift_μ = (-0.1, 0.1),
+    noise = (0, 0.5),
+    threshold = 1,
     sample_cost = 0,
-    between_σ = (0, 2),
+    between_σ = (0, 0.5),
     within_σ=0,
-    judgement_noise=1,
+    judgement_noise=(0, 0.5),
 ));
 
 empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_prms)

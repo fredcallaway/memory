@@ -4,7 +4,7 @@ SIZE = 2.7
 MAKE_PDF = TRUE
 STEP_SIZE = 100
 
-RUN = "may_fixedthresh_v1"
+RUN = "may18_fixedthresh"
 OUT = "exp1"
 
 savefig = function(name, width, height) {
