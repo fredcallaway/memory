@@ -5,7 +5,7 @@ mkpath("results/exp1")
 mkpath("tmp")
 
 N_SOBOL = 50_000
-RUN = "may18_fixedthresh"
+RUN = "may25"
 
 if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
@@ -23,36 +23,34 @@ target = exp1_sumstats(trials);
 
 # %% ==================== fitting pipeline ====================
 
-function fit_exp1_model(name, make_policies, prms; n_top=5000, n_sim_top=1_000_000)
+
+function fit_exp1_model(name, make_policies, box; n_top=5000, n_sim_top=1_000_000)
+    fitdir = "results/$(RUN)_exp1/fits/$name/"
+    mkpath(fitdir)
+
+    prms = sample_params(box)
     sumstats = compute_sumstats(name, make_policies, prms);
-    tbl = compute_loss(loss, sumstats, prms);
-    serialize("tmp/$(RUN)_exp1_tbl_$name", tbl)
-    display(select(tbl, Not([:ss]))[1:13, :])
+    tbl = compute_loss(sumstats, prms);
+    serialize("$fitdir/full", tbl)
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
     
-    top_tbl = compute_loss(loss, top_sumstats, top_prms)
-    display(select(top_tbl, Not([:ss]))[1:13, :])
+    top_tbl = compute_loss(top_sumstats, top_prms)
+    display(top_tbl[1:13, :])
 
-    # rt_noise = @showprogress "optimize rt noise" pmap(eachrow(top_tbl)) do row
-    #     ismissing(row.ss) && return (α=NaN, θ=NaN)
-    #     Gamma(optimize_rt_noise(row.ss).minimizer...)
-    # end
-    # top_tbl.rt_α = getfield.(rt_noise, :α)
-    # top_tbl.rt_θ = getfield.(rt_noise, :θ)
-
-    mkpath("results/$(RUN)_exp1/$(name)_trials/")
+    simdir = "results/$(RUN)_exp1/simulations/$(name)_trials"
+    mkpath(simdir)
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
-        # rt_noise = Gamma(row.rt_α, row.rt_θ)
-        rt_noise = Gamma(optimize_rt_noise(row.ss).minimizer...)
+        rt_noise = Gamma(row.rt_α, row.rt_θ)
         prm = NamedTuple(row)
+        prm = (;prm..., judgement_noise=0.2)
         sim = simulate_exp1(make_policies, prm, n_sim_top)
         sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
-        CSV.write("results/$(RUN)_exp1/$(name)_trials/$i.csv", sim)
+        CSV.write("$simdir/$i.csv", sim)
     end
 
-    serialize("tmp/$(RUN)_exp1_fits_$name", top_tbl)
+    serialize("$fitdir/top", top_tbl)
     top_tbl
 end
 
@@ -65,18 +63,19 @@ print_header("optimal")
     OptimalPolicy(exp1_mdp(prm)),
 )
 
-optimal_prms = sample_params(Box(
-    drift_μ = (-0.1, 0.1),
-    noise = (0, 0.5),
+optimal_box = Box(
+    drift_μ = (-0.5, 0.5),
+    noise = (0, 1),
     threshold = 1,
-    sample_cost = (0, .02),
-    between_σ = (0, 0.5),
+    sample_cost = (0, .05),
+    between_σ = (0, 1),
     within_σ=0,
     judgement_noise=0.1,
-));
+)
 
-optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_prms)
+optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
 
+# name, make_policies, box = "optimal", optimal_policies, optimal_box
 # %% ==================== empirical ====================
 
 print_header("empirical")
@@ -91,19 +90,8 @@ print_header("empirical")
     )
 end
 
-empirical_prms = sample_params(Box(
-    drift_μ = (-0.1, 0.1),
-    noise = (0, 0.5),
-    threshold = 1,
-    sample_cost = 0,
-    between_σ = (0, 0.5),
-    within_σ=0,
-    judgement_noise=0.1,
-));
-
-empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_prms)
-# %% --------
-
+empirical_box = modify(optimal_box, sample_cost=0)
+empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_box)
 
 # # %% ==================== decision bound ====================
 

@@ -100,30 +100,28 @@ function smooth_rt!(result, p::KeyedArray, d::Distribution, ε::Float64=1e-6)
     smooth_uniform!(result, ε)
 end
 
-function optimize_rt_noise(ss)
+function optimize_noise_model(ss)
+    ismissing(ss) && return [Inf, 1000., 1000.]  # 1000 gives super long RT (a warning flag)
     human = sum(target.hist; dims=:judgement)
     model = sum(ss.hist; dims=:judgement)
     X = zeros(size(model))
-    optimize([10., 10.]) do x
+    res = optimize([10., 10.]) do x
         any(xi < 0 for xi in x) && return Inf
         smooth_rt!(X, model, Gamma(x...))
         crossentropy(human, X)
     end
+    [res.minimum; res.minimizer]
 end
 
-function acc_rate(ss)
-    x = ssum(ss.hist, :rt, :judgement)
-    x ./= sum(x, dims=:response_type)
-    x("correct")
+function compute_loss(sumstats, prms)
+    ismissing(sumstats) && return Inf
+    tbl = DataFrame(prms)
+    results = @showprogress "loss " pmap(optimize_noise_model, sumstats)
+    tbl.loss, tbl.rt_α, tbl.rt_θ = invert(results)
+    # tbl.ss = sumstats
+    sort!(tbl, :loss)
 end
 
-function loss(ss)
-    ismissing(ss) && return Inf
-    x = acc_rate(ss)
-    (x[1] < .1 && x[3] > .85) || return Inf
-    res = optimize_rt_noise(ss)
-    res.minimum
-end
 
 # %% ==================== parameterization ====================
 
@@ -133,5 +131,4 @@ function reparameterize(prm)
 end
 
 sample_params(box) = map(reparameterize, sobol(N_SOBOL, box))
-
 

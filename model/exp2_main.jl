@@ -2,7 +2,7 @@ if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
 
-RUN = "apr18"
+RUN = "may25"
 @everywhere include("common.jl")
 @everywhere include("exp2_base.jl")
 mkpath("results/$(RUN)_exp2")
@@ -43,15 +43,16 @@ function compute_sumstats(name, make_policies, prms; read_only = false)
 end
 
 function write_sims(name, make_policies; n_top=5)
-    top_table = select(deserialize("tmp/$(RUN)_exp1_fits_$name"), Not(:ss))
+    top_table = deserialize("results/$(RUN)_exp1/fits/$name/top")
     exp1_top = eachrow(top_table)[1:n_top]
-
     prms = map(exp1_top) do prm
         (;prm..., switch_cost=prm.sample_cost)
     end
 
-    mkpath("results/$(RUN)_exp2/$(name)_trials/")
-    mkpath("results/$(RUN)_exp2/$(name)_fixations/")
+    trialdir = "results/$(RUN)_exp2/simulations/$(name)_trials"
+    fixdir = "results/$(RUN)_exp2/simulations/$(name)_fixations"
+    mkpath(trialdir)
+    mkpath(fixdir)
 
     @showprogress "simulate" pmap(enumerate(prms)) do (i, prm)
         pre_pol, crit_pol = make_policies(prm)
@@ -63,8 +64,8 @@ function write_sims(name, make_policies; n_top=5)
         add_duration_noise!(sim, dur_noise)
 
         trials = make_trials(sim); fixations = make_fixations(sim)
-        CSV.write("results/$(RUN)_exp2/$(name)_trials/$i.csv", trials)
-        CSV.write("results/$(RUN)_exp2/$(name)_fixations/$i.csv", fixations)
+        CSV.write("$trialdir/$i.csv", trials)
+        CSV.write("$fixdir/$i.csv", fixations)
         ss = exp2_sumstats(trials, fixations)
         ss
         # (;ss..., res)

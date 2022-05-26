@@ -78,3 +78,10 @@ function sobol(n::Int, box::Box)
     [box(Sobol.next!(seq)) for i in 1:n]
 end
 
+function modify(box::Box; kws...)
+    newbox = Box(copy(box.dims))
+    for (k, v) in kws
+        newbox.dims[k] = v
+    end
+    newbox
+end
