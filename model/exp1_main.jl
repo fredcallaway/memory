@@ -15,6 +15,8 @@ end
 
 pretest = load_data("exp1/pretest")
 trials = load_data("exp1/trials")
+filter!(t-> !ismissing(t.rt), pretest)
+filter!(t-> !ismissing(t.rt), trials)
 target = exp1_sumstats(trials);
 
 @everywhere trials = $trials
@@ -22,7 +24,6 @@ target = exp1_sumstats(trials);
 @everywhere target = $target
 
 # %% ==================== fitting pipeline ====================
-
 
 function fit_exp1_model(name, make_policies, box; n_top=5000, n_sim_top=1_000_000)
     fitdir = "results/$(RUN)_exp1/fits/$name/"
@@ -37,6 +38,7 @@ function fit_exp1_model(name, make_policies, box; n_top=5000, n_sim_top=1_000_00
     top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
     
     top_tbl = compute_loss(top_sumstats, top_prms)
+    top_tbl.judgement_noise = 0.5 .* top_tbl.drift_σ
     display(top_tbl[1:13, :])
 
     simdir = "results/$(RUN)_exp1/simulations/$(name)_trials"
@@ -44,7 +46,6 @@ function fit_exp1_model(name, make_policies, box; n_top=5000, n_sim_top=1_000_00
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
         rt_noise = Gamma(row.rt_α, row.rt_θ)
         prm = NamedTuple(row)
-        prm = (;prm..., judgement_noise=0.2)
         sim = simulate_exp1(make_policies, prm, n_sim_top)
         sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
         CSV.write("$simdir/$i.csv", sim)

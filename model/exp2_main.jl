@@ -11,6 +11,7 @@ mkpath("results/$(RUN)_exp2")
 
 human_pretest = CSV.read("../data/processed/exp2/pretest.csv", DataFrame, missingstring="NA")
 human_trials = CSV.read("../data/processed/exp2/trials.csv", DataFrame, missingstring="NA")
+human_trials_witherr = CSV.read("../data/processed/exp2/trials_witherr.csv", DataFrame, missingstring="NA")
 human_fixations = CSV.read("../data/processed/exp2/fixations.csv", DataFrame, missingstring="NA")
 
 human_pretest = @rsubset human_pretest :practice == false :block == 3
@@ -20,7 +21,12 @@ human_trials = @chain human_trials begin
     @rtransform :choose_first = :response_type == "correct" ? :choose_first : missing
 end
 
+human_trials_witherr = @chain human_trials_witherr begin
+    @rsubset :n_pres > 0
+end
+
 @everywhere human_trials = $human_trials
+@everywhere human_trials_witherr = $human_trials_witherr
 @everywhere human_pretest = $human_pretest
 @everywhere human_fixations = $human_fixations
 
@@ -87,7 +93,7 @@ serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
 @everywhere begin
     plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
     const emp_pretest_stop_dist = empirical_distribution(plausible_skips(human_pretest).rt)
-    const emp_crit_stop_dist = empirical_distribution(skipmissing(plausible_skips(human_trials).rt))
+    const emp_crit_stop_dist = empirical_distribution(skipmissing(plausible_skips(human_trials_witherr).rt))
     const emp_switch_dist = empirical_distribution(human_fixations.duration)
 
     empirical_policies(prm) = (
