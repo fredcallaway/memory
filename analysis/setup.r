@@ -109,14 +109,10 @@ load_model_human = function(run, exp, name, random='empirical', n=1) {
     bind_rows(
         read_csv(glue('../data/processed/{exp}/{name}.csv'), 
             col_types = cols()) %>% mutate(name='human'),
-        map(seq(n), ~ 
-            read_csv(glue('../model/results/{run}_{exp}/optimal_{name}/{.x}.csv'), col_types = cols()) %>% 
-            mutate(name='optimal', wid = glue('optimal-{.x}'))
-         ),
-        map(seq(n), ~ 
-            read_csv(glue('../model/results/{run}_{exp}/empirical_{name}/{.x}.csv'), col_types = cols()) %>% 
-            mutate(name='empirical', wid = glue('empirical-{.x}'))
-         ),
+        read_csv(glue('../model/results/{run}_{exp}/simulations/optimal_{name}/{n}.csv'), col_types = cols()) %>% 
+            mutate(name='optimal', wid = glue('optimal-{n}')),
+        read_csv(glue('../model/results/{run}_{exp}/simulations/empirical_{name}/{n}.csv'), col_types = cols()) %>% 
+            mutate(name='empirical', wid = glue('empirical-{n}')),
         # read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
         #     col_types = cols()) %>% mutate(name='optimal'),
         # read_csv(glue('../model/results/{exp}/{random}_{name}.csv'), 
@@ -198,9 +194,8 @@ plot_effect = function(df, x, y, color, collapser, min_n=10, geom="pointrange") 
 
     enough_data = dat %>% 
         ungroup() %>% 
-        filter(name == "Human") %>% 
-        count({{color}}, {{x}}) %>% 
-        filter(n > min_n)
+        count(name, {{color}}, {{x}}) %>% 
+        filter(name != "Human" | n > min_n)
 
     # warn("Using Normal approximation for confidence intervals", .frequency="once", .frequency_id="normconf")
     

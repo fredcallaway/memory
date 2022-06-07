@@ -25,7 +25,6 @@ fixations = load_human("exp2", "fixations") %>%
     )
 fmt_percent = function(prop) glue("{round(100 * prop)}\\%")
 
-
 # %% ==================== overall proportion ====================
 
 trials %>%
@@ -61,7 +60,7 @@ fixations %>%
     summarise(x=sum(duration)) %>%
     mutate(prop = x / sum(x)) %>%
     filter(is_final) %>% 
-    participant_means(prop) %>%
+    collapse_participants(mean, prop) %>%
     with(mean(prop)) %>% 
     fmt_percent %>% 
     write_tex("prop_last_duration")

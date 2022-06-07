@@ -44,4 +44,3 @@ trials %>%
     filter(correct) %>% 
     regress(rt ~ pretest_accuracy) %>%
     write_model("rt_correct2")
-

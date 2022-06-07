@@ -1,6 +1,7 @@
 library(simr)
 suppressPackageStartupMessages(source("setup.r"))
 suppressPackageStartupMessages(source("stats_base.r"))
+source("power.r")
 
 # %% --------
 trials = load_human("exp1", "trials") %>% 
@@ -17,29 +18,19 @@ groups = trials %>%
     nest_by(wid, .keep=TRUE) %>%
     with(data)
 
-sample_p = function(N, run_model) {
-    data = sample(groups, N, replace=T) %>% 
-        map(~ mutate(.x, wid=round(1e10 * runif(1)))) %>%
-        bind_rows
-    tryCatch(run_model(data), error=function(c) NaN)
-}
+N = c(50)
+n_sim = 10
 
-power_analysis = function(N, n_sim, run_model) {
-    results = map(N, ~ replicate(n_sim, sample_p(.x, run_model))) %>% unlist
-    expand.grid(
-        sim_i = 1:n_sim,
-        N = N
-    ) %>% 
-    rowwise() %>% 
-    mutate(
-        p = sample_p(N, run_model)
-    ) %>% ungroup()
-}
+p1 = power_analysis(groups, N, n_sim, . %>% 
+    lm(rt ~ pretest_accuracy, data=.) %>% 
+    summ %>% with(coeftable[2, "p"])
+)
+
 
 # %% --------
 
-N = c(200, 250, 300, 350, 400)
-n_sim = 100
+N = c(300, 350, 400, 450, 500)
+n_sim = 500
 
 p1 = power_analysis(N, n_sim, . %>% 
     regress(rt ~ pretest_accuracy) %>% 
@@ -51,6 +42,70 @@ p1 %>%
     summarise(power=mean(p<.05, na.rm=T)) %>% 
 
     ggplot(aes(N, power)) + geom_line()
+
+fig()
+
+# %% --------
+
+p2 = power_analysis(N, n_sim, . %>% 
+    lm(rt ~ pretest_accuracy) %>% 
+    summ %>% with(coeftable[2, "p"])
+)
+
+p2 %>% 
+    group_by(N) %>%
+    summarise(power=mean(p<.05, na.rm=T))
+
+# %% --------
+
+sample_stat = function(groups, N, statistic) {
+    data = sample(groups, N, replace=T) %>% 
+        map(~ mutate(.x, wid=round(1e10 * runif(1)))) %>%
+        bind_rows
+    tryCatch(statistic(data), error=function(c) NaN)
+}
+
+power_analysis = function(groups, N, n_sim, statistic) {
+    results = map(N, ~ replicate(n_sim, sample_stat(groups, .x, statistic))) %>% unlist
+    expand.grid(
+        sim_i = 1:n_sim,
+        N = N
+    ) %>% 
+    rowwise() %>% 
+    mutate(
+        stat = sample_stat(groups, N, statistic)
+    ) %>% ungroup()
+}
+
+groups = trials %>% 
+    filter(skip) %>% 
+    group_by(wid, pretest_accuracy) %>% 
+    summarise(y=median(rt))  %>% 
+    ungroup() %>% 
+    nest_by(wid, .keep=TRUE) %>%
+    with(data)
+
+
+statistic = . %>% 
+    group_by(pretest_accuracy) %>% 
+    summarise(mean_cl_boot(y)) %>% 
+    select(-y) %>% 
+    pivot_wider(names_from=pretest_accuracy, values_from=c(ymin,ymax)) %>% 
+    with(ymin_1 - ymax_0)
+
+N = c(300, 350, 400, 450, 500)
+n_sim = 100
+
+ci_pwr = power_analysis(groups, N, n_sim, statistic)
+# %% --------
+
+ci_pwr %>% 
+    group_by(N) %>% 
+    summarise(mean(stat > 0))
+
+ci_pwr %>% 
+    ggplot(aes(N, stat)) +
+    geom_point()
 
 fig()
 

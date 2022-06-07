@@ -3,7 +3,7 @@ SIZE = 2.7
 MAKE_PDF = TRUE
 STEP_SIZE = 100
 
-RUN = "apr18"
+RUN = "may25"
 OUT = "exp2"
 # OUT = glue("{RUN}_exp2_alt")
 
@@ -107,11 +107,16 @@ nonfinal = fixations %>%
         )
     ) %>% mutate(relative = fixated - nonfixated)
 
+
+cutoff = fixations %>% 
+    filter(name == "Human" & last_fix == 1) %>% 
+    with(quantile(duration, .95, na.rm=T))
+
 plt_last_duration = fixations %>% 
-    filter(duration <= 5000) %>%
+    filter(duration <= cutoff) %>%
     mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
     ggplot(aes(duration/1000, fill=type, y = ..width..*..density..)) +
-    geom_histogram(position="identity", breaks=seq(0, 5.001, .200), alpha=0.5) +
+    geom_histogram(position="identity", breaks=seq(0, cutoff/1000, length.out=30), alpha=0.5) +
     facet_grid(~name) +
     # theme(legend.position="None") +
     scale_colour_manual(values=c(
@@ -123,13 +128,6 @@ plt_last_duration = fixations %>%
     labs(x="Fixation Duration (s)", y="Proportion")
     # scale_x_continuous(breaks=seq(-1,5,1))
 
-
-plt_number = fixations %>% 
-    filter(presentation < 6) %>% 
-    mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
-    plot_effect(presentation, duration, type, median) +
-    labs(x="Fixation Number", y="Duration (s)")
-savefig("number", 3.5, 1)
 
 short_names = .  %>% mutate(name = recode_factor(name, 
     "Optimal Metamemory" = "Optimal", 
@@ -194,3 +192,12 @@ savefig("fixation_durations", 3.5, 2)
 #     ), aesthetics=c("fill", "colour"), name="Fixation Type")
 
 # savefig("fixation_durations", 3.5, 2.5)
+
+# %% --------
+
+plt_number = fixations %>% 
+    filter(presentation < 6) %>% 
+    mutate(type=if_else(last_fix==1, "Final", "Non-Final")) %>% 
+    plot_effect(presentation, duration, type, median) +
+    labs(x="Fixation Number", y="Duration (s)")
+savefig("number", 3.5, 1)

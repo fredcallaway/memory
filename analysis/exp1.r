@@ -4,7 +4,7 @@ SIZE = 2.7
 MAKE_PDF = TRUE
 STEP_SIZE = 100
 
-RUN = "may18_fixedthresh"
+RUN = "may25"
 OUT = "exp1"
 
 savefig = function(name, width, height) {
@@ -15,7 +15,7 @@ system(glue('mkdir -p figs/{OUT}'))
 # %% ==================== load data ====================
 
 # pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
-df = load_model_human(RUN, "exp1", "trials") %>% 
+df = load_model_human(RUN, "exp1", "trials", n=1) %>% 
     mutate(
         skip=response_type=="empty", correct=response_type=="correct",
         response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")
@@ -23,24 +23,23 @@ df = load_model_human(RUN, "exp1", "trials") %>%
 
 # %% ==================== reaction times ====================
 
-
 style = list(
     scale_colour_manual("Response Type", values=c(
         `Skipped`="#DE79AA",
         `Recalled`="#3B77B3"
     ), aesthetics=c("fill", "colour")),
-    coord_cartesian(xlim=c(NULL), ylim=c(1000, 3500))
+    coord_cartesian(xlim=c(NULL), ylim=c(0.9, 4.1))
 )
 
 acc_rt = df %>%
-    plot_effect(pretest_accuracy, rt, response_type, median) +
+    plot_effect(pretest_accuracy, rt/1000, response_type, median) +
     labs(x="Pretest Accuracy", y='Response Time (s)') +
     scale_x_continuous(labels = scales::percent, n.breaks=3) +
     style
 # savefig("acc_rt", 3.5, 1.1)
 
 judge_rt = df %>% 
-    plot_effect(judgement, rt, response_type, median) +
+    plot_effect(judgement, rt/1000, response_type, median) +
     labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Response Time (s)') +
     scale_x_continuous(n.breaks=5) + style
 # savefig("judge_rt", 3.5, 1.1)

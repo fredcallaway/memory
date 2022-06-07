@@ -1,4 +1,4 @@
-VERSIONS = c('v5.6')
+VERSIONS = c('v5.6B')
 
 suppressPackageStartupMessages(source("setup.r"))
 source("preprocess_common.r")  # defines all pretest and agg_pretest
@@ -18,6 +18,7 @@ all_trials = load_data('multi-recall') %>%
 
 excl = all_trials %>% 
     group_by(wid) %>% 
+    filter(n() == 19) %>% 
     summarise(accuracy=mean(response_type=="correct"), n_trial=n()) %>% 
     mutate(incomplete=n_trial != 19, many_error=accuracy < 0.5) %>% 
     mutate(keep = !many_error) %>% 
@@ -30,11 +31,6 @@ sum(excl$keep) %>% write_tex("N/final")
 keep_wids = excl %>% filter(keep) %>% with(wid)
 pretest = all_pretest %>% filter(wid %in% keep_wids)
 trials = all_trials %>% filter(wid %in% keep_wids)
-
-trials = trials %>% 
-    mutate(drop = response_type != "correct") %T>% 
-    with(write_tex(n_pct(drop), "N/error")) %>% 
-    filter(!drop)
 
 # %% ==================== Select and Augment ====================
 
@@ -72,9 +68,15 @@ fixations = trials %>%
 
 # %% ====================  ====================
 
+trials = trials %>% select(-c(presentation_times, first_word, second_word)) 
+
 trials %>% 
-    select(-c(presentation_times, first_word, second_word)) %>% 
+    mutate(drop = response_type != "correct") %T>% 
+    with(write_tex(n_pct(drop), "N/error")) %>% 
+    filter(!drop) %>% 
+    select(-drop) %>% 
     write_csv('../data/processed/exp2/trials.csv')
 
+write_csv(trials, '../data/processed/exp2/trials_witherr.csv')
 write_csv(pretest, '../data/processed/exp2/pretest.csv')
 write_csv(fixations, '../data/processed/exp2/fixations.csv')

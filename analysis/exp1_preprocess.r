@@ -1,5 +1,5 @@
 # VERSIONS = c('v6.5', 'v6.5B', 'v6.5C', 'v6.6', 'v6.7', 'v6.8')
-VERSIONS = c('v6.5D')
+VERSIONS = c('v6.5E')
 
 suppressPackageStartupMessages(source("setup.r"))
 source("preprocess_common.r")  # defines all pretest and agg_pretest
@@ -17,6 +17,7 @@ all_trials = load_data('simple-recall-penalized') %>%
     select(-judgement_type)
 
 # %% ==================== Exclusions ====================
+
 excl = all_trials %>% 
     group_by(wid) %>%
     summarise(skip_rate=mean(response_type == "empty")) %>% 
@@ -28,7 +29,7 @@ sum(excl$keep) %>% write_tex("N/final")
 
 keep_wids = excl %>% filter(keep) %>% with(wid)
 pretest = all_pretest %>% filter(wid %in% keep_wids)
-trials = all_trials %>% filter(wid %in% keep_wids) 
+trials = all_trials %>% filter(wid %in% keep_wids)
 
 trials = trials %>% 
     mutate(drop = response_type %nin% c("correct","empty")) %T>% 
@@ -48,7 +49,6 @@ pretest = pretest %>% select(wid, block, word, response_type, rt)
 write_csv(pretest, '../data/processed/exp1/pretest.csv')
 write_csv(trials, '../data/processed/exp1/trials.csv')
 write_csv(excl, '../data/processed/exp1/participants.csv')
-
 
 
 # judgement_breaks = function(tail_size) {
