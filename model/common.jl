@@ -61,12 +61,4 @@ function empirical_distribution(x)
     fit(DiscreteNonParametric, max.(1, round.(Int, x ./ MS_PER_SAMPLE)))
 end
 
-function compute_loss(loss, sumstats, prms)
-    ismissing(sumstats) && return Inf
-    tbl = DataFrame(prms)
-    tbl.loss = @showprogress "loss" pmap(loss, sumstats);
-    tbl.ss = sumstats
-    sort!(tbl, :loss)
-end
-
 

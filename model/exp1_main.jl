@@ -7,6 +7,8 @@ mkpath("tmp")
 N_SOBOL = 50_000
 RUN = "may25"
 
+print_header("beginning run $RUN")
+
 if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
@@ -25,7 +27,10 @@ target = exp1_sumstats(trials);
 
 # %% ==================== fitting pipeline ====================
 
+get_simdir(name) = "results/$(RUN)_exp1/simulations/$(name)_trials"
+
 function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
+    print_header(name)
     fitdir = "results/$(RUN)_exp1/fits/$name/"
     mkpath(fitdir)
 
@@ -44,7 +49,7 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
     top_tbl.judgement_noise = 0.5 .* top_tbl.drift_σ
     display(top_tbl[1:13, :])
 
-    simdir = "results/$(RUN)_exp1/simulations/$(name)_trials"
+    simdir = get_simdir(name)
     mkpath(simdir)
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
         rt_noise = Gamma(row.rt_α, row.rt_θ)
@@ -59,8 +64,6 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
 end
 
 # %% ==================== optimal ====================
-
-print_header("optimal")
 
 @everywhere optimal_policies(prm) = (
     OptimalPolicy(pretest_mdp(prm)),
@@ -77,11 +80,9 @@ optimal_box = Box(
     judgement_noise=0.1,
 )
 
-optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
+# optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
 
 # %% ==================== random ====================
-
-print_header("random")
 
 @everywhere begin
     random_policies(prm) = (
@@ -95,11 +96,10 @@ random_box = modify(optimal_box,
     αθ_stop = (1, 20),
     α_stop = (1, 100, :log),
 )
-random_tbl = fit_exp1_model("random", random_policies, random_box)
+
+# random_tbl = fit_exp1_model("random", random_policies, random_box)
 
 # %% ==================== empirical ====================
-
-print_header("empirical")
 
 @everywhere begin
     @isdefined(emp_pretest_stop_dist) || const emp_pretest_stop_dist = empirical_distribution(@subset(pretest, :response_type .== "empty").rt)
@@ -112,7 +112,7 @@ print_header("empirical")
 end
 
 empirical_box = modify(optimal_box, sample_cost=0)
-empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_box)
+# empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_box)
 
 # %% ==================== lesioned ====================
 
@@ -124,12 +124,70 @@ lesioned_box = Box(;
     α_stop = (1, 100, :log)
 )
 
-lesioned_tbl = fit_exp1_model("lesioned", random_policies, lesioned_box; n_init=5000)
+# lesioned_tbl = fit_exp1_model("lesioned", random_policies, lesioned_box; n_init=5000)
 
+# %% ==================== empirical gamma ====================
+
+@everywhere function optimize_stopping_model(trials, rt_α, rt_θ)
+    # this works for both pretest and critical trials
+    human = @chain trials begin
+        @rsubset :response_type == "empty"
+        @rtransform begin
+            :judgement = 1
+            :pretest_accuracy = 1
+        end
+        make_hist
+        sum(dims=(:judgement, :pretest_accuracy, :response_type))
+    end
+    
+    ndt_dist = Gamma(rt_α, rt_θ)
+    model = copy(human)
+    model .= diff([0; cdf(ndt_dist, model.rt)])
+    # RT = NDT + stop_time; NDT is fixed, so we can optimize the stopping dist
+    # in the same way we optimize NDT for the optimal model.
+
+    X = zeros(length(human))
+    res = optimize([10., 10.]) do (α_stop, θ_stop)
+        stop_dist = Gamma(α_stop, θ_stop)
+        smooth_rt!(X, model, stop_dist)
+        crossentropy(human, X)
+    end
+    α, θ = res.minimizer
+    Gamma(α, θ / MS_PER_SAMPLE)
+end
+
+
+opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
+@isdefined(pretest_gamma) || const pretest_gamma = optimize_stopping_model(pretest, opt_prm.rt_α, opt_prm.rt_θ)
+@isdefined(crit_gamma) || const crit_gamma = optimize_stopping_model(trials, opt_prm.rt_α, opt_prm.rt_θ)
+
+@everywhere begin
+    @isdefined(pretest_gamma) || const pretest_gamma = $ pretest_gamma
+    @isdefined(crit_gamma) || const crit_gamma = $ crit_gamma
+
+    empirical_gamma_policies(prm) = (
+        RandomStoppingPolicy(pretest_mdp(prm), pretest_gamma),
+        RandomStoppingPolicy(exp1_mdp(prm), crit_gamma)
+    )
+end
+
+# let
+#     prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
+#     sim = simulate_exp1(empirical_gamma_policies, prm)
+#     rt_noise = Gamma(prm.rt_α, prm.rt_θ)
+#     sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
+#     simdir = get_simdir("empirical_gamma")
+#     mkpath(simdir)
+#     CSV.write("$simdir/1.csv", sim)
+# end
+
+# %% --------
+opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
+empirical_gamma_box = modify(optimal_box; sample_cost=0, opt_prm.rt_α, opt_prm.rt_θ)
+empirical_gamma_tbl = fit_exp1_model("empirical_gamma", empirical_gamma_policies, empirical_gamma_box)
 
 # # %% ==================== decision bound ====================
 
-# print_header("decision bound")
 
 # @everywhere bound_policies(prm) = (
 #     ConstantBoundPolicy(pretest_mdp(prm), prm.θ),

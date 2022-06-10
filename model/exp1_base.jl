@@ -114,7 +114,6 @@ function optimize_noise_model(ss)
 end
 
 function compute_loss(sumstats, prms)
-    ismissing(sumstats) && return Inf
     tbl = DataFrame(prms)
     results = @showprogress "loss " pmap(optimize_noise_model, sumstats)
     tbl.loss, tbl.rt_α, tbl.rt_θ = invert(results)
@@ -123,10 +122,10 @@ function compute_loss(sumstats, prms)
 end
 
 function compute_loss(sumstats, prms; rt_α, rt_θ)
-    ismissing(sumstats) && return Inf
     tbl = DataFrame(prms)
     human = sum(target.hist; dims=:judgement)
     tbl.loss = @showprogress "loss " pmap(sumstats) do ss
+        ismissing(ss) && return Inf
         model = sum(ss.hist; dims=:judgement)
         X = zeros(size(model))
         smooth_rt!(X, model, Gamma(rt_α, rt_θ))
