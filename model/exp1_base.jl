@@ -122,13 +122,33 @@ function compute_loss(sumstats, prms)
     sort!(tbl, :loss)
 end
 
+function compute_loss(sumstats, prms; rt_α, rt_θ)
+    ismissing(sumstats) && return Inf
+    tbl = DataFrame(prms)
+    human = sum(target.hist; dims=:judgement)
+    tbl.loss = @showprogress "loss " pmap(sumstats) do ss
+        model = sum(ss.hist; dims=:judgement)
+        X = zeros(size(model))
+        smooth_rt!(X, model, Gamma(rt_α, rt_θ))
+        crossentropy(human, X)
+    end
+    tbl.rt_α .= rt_α
+    tbl.rt_θ .= rt_θ
+    # tbl.ss = sumstats
+    sort!(tbl, :loss)
+end
+
 
 # %% ==================== parameterization ====================
 
 function reparameterize(prm)
     drift_σ = √(prm.between_σ^2 + prm.within_σ^2)
-    (;prm..., drift_σ)
+    prm = (;prm..., drift_σ)
+    if hasfield(typeof(prm), :αθ_stop)
+        prm = (;prm..., θ_stop = prm.αθ_stop / prm.α_stop)
+    end
+    prm
 end
 
-sample_params(box) = map(reparameterize, sobol(N_SOBOL, box))
+sample_params(box, N) = map(reparameterize, sobol(N, box))
 

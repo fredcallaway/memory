@@ -25,19 +25,22 @@ target = exp1_sumstats(trials);
 
 # %% ==================== fitting pipeline ====================
 
-function fit_exp1_model(name, make_policies, box; n_top=5000, n_sim_top=1_000_000)
+function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
     fitdir = "results/$(RUN)_exp1/fits/$name/"
     mkpath(fitdir)
 
-    prms = sample_params(box)
+    prms = sample_params(box, n_init)
+    fix_ndt = hasfield(typeof(prms[1]), :rt_α)
+    loss_kws = fix_ndt ? (;prms[1].rt_α, prms[1].rt_θ) : (;)
+    @show loss_kws
+
     sumstats = compute_sumstats(name, make_policies, prms);
-    tbl = compute_loss(sumstats, prms);
+    tbl = compute_loss(sumstats, prms; loss_kws...)
     serialize("$fitdir/full", tbl)
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
-    
-    top_tbl = compute_loss(top_sumstats, top_prms)
+    top_tbl = compute_loss(top_sumstats, top_prms; loss_kws...)
     top_tbl.judgement_noise = 0.5 .* top_tbl.drift_σ
     display(top_tbl[1:13, :])
 
@@ -76,7 +79,24 @@ optimal_box = Box(
 
 optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
 
-# name, make_policies, box = "optimal", optimal_policies, optimal_box
+# %% ==================== random ====================
+
+print_header("random")
+
+@everywhere begin
+    random_policies(prm) = (
+        RandomStoppingPolicy(pretest_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
+        RandomStoppingPolicy(exp1_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
+    )
+end
+
+random_box = modify(optimal_box, 
+    sample_cost=0,
+    αθ_stop = (1, 20),
+    α_stop = (1, 100, :log),
+)
+random_tbl = fit_exp1_model("random", random_policies, random_box)
+
 # %% ==================== empirical ====================
 
 print_header("empirical")
@@ -93,6 +113,19 @@ end
 
 empirical_box = modify(optimal_box, sample_cost=0)
 empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_box)
+
+# %% ==================== lesioned ====================
+
+opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
+
+lesioned_box = Box(;
+    opt_prm..., 
+    αθ_stop = (1, 20),
+    α_stop = (1, 100, :log)
+)
+
+lesioned_tbl = fit_exp1_model("lesioned", random_policies, lesioned_box; n_init=5000)
+
 
 # # %% ==================== decision bound ====================
 
