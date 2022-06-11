@@ -45,7 +45,6 @@ timecourse = fixations %>%
     group_by(trial_id) %>% 
     mutate(time = (STEP_SIZE/1000)*row_number())
 
-
 # %% --------
 style = list(
     coord_cartesian(xlim=c(NULL), ylim=c(0, 1)),
@@ -149,7 +148,6 @@ plt_nonfixated = nonfinal %>%
     mutate(duration=duration/1000)  %>% 
     plot_effect(nonfixated, duration, type, median) +
     labs(x="Pretest Accuracy of Non-Fixated Cue", y="Duration (s)", colour="Fixation Type")
-
 
 layout <- c(
   area(1, 1, 1, 201),

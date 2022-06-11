@@ -4,8 +4,8 @@
 mkpath("results/exp1")
 mkpath("tmp")
 
-N_SOBOL = 50_000
-RUN = "may25"
+N_SOBOL = 100
+RUN = "testrun"
 
 print_header("beginning run $RUN")
 
@@ -15,14 +15,14 @@ end
 
 # %% ==================== load data ====================
 
-pretest = load_data("exp1/pretest")
-trials = load_data("exp1/trials")
-filter!(t-> !ismissing(t.rt), pretest)
-filter!(t-> !ismissing(t.rt), trials)
-target = exp1_sumstats(trials);
+human_pretest = load_data("exp1/pretest")
+human_trials = load_data("exp1/trials")
+filter!(t-> !ismissing(t.rt), human_pretest)
+filter!(t-> !ismissing(t.rt), human_trials)
+target = exp1_sumstats(human_trials);
 
-@everywhere trials = $trials
-@everywhere pretest = $pretest
+@everywhere human_trials = $human_trials
+@everywhere human_pretest = $human_pretest
 @everywhere target = $target
 
 # %% ==================== fitting pipeline ====================
@@ -35,24 +35,22 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
     mkpath(fitdir)
 
     prms = sample_params(box, n_init)
-    fix_ndt = hasfield(typeof(prms[1]), :rt_α)
-    loss_kws = fix_ndt ? (;prms[1].rt_α, prms[1].rt_θ) : (;)
-    @show loss_kws
+    ndt = hasfield(typeof(prms[1]), :α_ndt) ? (;prms[1].α_ndt, prms[1].θ_ndt) : missing  # = optimize
 
     sumstats = compute_sumstats(name, make_policies, prms);
-    tbl = compute_loss(sumstats, prms; loss_kws...)
+    tbl = compute_loss(sumstats, prms, ndt)
     serialize("$fitdir/full", tbl)
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
-    top_tbl = compute_loss(top_sumstats, top_prms; loss_kws...)
+    top_tbl = compute_loss(top_sumstats, top_prms, ndt)
     top_tbl.judgement_noise = 0.5 .* top_tbl.drift_σ
     display(top_tbl[1:13, :])
 
     simdir = get_simdir(name)
     mkpath(simdir)
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
-        rt_noise = Gamma(row.rt_α, row.rt_θ)
+        rt_noise = Gamma(row.α_ndt, row.θ_ndt)
         prm = NamedTuple(row)
         sim = simulate_exp1(make_policies, prm, n_sim_top)
         sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
@@ -80,7 +78,7 @@ optimal_box = Box(
     judgement_noise=0.1,
 )
 
-# optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
+optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
 opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
 
 # %% ==================== random ====================
@@ -101,14 +99,14 @@ fit_exp1_model("random", random_policies, random_box)
 
 # %% ==================== random_ndt ====================
 
-random_ndt_box = modify(random_box; opt_prm.rt_α, opt_prm.rt_θ)
+random_ndt_box = modify(random_box; opt_prm.α_ndt, opt_prm.θ_ndt)
 fit_exp1_model("random_ndt", random_policies, random_ndt_box)
 
 # %% ==================== empirical ====================
 
 @everywhere begin
-    @isdefined(emp_pretest_stop_dist) || const emp_pretest_stop_dist = empirical_distribution(@subset(pretest, :response_type .== "empty").rt)
-    @isdefined(emp_crit_stop_dist) || const emp_crit_stop_dist = empirical_distribution(@subset(trials, :response_type .== "empty").rt)
+    @isdefined(emp_pretest_stop_dist) || const emp_pretest_stop_dist = empirical_distribution(@subset(human_pretest, :response_type .== "empty").rt)
+    @isdefined(emp_crit_stop_dist) || const emp_crit_stop_dist = empirical_distribution(@subset(human_trials, :response_type .== "empty").rt)
 
     empirical_policies(prm) = (
         RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
@@ -117,7 +115,7 @@ fit_exp1_model("random_ndt", random_policies, random_ndt_box)
 end
 
 empirical_box = modify(optimal_box, sample_cost=0)
-# empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_box)
+empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_box)
 
 # %% ==================== lesioned ====================
 
@@ -127,14 +125,14 @@ lesioned_box = Box(;
     α_stop = (1, 100, :log)
 )
 
-# lesioned_tbl = fit_exp1_model("lesioned", random_policies, lesioned_box; n_init=5000)
+lesioned_tbl = fit_exp1_model("lesioned", random_policies, lesioned_box; n_init=5000)
 
 # %% ==================== empirical gamma ====================
 
 opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
-@isdefined(pretest_gamma) || const pretest_gamma = optimize_stopping_model(pretest, opt_prm.rt_α, opt_prm.rt_θ)
+@isdefined(pretest_gamma) || const pretest_gamma = optimize_stopping_model(human_pretest, opt_prm.α_ndt, opt_prm.θ_ndt)
 
-@isdefined(crit_gamma) || const crit_gamma = optimize_stopping_model(trials, opt_prm.rt_α, opt_prm.rt_θ)
+@isdefined(crit_gamma) || const crit_gamma = optimize_stopping_model(human_trials, opt_prm.α_ndt, opt_prm.θ_ndt)
 
 @everywhere begin
     @isdefined(pretest_gamma) || const pretest_gamma = $pretest_gamma
@@ -149,7 +147,7 @@ end
 # let
 #     prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
 #     sim = simulate_exp1(empirical_gamma_policies, prm)
-#     rt_noise = Gamma(prm.rt_α, prm.rt_θ)
+#     rt_noise = Gamma(prm.α_ndt, prm.θ_ndt)
 #     sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
 #     simdir = get_simdir("empirical_gamma")
 #     mkpath(simdir)
@@ -159,7 +157,7 @@ end
 # %% --------
 
 opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
-empirical_gamma_box = modify(optimal_box; sample_cost=0, opt_prm.rt_α, opt_prm.rt_θ)
+empirical_gamma_box = modify(optimal_box; sample_cost=0, opt_prm.α_ndt, opt_prm.θ_ndt)
 empirical_gamma_tbl = fit_exp1_model("empirical_gamma", empirical_gamma_policies, empirical_gamma_box)
 
 serialize("results/$(RUN)_exp1/fits/empirical/pretest_gamma", pretest_gamma)

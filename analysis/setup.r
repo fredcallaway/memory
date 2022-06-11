@@ -111,16 +111,20 @@ load_model_human = function(run, exp, name, random='empirical', n=1) {
             col_types = cols()) %>% mutate(name='human'),
         read_csv(glue('../model/results/{run}_{exp}/simulations/optimal_{name}/{n}.csv'), col_types = cols()) %>% 
             mutate(name='optimal', wid = glue('optimal-{n}')),
-        read_csv(glue('../model/results/{run}_{exp}/simulations/empirical_{name}/{n}.csv'), col_types = cols()) %>% 
+        # read_csv(glue('../model/results/{run}_{exp}/simulations/random_{name}/{n}.csv'), col_types = cols()) %>% 
+        #     mutate(name='random', wid = glue('random-{n}')),
+        # read_csv(glue('../model/results/{run}_{exp}/simulations/lesioned_{name}/{n}.csv'), col_types = cols()) %>% 
+        #     mutate(name='lesioned', wid = glue('lesioned-{n}')),
+        # read_csv(glue('../model/results/{run}_{exp}/simulations/random_ndt_{name}/{n}.csv'), col_types = cols()) %>% 
+        #     mutate(name='random', wid = glue('random-{n}')),
+        read_csv(glue('../model/results/{run}_{exp}/simulations/empirical_gamma_{name}/{n}.csv'), col_types = cols()) %>% 
             mutate(name='empirical', wid = glue('empirical-{n}')),
-        # read_csv(glue('../model/results/{exp}/optimal_{name}.csv'), 
-        #     col_types = cols()) %>% mutate(name='optimal'),
-        # read_csv(glue('../model/results/{exp}/{random}_{name}.csv'), 
-        #     col_types = cols()) %>% mutate(name='empirical'),
     ) %>% 
     mutate(name = recode_factor(name, 
         "optimal" = "Optimal Metamemory", 
         "empirical" = "No Meta-Level Control",
+        'random' = "Gamma Stopping",
+        'lesioned' = "Lesioned Optimal",
         "human" = "Human",
     ), ordered=T)
 }
@@ -207,7 +211,7 @@ plot_effect = function(df, x, y, color, collapser, min_n=10, geom="pointrange") 
         ggplot(aes({{x}}, {{y}}, color={{color}})) +
             stat_summary(fun=mean, geom="line", position=dodge) +
             stat_summary(fun.data=mean_cl_boot, geom=geom, position=dodge) +
-            facet_wrap(~name)
+            facet_grid(~name)
             # theme(legend.position="none") +
             # pal +
 }
@@ -220,7 +224,7 @@ plot_effect_continuous = function(data, x, y, color, collapser) {
         ggplot(aes({{x}}, {{y}}, group=color)) +
             stat_summary(aes(color=color), fun=mean, geom="line", size=.9) +
             stat_summary(fun.data=mean_cl_boot, geom="ribbon", alpha=0.08) +
-            facet_wrap(~name) 
+            facet_grid(~name) 
             # + 
             # theme(panel.grid.major.x = element_line(color="#EDEDED"))
 }

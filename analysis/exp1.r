@@ -32,14 +32,16 @@ style = list(
 )
 
 acc_rt = df %>%
-    plot_effect(pretest_accuracy, rt/1000, response_type, median) +
+    mutate(rt = rt/1000) %>% 
+    plot_effect(pretest_accuracy, rt, response_type, median) +
     labs(x="Pretest Accuracy", y='Response Time (s)') +
     scale_x_continuous(labels = scales::percent, n.breaks=3) +
     style
 # savefig("acc_rt", 3.5, 1.1)
 
 judge_rt = df %>% 
-    plot_effect(judgement, rt/1000, response_type, median) +
+    mutate(rt = rt/1000) %>% 
+    plot_effect(judgement, rt, response_type, median) +
     labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Response Time (s)') +
     scale_x_continuous(n.breaks=5) + style
 # savefig("judge_rt", 3.5, 1.1)
@@ -81,7 +83,7 @@ p_correct = plot_cum(TRUE, correct & rt <= cutoff) +
             `0.5`="#3B77B3",
             `1`="#4B9AE8"
         ), guide = guide_legend(reverse = TRUE), aesthetics=c("fill", "colour"))
-savefig("p_correct", 3.5, 1.1)
+# savefig("p_correct", 3.5, 1.1)
 
 p_skip = plot_cum(!(correct & (rt <= cutoff)), skip & (rt <= cutoff)) +
         labs(x="Time (s)", y="Cummulative Probability of\nSkipping Given No Recall") +

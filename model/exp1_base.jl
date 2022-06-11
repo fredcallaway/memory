@@ -1,15 +1,15 @@
-function discretize_judgement!(df, noise)
-    df.judgement .+= rand(Normal(0, noise), nrow(df))
-    breaks = map(["empty", "correct"]) do rtyp
-        human = @subset(trials, :response_type .== rtyp).judgement
-        model = @subset(df, :response_type .== rtyp).judgement
-        target_prop = counts(human) ./ length(human)
-        rtyp => quantile(model, cumsum(target_prop)) 
-    end |> Dict
-    df.judgement = map(df.response_type, df.judgement) do rtyp, j
-        findfirst(j .≤ breaks[rtyp])
-    end
-    df
+# %% ==================== simulation ====================
+
+function exp1_mdp(prm)
+    time_cost = (MS_PER_SAMPLE / 1000) * .1
+    MetaMDP{1}(;allow_stop=true, max_step=MAX_STEP, miss_cost=3,
+        prm.threshold, prm.noise, sample_cost=prm.sample_cost + time_cost,
+        prior=Normal(prm.drift_μ, prm.drift_σ),
+    )
+end
+
+function simulate_exp1(make_policies::Function, prm::NamedTuple, N=100_000)
+    simulate_exp1(make_policies(prm)..., N; prm.between_σ, prm.within_σ, prm.judgement_noise)
 end
 
 function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100_000; 
@@ -29,16 +29,18 @@ function simulate_exp1(pre_pol::Policy, crit_pol::Policy, N=100_000;
     discretize_judgement!(df, judgement_noise)
 end
 
-function exp1_mdp(prm)
-    time_cost = (MS_PER_SAMPLE / 1000) * .1
-    MetaMDP{1}(;allow_stop=true, max_step=MAX_STEP, miss_cost=3,
-        prm.threshold, prm.noise, sample_cost=prm.sample_cost + time_cost,
-        prior=Normal(prm.drift_μ, prm.drift_σ),
-    )
-end
-
-function simulate_exp1(make_policies::Function, prm::NamedTuple, N=100_000)
-    simulate_exp1(make_policies(prm)..., N; prm.between_σ, prm.within_σ, prm.judgement_noise)
+function discretize_judgement!(df, noise)
+    df.judgement .+= rand(Normal(0, noise), nrow(df))
+    breaks = map(["empty", "correct"]) do rtyp
+        human = @subset(human_trials, :response_type .== rtyp).judgement
+        model = @subset(df, :response_type .== rtyp).judgement
+        target_prop = counts(human) ./ length(human)
+        rtyp => quantile(model, cumsum(target_prop)) 
+    end |> Dict
+    df.judgement = map(df.response_type, df.judgement) do rtyp, j
+        findfirst(j .≤ breaks[rtyp])
+    end
+    df
 end
 
 # %% ==================== summary statistics ====================
@@ -89,7 +91,7 @@ end
 
 # %% ==================== likelihood ====================
 
-function compute_loss(sumstats, prms)
+function compute_loss(sumstats, prms, ::Missing)  # optimize ndt
     tbl = DataFrame(prms)
     human = sum(target.hist; dims=:judgement)
     results = @showprogress "loss " pmap(sumstats) do ss
@@ -103,16 +105,13 @@ function compute_loss(sumstats, prms)
     sort!(tbl, :loss)
 end
 
-function compute_loss(sumstats, prms; α_ndt, θ_ndt)
+function compute_loss(sumstats, prms, (α_ndt, θ_ndt)::Tuple)
     tbl = DataFrame(prms)
     human = sum(target.hist; dims=:judgement)
     tbl.loss = @showprogress "loss " pmap(sumstats) do ss
         ismissing(ss) && return Inf
         model = sum(ss.hist; dims=:judgement)
-        X = zeros(size(model))
-        convolve!(X, model, Gamma(α_ndt, θ_ndt))
-        smooth_uniform!(X, ε)
-        crossentropy(human, X)
+        likelihood(model, target, Gamma(α_ndt, θ_ndt))
     end
     tbl.α_ndt .= α_ndt
     tbl.θ_ndt .= θ_ndt
