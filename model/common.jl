@@ -61,4 +61,60 @@ function empirical_distribution(x)
     fit(DiscreteNonParametric, max.(1, round.(Int, x ./ MS_PER_SAMPLE)))
 end
 
+function convolve!(result::AbstractArray{Float64, 1}, p::KeyedArray{Float64, 1}, d::Distribution)
+    pd = diff([0; cdf(d, axiskeys(p, 1))])
+    for z in axes(p, 1)
+        result[z] = sum(1:z) do k
+            y = z - k
+            @inbounds p[k] * pd[y + 1]
+        end
+    end
+end
 
+function convolve!(result::AbstractArray{Float64, 2}, p::KeyedArray{Float64, 2}, d::Distribution)
+    pd = diff([0; cdf(d, axiskeys(p, 1))])
+    for j in axes(p, 2), z in axes(p, 1)
+        result[z, j] = sum(1:z) do k
+            y = z - k
+            @inbounds p[k, j] * pd[y + 1]
+        end
+    end
+end
+
+function convolve!(result::AbstractArray{Float64, 4}, p::KeyedArray{Float64, 4}, d::Distribution)
+    pd = diff([0; cdf(d, axiskeys(p, 1))])
+    for h in axes(p, 4), i in axes(p, 3), j in axes(p, 2), z in axes(p, 1)
+        result[z, j, i, h] = sum(1:z) do k
+            y = z - k
+            @inbounds p[k, j, i, h] * pd[y + 1]
+        end
+    end
+end
+
+function optimize_ndt(model::KeyedArray, target::KeyedArray; ε=1e-5)
+    X = zeros(size(model))
+    optimize([10., 10.]) do x
+        any(xi < 0 for xi in x) && return Inf
+        convolve!(X, model, Gamma(x...))
+        smooth_uniform!(X, ε)
+        crossentropy(target, X)
+    end
+end
+
+function optimize_stopping_model(trials, α_ndt, θ_ndt; ε=1e-5, dt=MS_PER_SAMPLE, maxt=MAX_TIME)
+    human = @chain trials begin
+        @rsubset :response_type == "empty" && :rt < MAX_TIME
+        @rtransform :rt = quantize(:rt, dt)
+        wrap_counts(rt = dt:dt:maxt)
+        normalize!
+    end
+
+    ndt_dist = Gamma(α_ndt, θ_ndt)
+    ndt_only = copy(human)
+    ndt_only .= diff([0; cdf(ndt_dist, ndt_only.rt)])
+
+    # RT = NDT + stop_time; NDT is fixed, so we can optimize the stopping dist
+    # in the same way we optimize NDT for the optimal model.
+    α, θ = optimize_ndt(ndt_only, human; ε).minimizer
+    Gamma(α, θ / MS_PER_SAMPLE)  # convert to units of samples
+end

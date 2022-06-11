@@ -89,54 +89,35 @@ end
 
 # %% ==================== likelihood ====================
 
-function smooth_rt!(result, p::KeyedArray, d::Distribution, ε::Float64=1e-6)
-    pd = diff([0; cdf(d, p.rt)])
-    for h in axes(p, 4), i in axes(p, 3), j in axes(p, 2), z in axes(p, 1)
-        result[z, j, i, h] = sum(1:z) do k
-            y = z - k
-            @inbounds p[k, j, i, h] * pd[y + 1]
-        end
-    end
-    smooth_uniform!(result, ε)
-end
-
-function optimize_noise_model(ss)
-    ismissing(ss) && return [Inf, 1000., 1000.]  # 1000 gives super long RT (a warning flag)
-    human = sum(target.hist; dims=:judgement)
-    model = sum(ss.hist; dims=:judgement)
-    X = zeros(size(model))
-    res = optimize([10., 10.]) do x
-        any(xi < 0 for xi in x) && return Inf
-        smooth_rt!(X, model, Gamma(x...))
-        crossentropy(human, X)
-    end
-    [res.minimum; res.minimizer]
-end
-
 function compute_loss(sumstats, prms)
     tbl = DataFrame(prms)
-    results = @showprogress "loss " pmap(optimize_noise_model, sumstats)
-    tbl.loss, tbl.rt_α, tbl.rt_θ = invert(results)
-    # tbl.ss = sumstats
+    human = sum(target.hist; dims=:judgement)
+    results = @showprogress "loss " pmap(sumstats) do ss
+        ismissing(ss) && return [Inf, 1000., 1000.]  # 1000 gives super long RT (a warning flag)
+        model = sum(ss.hist; dims=:judgement)
+        res = optimize_ndt(model, human)
+        [res.minimum; res.minimizer]
+    end
+
+    tbl.loss, tbl.α_ndt, tbl.θ_ndt = invert(results)
     sort!(tbl, :loss)
 end
 
-function compute_loss(sumstats, prms; rt_α, rt_θ)
+function compute_loss(sumstats, prms; α_ndt, θ_ndt)
     tbl = DataFrame(prms)
     human = sum(target.hist; dims=:judgement)
     tbl.loss = @showprogress "loss " pmap(sumstats) do ss
         ismissing(ss) && return Inf
         model = sum(ss.hist; dims=:judgement)
         X = zeros(size(model))
-        smooth_rt!(X, model, Gamma(rt_α, rt_θ))
+        convolve!(X, model, Gamma(α_ndt, θ_ndt))
+        smooth_uniform!(X, ε)
         crossentropy(human, X)
     end
-    tbl.rt_α .= rt_α
-    tbl.rt_θ .= rt_θ
-    # tbl.ss = sumstats
+    tbl.α_ndt .= α_ndt
+    tbl.θ_ndt .= θ_ndt
     sort!(tbl, :loss)
 end
-
 
 # %% ==================== parameterization ====================
 

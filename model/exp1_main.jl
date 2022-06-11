@@ -81,6 +81,7 @@ optimal_box = Box(
 )
 
 # optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
+opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
 
 # %% ==================== random ====================
 
@@ -96,8 +97,12 @@ random_box = modify(optimal_box,
     αθ_stop = (1, 20),
     α_stop = (1, 100, :log),
 )
+fit_exp1_model("random", random_policies, random_box)
 
-# random_tbl = fit_exp1_model("random", random_policies, random_box)
+# %% ==================== random_ndt ====================
+
+random_ndt_box = modify(random_box; opt_prm.rt_α, opt_prm.rt_θ)
+fit_exp1_model("random_ndt", random_policies, random_ndt_box)
 
 # %% ==================== empirical ====================
 
@@ -116,8 +121,6 @@ empirical_box = modify(optimal_box, sample_cost=0)
 
 # %% ==================== lesioned ====================
 
-opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
-
 lesioned_box = Box(;
     opt_prm..., 
     αθ_stop = (1, 20),
@@ -128,42 +131,14 @@ lesioned_box = Box(;
 
 # %% ==================== empirical gamma ====================
 
-@everywhere function optimize_stopping_model(trials, rt_α, rt_θ)
-    # this works for both pretest and critical trials
-    human = @chain trials begin
-        @rsubset :response_type == "empty"
-        @rtransform begin
-            :judgement = 1
-            :pretest_accuracy = 1
-        end
-        make_hist
-        sum(dims=(:judgement, :pretest_accuracy, :response_type))
-    end
-    
-    ndt_dist = Gamma(rt_α, rt_θ)
-    model = copy(human)
-    model .= diff([0; cdf(ndt_dist, model.rt)])
-    # RT = NDT + stop_time; NDT is fixed, so we can optimize the stopping dist
-    # in the same way we optimize NDT for the optimal model.
-
-    X = zeros(length(human))
-    res = optimize([10., 10.]) do (α_stop, θ_stop)
-        stop_dist = Gamma(α_stop, θ_stop)
-        smooth_rt!(X, model, stop_dist)
-        crossentropy(human, X)
-    end
-    α, θ = res.minimizer
-    Gamma(α, θ / MS_PER_SAMPLE)
-end
-
-
 opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
 @isdefined(pretest_gamma) || const pretest_gamma = optimize_stopping_model(pretest, opt_prm.rt_α, opt_prm.rt_θ)
+
 @isdefined(crit_gamma) || const crit_gamma = optimize_stopping_model(trials, opt_prm.rt_α, opt_prm.rt_θ)
 
 @everywhere begin
-    @isdefined(pretest_gamma) || const pretest_gamma = $ pretest_gamma
-    @isdefined(crit_gamma) || const crit_gamma = $ crit_gamma
+    @isdefined(pretest_gamma) || const pretest_gamma = $pretest_gamma
+    @isdefined(crit_gamma) || const crit_gamma = $crit_gamma
 
     empirical_gamma_policies(prm) = (
         RandomStoppingPolicy(pretest_mdp(prm), pretest_gamma),
@@ -182,9 +157,12 @@ end
 # end
 
 # %% --------
+
 opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
 empirical_gamma_box = modify(optimal_box; sample_cost=0, opt_prm.rt_α, opt_prm.rt_θ)
 empirical_gamma_tbl = fit_exp1_model("empirical_gamma", empirical_gamma_policies, empirical_gamma_box)
+
+serialize("results/$(RUN)_exp1/fits/empirical/pretest_gamma", pretest_gamma)
 
 # # %% ==================== decision bound ====================
 
