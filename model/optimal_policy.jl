@@ -177,6 +177,7 @@ function compute_value_functions!(model::BackwardsInduction{2}; verbose=true)
     end
 end
 
+
 round_evidence(B, e) = clip(round(Int, (e + B.m.threshold) / B.dv + 1), 1, size(B.V, 2)-1)
 
 function belief2index(B::BackwardsInduction{1}, b::Belief{1})
@@ -208,6 +209,12 @@ end
 OptimalPolicy(B::BackwardsInduction) = OptimalPolicy(B.m, B)
 OptimalPolicy(m::MetaMDP, dv::Float64=.02m.threshold) = OptimalPolicy(m, BackwardsInduction(m; dv))
 
+
+function act(pol::OptimalPolicy{1}, b::Belief)
+    # faster version, pol.m.allow_stop is assumed
+    pol.B.V[belief2index(pol.B, b)...]
+    Int(pol.B.V[belief2index(pol.B, b)...] > -pol.m.miss_cost)
+end
 
 function act(pol::OptimalPolicy, b::Belief)
     qs = @view pol.B.Q[:, belief2index(pol.B, b)...]
