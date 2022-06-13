@@ -62,45 +62,19 @@ function make_fixations(df)
     end
 end
 
-# %% ==================== duration smoothing ====================
+# %% ==================== NDT on fixation durations ====================
 
 function nonfinal_duration_hist(fixations; dt=MS_PER_SAMPLE, maxt=10000)
-    durations = @chain fixations begin
+    @chain fixations begin
         @rsubset :presentation ≠ :n_pres
-        @with :duration
-    end
-    p = initialize_keyed(0., duration=dt:dt:maxt)
-    for d in durations
-        i = min(Int(cld(d, dt)), length(p))
-        p[i] += 1
-    end
-    p ./= sum(p)
-end
-
-function smooth_duration!(result, p::KeyedArray, d::Distribution; ε=1e-5, key=:duration)
-    pd = diff([0; cdf(d, axiskeys(p, key))])
-    for z in axes(p, 1)
-        result[z] = sum(1:z) do k
-            y = z - k
-            @inbounds p[k] * pd[y + 1]
-        end
-    end
-    smooth_uniform!(result, ε)
-end
-
-function optimize_duration_noise(model::KeyedArray, target::KeyedArray; key=:duration)
-    X = zeros(length(model))
-    optimize([10., 10.]) do x
-        any(xi < 0 for xi in x) && return Inf
-        smooth_duration!(X, model, Gamma(x...); key)
-        crossentropy(target, X)
+        wrap_counts(duration = dt:dt:maxt)
     end
 end
 
 function optimize_duration_noise(model_df::DataFrame, human_fixations::DataFrame)
     model = nonfinal_duration_hist(make_fixations(model_df))
     target = nonfinal_duration_hist(human_fixations)
-    optimize_duration_noise(model, target)
+    optimize_ndt(model, target)
 end
 
 function add_duration_noise!(df, d)

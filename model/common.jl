@@ -5,6 +5,7 @@ include("box.jl")
 
 using Optim
 using ProgressMeter
+using JuliennedArrays
 
 const MAX_TIME = 15000
 const MS_PER_SAMPLE = 100
@@ -50,28 +51,31 @@ function smooth_uniform!(x, ε::Float64=1e-6)
     x
 end
 
-function convolve!(result::AbstractVector{T}, pdf_x::AbstractVector{T}, pdf_y::AbstractVector{T}) where T
-    for r in axes(pdf_x, 1)
-        result[r] = sum(1:r) do x
-            y = r - x
+
+# convolves two binned pdfs over a non-negative domain
+function convolve!(result::AbstractVector, pdf_x::AbstractVector, pdf_y::AbstractVector)
+    # note: we identify bins with the left bound, so pdf_y[1] is p(Y = 0)
+    for z in axes(pdf_x, 1)
+        result[z] = sum(1:z) do x
+            y = z - x
             @inbounds pdf_x[x] * pdf_y[y + 1]
         end
     end
 end
-# annoying that we have to write each version out, see https://github.com/JuliaLang/julia/issues/29146
-function convolve!(result::AbstractArray{T, 2}, pdf_x::AbstractArray{T, 2}, pdf_y::AbstractVector{T}) where T
-    for i in axes(pdf_x, 2)
-        convolve!(@view(result[:, i]), @view(pdf_x[:, i]), pdf_y)
+
+function subtract_convolve!(result::AbstractVector, pdf_x::AbstractVector, pdf_y::AbstractVector)
+    for z in axes(pdf_x, 1)
+        result[z] = sum(z:length(pdf_x)) do x
+            y = x - z
+            @inbounds pdf_x[x] * pdf_y[y + 1]
+        end
     end
 end
-function convolve!(result::AbstractArray{T, 3}, pdf_x::AbstractArray{T, 3}, pdf_y::AbstractVector{T}) where T
-    for j in axes(pdf_x, 3), i in axes(pdf_x, 2)
-        convolve!(@view(result[:, i, j]), @view(pdf_x[:, i, j]), pdf_y)
-    end
-end
-function convolve!(result::AbstractArray{T, 4}, pdf_x::AbstractArray{T, 4}, pdf_y::AbstractVector{T}) where T
-    for k in axes(pdf_x, 4), j in axes(pdf_x, 3), i in axes(pdf_x, 2)
-        convolve!(@view(result[:, i, j, k]), @view(pdf_x[:, i, j, k]), pdf_y)
+
+function convolve!(result::AbstractArray, pdf_x::AbstractArray, pdf_y::AbstractVector)
+    # we always convolve along the first dimension (RT / duration)
+    for (rslice, xslice) in zip(Slices(result, 1), Slices(pdf_x, 1))
+        convolve!(rslice, xslice, pdf_y)
     end
 end
 
@@ -103,7 +107,7 @@ function optimize_stopping_model(trials, α_ndt, θ_ndt; ε=1e-5, dt=MS_PER_SAMP
     end
 
     ndt_dist = Gamma(α_ndt, θ_ndt)
-    ndt_only = copy(human)
+    ndt_only = similar(human)    
     ndt_only .= diff([0; cdf(ndt_dist, ndt_only.rt)])
 
     # RT = NDT + stop_time; NDT is fixed, so we can optimize the stopping dist

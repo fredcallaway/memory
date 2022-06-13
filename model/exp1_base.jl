@@ -91,30 +91,22 @@ end
 
 # %% ==================== likelihood ====================
 
-function compute_loss(sumstats, prms, ::Missing)  # optimize ndt
+function compute_loss(sumstats, prms)
     tbl = DataFrame(prms)
     human = sum(target.hist; dims=:judgement)
-    results = @showprogress "loss " pmap(sumstats) do ss
+    results = @showprogress "loss " pmap(sumstats, prms) do ss, prm
         ismissing(ss) && return [Inf, 1000., 1000.]  # 1000 gives super long RT (a warning flag)
         model = sum(ss.hist; dims=:judgement)
-        res = optimize_ndt(model, human)
-        [res.minimum; res.minimizer]
+        if hasfield(typeof(prm), :α_ndt)
+            (;α_ndt, θ_ndt) = prm
+            lk = likelihood(model, human, Gamma(α_ndt, θ_ndt))
+            [lk, α_ndt, θ_ndt]
+        else
+            res = optimize_ndt(model, human)
+            [res.minimum; res.minimizer]
+        end
     end
-
     tbl.loss, tbl.α_ndt, tbl.θ_ndt = invert(results)
-    sort!(tbl, :loss)
-end
-
-function compute_loss(sumstats, prms, (α_ndt, θ_ndt)::Tuple)
-    tbl = DataFrame(prms)
-    human = sum(target.hist; dims=:judgement)
-    tbl.loss = @showprogress "loss " pmap(sumstats) do ss
-        ismissing(ss) && return Inf
-        model = sum(ss.hist; dims=:judgement)
-        likelihood(model, target, Gamma(α_ndt, θ_ndt))
-    end
-    tbl.α_ndt .= α_ndt
-    tbl.θ_ndt .= θ_ndt
     sort!(tbl, :loss)
 end
 
@@ -125,6 +117,9 @@ function reparameterize(prm)
     prm = (;prm..., drift_σ)
     if hasfield(typeof(prm), :αθ_stop)
         prm = (;prm..., θ_stop = prm.αθ_stop / prm.α_stop)
+    end
+    if hasfield(typeof(prm), :αθ_ndt)
+        prm = (;prm..., θ_ndt = prm.αθ_ndt / prm.α_ndt)
     end
     prm
 end

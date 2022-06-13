@@ -4,8 +4,8 @@
 mkpath("results/exp1")
 mkpath("tmp")
 
-N_SOBOL = 100
-RUN = "testrun"
+N_SOBOL = 50_000
+RUN = "may25"
 
 print_header("beginning run $RUN")
 
@@ -35,25 +35,24 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
     mkpath(fitdir)
 
     prms = sample_params(box, n_init)
-    ndt = hasfield(typeof(prms[1]), :α_ndt) ? (;prms[1].α_ndt, prms[1].θ_ndt) : missing  # = optimize
 
     sumstats = compute_sumstats(name, make_policies, prms);
-    tbl = compute_loss(sumstats, prms, ndt)
+    tbl = compute_loss(sumstats, prms)
     serialize("$fitdir/full", tbl)
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_sumstats = compute_sumstats(name, make_policies, top_prms; N=n_sim_top);
-    top_tbl = compute_loss(top_sumstats, top_prms, ndt)
+    top_tbl = compute_loss(top_sumstats, top_prms)
     top_tbl.judgement_noise = 0.5 .* top_tbl.drift_σ
     display(top_tbl[1:13, :])
 
     simdir = get_simdir(name)
     mkpath(simdir)
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
-        rt_noise = Gamma(row.α_ndt, row.θ_ndt)
+        ndt = Gamma(row.α_ndt, row.θ_ndt)
         prm = NamedTuple(row)
         sim = simulate_exp1(make_policies, prm, n_sim_top)
-        sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
+        sim.rt = sim.rt .+ rand(ndt, nrow(sim))
         CSV.write("$simdir/$i.csv", sim)
     end
 
@@ -79,88 +78,58 @@ optimal_box = Box(
 )
 
 optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
-opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
 
-# %% ==================== random ====================
+# %% ==================== empirical gamma ====================
 
-@everywhere begin
-    random_policies(prm) = (
-        RandomStoppingPolicy(pretest_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
-        RandomStoppingPolicy(exp1_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
+@everywhere function empirical_gamma_policies(prm)
+    pretest_gamma = optimize_stopping_model(human_pretest, prm.α_ndt, prm.θ_ndt)
+    crit_gamma = optimize_stopping_model(human_trials, prm.α_ndt, prm.θ_ndt)
+    (
+        RandomStoppingPolicy(pretest_mdp(prm), pretest_gamma),
+        RandomStoppingPolicy(exp1_mdp(prm), crit_gamma)
     )
 end
 
-random_box = modify(optimal_box, 
-    sample_cost=0,
-    αθ_stop = (1, 20),
-    α_stop = (1, 100, :log),
+empirical_gamma_box = modify(optimal_box; 
+    sample_cost = 0,
+    αθ_ndt = (100, 1500, :log),
+    α_ndt = (1, 100, :log)
 )
-fit_exp1_model("random", random_policies, random_box)
 
-# %% ==================== random_ndt ====================
+empirical_gamma_tbl = fit_exp1_model("empirical_gamma", empirical_gamma_policies, empirical_gamma_box)
 
-random_ndt_box = modify(random_box; opt_prm.α_ndt, opt_prm.θ_ndt)
-fit_exp1_model("random_ndt", random_policies, random_ndt_box)
+# %% --------
+empirical_gamma_box = modify(optimal_box; sample_cost=0, opt_prm.α_ndt, opt_prm.θ_ndt)
+empirical_gamma_tbl = fit_exp1_model("empirical_gamma_fixndt", empirical_gamma_policies, empirical_gamma_box)
 
-# %% ==================== empirical ====================
+serialize("results/$(RUN)_exp1/fits/empirical/pretest_gamma", pretest_gamma)
+
+# %% ==================== empirical lesioned ====================
+
+let
+    prm = opt_prm
+    sim = simulate_exp1(empirical_gamma_policies, prm)
+    sim.rt = sim.rt .+ rand(Gamma(prm.α_ndt, prm.θ_ndt), nrow(sim))
+    simdir = get_simdir("empirical_lesioned")
+    mkpath(simdir)
+    CSV.write("$simdir/1.csv", sim)
+end
+
+
+# %% ==================== old empirical ====================
 
 @everywhere begin
     @isdefined(emp_pretest_stop_dist) || const emp_pretest_stop_dist = empirical_distribution(@subset(human_pretest, :response_type .== "empty").rt)
     @isdefined(emp_crit_stop_dist) || const emp_crit_stop_dist = empirical_distribution(@subset(human_trials, :response_type .== "empty").rt)
 
-    empirical_policies(prm) = (
+    old_empirical_policies(prm) = (
         RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
         RandomStoppingPolicy(exp1_mdp(prm), emp_crit_stop_dist),
     )
 end
 
 empirical_box = modify(optimal_box, sample_cost=0)
-empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_box)
-
-# %% ==================== lesioned ====================
-
-lesioned_box = Box(;
-    opt_prm..., 
-    αθ_stop = (1, 20),
-    α_stop = (1, 100, :log)
-)
-
-lesioned_tbl = fit_exp1_model("lesioned", random_policies, lesioned_box; n_init=5000)
-
-# %% ==================== empirical gamma ====================
-
-opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
-@isdefined(pretest_gamma) || const pretest_gamma = optimize_stopping_model(human_pretest, opt_prm.α_ndt, opt_prm.θ_ndt)
-
-@isdefined(crit_gamma) || const crit_gamma = optimize_stopping_model(human_trials, opt_prm.α_ndt, opt_prm.θ_ndt)
-
-@everywhere begin
-    @isdefined(pretest_gamma) || const pretest_gamma = $pretest_gamma
-    @isdefined(crit_gamma) || const crit_gamma = $crit_gamma
-
-    empirical_gamma_policies(prm) = (
-        RandomStoppingPolicy(pretest_mdp(prm), pretest_gamma),
-        RandomStoppingPolicy(exp1_mdp(prm), crit_gamma)
-    )
-end
-
-# let
-#     prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
-#     sim = simulate_exp1(empirical_gamma_policies, prm)
-#     rt_noise = Gamma(prm.α_ndt, prm.θ_ndt)
-#     sim.rt = sim.rt .+ rand(rt_noise, nrow(sim))
-#     simdir = get_simdir("empirical_gamma")
-#     mkpath(simdir)
-#     CSV.write("$simdir/1.csv", sim)
-# end
-
-# %% --------
-
-opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
-empirical_gamma_box = modify(optimal_box; sample_cost=0, opt_prm.α_ndt, opt_prm.θ_ndt)
-empirical_gamma_tbl = fit_exp1_model("empirical_gamma", empirical_gamma_policies, empirical_gamma_box)
-
-serialize("results/$(RUN)_exp1/fits/empirical/pretest_gamma", pretest_gamma)
+empirical_tbl = fit_exp1_model("empirical_old", old_empirical_policies, empirical_box)
 
 # # %% ==================== decision bound ====================
 
@@ -185,14 +154,3 @@ serialize("results/$(RUN)_exp1/fits/empirical/pretest_gamma", pretest_gamma)
 # bound_sumstats = fit_exp1_model("bound", bound_policies, bound_prms);
 
 # println("Done!")
-
-
-# # %% --------
-
-# opt_tbl = deserialize("tmp/exp1_fits_optimal")
-# # opt_tbl.loss[1]
-
-# # bound_tbl = deserialize("tmp/exp1_fits_bound")
-# # bound_tbl.loss[1]
-
-

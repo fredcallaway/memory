@@ -30,7 +30,7 @@ end
 @everywhere human_pretest = $human_pretest
 @everywhere human_fixations = $human_fixations
 
-const ss_human = exp2_sumstats(human_trials, human_fixations);
+# const ss_human = exp2_sumstats(human_trials, human_fixations);
 
 function write_sims(name, make_policies; ndt=:optimize, n_top=1)
 
@@ -47,10 +47,11 @@ function write_sims(name, make_policies; ndt=:optimize, n_top=1)
     mkpath(fixdir)
     mkpath(dirname(fitpath))
 
-    @showprogress "simulate" pmap(enumerate(prms)) do (i, prm)
+    map(enumerate(prms)) do (i, prm)
         pre_pol, crit_pol = make_policies(prm)
 
         if ndt == :optimize
+            println("optimizing ndt")
             sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
             res = optimize_duration_noise(sim, human_fixations)
             α_ndt, θ_ndt = res.minimizer
@@ -64,8 +65,8 @@ function write_sims(name, make_policies; ndt=:optimize, n_top=1)
         trials = make_trials(sim); fixations = make_fixations(sim)
         CSV.write("$trialdir/$i.csv", trials)
         CSV.write("$fixdir/$i.csv", fixations)
-        ss = exp2_sumstats(trials, fixations)
-        ss
+        # ss = exp2_sumstats(trials, fixations)
+        # ss
         # (;ss..., res)
     end
 end
@@ -83,18 +84,17 @@ serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
 # %% ==================== empirical gamma ====================
 
 function optimize_switching_model(α_ndt, θ_ndt)
-    switch_dist = @chain human_fixations begin
+    @chain human_fixations begin
         DataFrames.rename(:duration => :rt)
         @rtransform :response_type = "empty"  # a hack to prevent the filtering in optimize_stopping_model
-        @rsubset :presentation ≠ :n_pres
+        # @rsubset :presentation ≠ :n_pres
         optimize_stopping_model(α_ndt, θ_ndt)
     end
 end
 
 function optimize_stopping_model_exp2(α_ndt, θ_ndt)
-    # we have to split by number of fixations becausee the
+    # we have to split by number of fixations because the
     # total NDT is the sum of NDT on each fixation
-
     dt = MS_PER_SAMPLE; maxt = MAX_TIME
 
     human = @chain human_trials_witherr begin
@@ -116,15 +116,22 @@ function optimize_stopping_model_exp2(α_ndt, θ_ndt)
     Gamma(α, θ / MS_PER_SAMPLE)  # convert to units of samples
 end
 
+pretest_stopping = let
+    exp1_prm = first(eachrow(deserialize("results/$(RUN)_exp1/fits/empirical_gamma/top")))
+    optimize_stopping_model(human_pretest, exp1_prm.rt_α, exp1_prm.rt_θ)
+    # deserialize("results/$(RUN)_exp1/fits/empirical/pretest_gamma")
+end
+
 (;α_ndt, θ_ndt) = deserialize("results/$(RUN)_exp2/fits/optimal")
-@isdefined(pretest_stopping) || const pretest_stopping = deserialize("results/$(RUN)_exp1/fits/empirical/pretest_gamma")
-@isdefined(crit_switching) || const crit_switching = optimize_switching_model(α_ndt, θ_ndt)
-@isdefined(crit_stopping) || const crit_stopping = optimize_stopping_model_exp2(α_ndt, θ_ndt)
+# crit_switching = optimize_switching_model(1e-3, 1e-3)
+# crit_stopping = optimize_stopping_model_exp2(1e-3, 1e-3)
+crit_switching = optimize_switching_model(α_ndt, θ_ndt)
+crit_stopping = optimize_stopping_model_exp2(α_ndt, θ_ndt)
 
 @everywhere begin
-    @isdefined(pretest_stopping) || const pretest_stopping = $pretest_stopping
-    @isdefined(crit_switching) || const crit_switching = $crit_switching
-    @isdefined(crit_stopping) || const crit_stopping = $crit_stopping
+    pretest_stopping = $pretest_stopping
+    crit_switching = $crit_switching
+    crit_stopping = $crit_stopping
 
     empirical_gamma_policies(prm) = (
         RandomStoppingPolicy(pretest_mdp(prm), pretest_stopping),
@@ -132,8 +139,54 @@ end
     )
 end
 
-# need to use the optimal NDT parameters ✔ -> need to check results
-write_sims("empirical_gamma", empirical_gamma_policies; ndt=Gamma(α_ndt, θ_ndt))
+# write_sims("empirical_gamma", empirical_gamma_policies; ndt=Gamma(α_ndt, θ_ndt))
+
+# %% --------
+
+prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/empirical_gamma/top"))))
+prm = (;prm..., switch_cost=0)
+sim = simulate_exp2(empirical_gamma_policies, prm, 100000)
+add_duration_noise!(sim, Gamma(α_ndt, θ_ndt))
+trials = make_trials(sim); fixations = make_fixations(sim)
+
+@show mean(trials.response_type .== "correct")
+
+@chain fixations begin
+    @rsubset :response_type == "correct"
+    @rtransform :final = :presentation == :n_pres
+    @bywrap :final mean(:duration)
+end
+
+function final_nonfinal(fixations)
+    @chain fixations begin
+        @rsubset :response_type == "correct"
+        @rtransform :final = :presentation == :n_pres
+        @bywrap :final mean(:duration)
+    end
+end
+# %% --------
+pre_pol, crit_pol = empirical_gamma_policies(prm)
+crit_pol.stop_dist
+crit_pol = mutate(crit_pol, stop_dist=Gamma(1000, 1000))
+crit_pol = mutate(crit_pol, m=mutate(crit_pol.m, prior=Normal(0.3, 0)))
+
+
+
+trials = make_trials(sim); fixations = make_fixations(sim)
+final_nonfinal(fixations)
+mean(trials.response_type .== "correct")
+# %% --------
+
+prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
+prm = (;prm..., switch_cost=prm.sample_cost)
+pre_pol, crit_pol = optimal_policies(prm)
+sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
+# opt_sim = sim;
+trials = make_trials(sim); fixations = make_fixations(sim)
+
+
+# %% --------
+
 
 # %% ==================== empirical ====================
 
