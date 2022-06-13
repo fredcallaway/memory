@@ -43,7 +43,7 @@ function discretize_judgement!(df, noise)
     df
 end
 
-# %% ==================== summary statistics ====================
+# %% ==================== likelihood ====================
 
 function make_hist(trials::DataFrame; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
     @chain trials begin
@@ -58,29 +58,14 @@ function make_hist(trials::DataFrame; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
     end
 end
 
-function aggregate_rt(trials)
-    @chain trials begin
-        groupby([:response_type, :pretest_accuracy, :judgement])
-        @combine begin
-            :μ = mean(:rt)
-            :σ = std(:rt)
-            :n = length(:rt)
-        end
-    end
-end
-
-function exp1_sumstats(trials)
-    (hist = make_hist(trials), rt = aggregate_rt(trials))
-end
-
-function compute_sumstats(name, make_policies, prms; N=100000, read_only = false)
-    dir = "cache/$(RUN)_exp1_$(name)_sumstats_$N"
+function compute_histograms(name, make_policies, prms; N=100000, read_only = false)
+    dir = "cache/$(RUN)_exp1_$(name)_histograms_$N"
     mkpath(dir)
     map = read_only ? asyncmap : pmap
-    @showprogress "sumstats" map(prms) do prm
+    @showprogress "histograms " map(prms) do prm
         cache("$dir/$(hash(prm))"; read_only) do
             try
-                exp1_sumstats(simulate_exp1(make_policies, prm, N))
+                make_hist(simulate_exp1(make_policies, prm, N))
             catch
                 # println("Error, skipping")
                 missing
@@ -89,14 +74,12 @@ function compute_sumstats(name, make_policies, prms; N=100000, read_only = false
     end;
 end
 
-# %% ==================== likelihood ====================
-
-function compute_loss(sumstats, prms)
+function compute_loss(histograms, prms)
     tbl = DataFrame(prms)
-    human = sum(target.hist; dims=:judgement)
-    results = @showprogress "loss " pmap(sumstats, prms) do ss, prm
-        ismissing(ss) && return [Inf, 1000., 1000.]  # 1000 gives super long RT (a warning flag)
-        model = sum(ss.hist; dims=:judgement)
+    human = sum(human_hist; dims=:judgement)
+    results = @showprogress "loss " pmap(histograms, prms) do hist, prm
+        ismissing(hist) && return [Inf, 1000., 1000.]  # 1000 gives super long RT (a warning flag)
+        model = sum(hist; dims=:judgement)
         if hasfield(typeof(prm), :α_ndt)
             (;α_ndt, θ_ndt) = prm
             lk = likelihood(model, human, Gamma(α_ndt, θ_ndt))

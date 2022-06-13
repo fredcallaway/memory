@@ -84,17 +84,17 @@ function convolve!(result, pdf_x::KeyedArray, y::Distribution)
     convolve!(result, pdf_x, pdf_y)
 end
 
-function likelihood(model, target, ndt, tmp=zeros(size(model)); ε=1e-5)
+function likelihood(model, human, ndt, tmp=zeros(size(model)); ε=1e-5)
     convolve!(tmp, model, ndt)
     smooth_uniform!(tmp, ε)
-    crossentropy(target, tmp)
+    crossentropy(human, tmp)
 end
 
-function optimize_ndt(model::KeyedArray, target::KeyedArray; ε=1e-5)
+function optimize_ndt(model::KeyedArray, human::KeyedArray; ε=1e-5)
     tmp = zeros(size(model))
     optimize([10., 10.]) do x
         any(xi < 0 for xi in x) && return Inf
-        likelihood(model, target, Gamma(x...), tmp; ε)
+        likelihood(model, human, Gamma(x...), tmp; ε)
     end
 end
 

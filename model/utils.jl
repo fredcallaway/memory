@@ -26,10 +26,14 @@ end
 
 function print_header(txt; color=:magenta)
     display_width = displaysize(stdout)[2]
-    n_dash = fld(display_width - length(txt) - 2, 2)
+    n_fill = fld(display_width - length(txt) - 2, 2)
+    n_space = 2
+    n_dash = n_fill - n_space
+    print(' '^n_space)
     printstyled('-'^n_dash; color, bold=true)
     print(' ', txt, ' ')
     printstyled('-'^n_dash; color, bold=true)
+    print(' '^n_space)
     print("\n")
 end
 
