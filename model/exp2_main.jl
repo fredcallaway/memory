@@ -20,6 +20,7 @@ human_trials = @chain human_trials begin
     @rsubset :response_type != "intrusion"
     @rtransform :choose_first = :response_type == "correct" ? :choose_first : missing
     @rtransform :rt = :total_first + :total_second
+    select(Not(:raw_rt))
 end
 
 human_trials_witherr = @chain human_trials_witherr begin
@@ -149,6 +150,83 @@ write_sims("flexible", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
     )
 end
 empirical_results = write_sims("empirical_old", empirical_policies)
+
+
+# %% ==================== flexible ====================
+
+@everywhere flexible_policies(prm) = (
+    RandomStoppingPolicy(pretest_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
+    RandomSwitchingPolicy(exp2_mdp(prm), Gamma(prm.α_switch, prm.θ_switch), Gamma(prm.α_stop, prm.θ_stop)),
+)
+
+
+flex_box = Box(
+    drift_μ = (-0.5, 0.5),
+    between_σ = (0, 1),
+    noise = (0, 1),
+    threshold = 1,
+    sample_cost = 0,
+    switch_cost = 0,
+    within_σ=0,
+    judgement_noise=0.1,
+    αθ_stop = (1, 20),
+    α_stop = (1, 100, :log),
+    αθ_switch = (1, 20),
+    α_switch = (1, 100, :log),
+    αθ_ndt = (100, 1500, :log),
+    α_ndt = (1, 100, :log)
+)
+
+prms = sample_params(flex_box, 5)
+ss = compute_sumstats("flexible", flexible_policies, prms)
+
+# %% --------
+@chain ss.tri begin
+    @rtransform :rel_pretest = :pretest_accuracy_first - :pretest_accuracy_second
+    @bywrap :rel_pretest mean(:prop_first)
+end
+
+
+
+
+# compute_trends(flexible_policies, flex_box)
+
+# %% --------
+
+
+
+function fit_exp2_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
+    print_header(name)
+    fitdir = "results/$(RUN)_exp1/fits/$name/"
+    mkpath(fitdir)
+
+    prms = sample_params(box, n_init)
+    hists = compute_histograms(name, make_policies, prms);
+    tbl = compute_loss(hists, prms)
+    serialize("$fitdir/full", tbl)
+
+    top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
+    top_hists = compute_histograms(name, make_policies, top_prms; N=n_sim_top);
+    top_tbl = compute_loss(top_hists, top_prms)
+    top_tbl.judgement_noise = 0.5 .* top_tbl.drift_σ
+    display(top_tbl[1:13, :])
+
+    simdir = get_simdir(name)
+    mkpath(simdir)
+    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
+        ndt = Gamma(row.α_ndt, row.θ_ndt)
+        prm = NamedTuple(row)
+        sim = simulate_exp1(make_policies, prm, n_sim_top)
+        sim.rt = sim.rt .+ rand(ndt, nrow(sim))
+        CSV.write("$simdir/$i.csv", sim)
+    end
+
+    serialize("$fitdir/top", top_tbl)
+    top_tbl
+end
+
+
+
 
 
 

@@ -47,6 +47,23 @@ end
 
 # %% ==================== likelihood stuff ====================
 
+function reparameterize(prm)
+    drift_σ = √(prm.between_σ^2 + prm.within_σ^2)
+    prm = (;prm..., drift_σ)
+    if hasfield(typeof(prm), :αθ_stop)
+        prm = (;prm..., θ_stop = prm.αθ_stop / prm.α_stop)
+    end
+    if hasfield(typeof(prm), :αθ_switch)
+        prm = (;prm..., θ_switch = prm.αθ_switch / prm.α_switch)
+    end
+    if hasfield(typeof(prm), :αθ_ndt)
+        prm = (;prm..., θ_ndt = prm.αθ_ndt / prm.α_ndt)
+    end
+    prm
+end
+
+sample_params(box, N) = map(reparameterize, sobol(N, box))
+
 function smooth_uniform!(x, ε::Float64=1e-6)
     x .*= (1 - ε)
     x .+= (ε / length(x))

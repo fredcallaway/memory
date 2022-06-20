@@ -94,19 +94,8 @@ function compute_loss(histograms, prms; sort=true)
     tbl
 end
 
-# %% ==================== parameterization ====================
-
-function reparameterize(prm)
-    drift_σ = √(prm.between_σ^2 + prm.within_σ^2)
-    prm = (;prm..., drift_σ)
-    if hasfield(typeof(prm), :αθ_stop)
-        prm = (;prm..., θ_stop = prm.αθ_stop / prm.α_stop)
-    end
-    if hasfield(typeof(prm), :αθ_ndt)
-        prm = (;prm..., θ_ndt = prm.αθ_ndt / prm.α_ndt)
-    end
-    prm
+useful_columns(x) = select(x, [:drift_μ, :drift_σ, :noise, :sample_cost, :α_ndt, :θ_ndt, :loss])
+function load_fits(name, run=RUN; full=false)
+    x = deserialize("results/$(run)_exp1/fits/$name/top")
+    full ? x : useful_columns(x)
 end
-
-sample_params(box, N) = map(reparameterize, sobol(N, box))
-
