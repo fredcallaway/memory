@@ -100,32 +100,48 @@ midbins = function(x, breaks) {
     ((left + right) / 2)[bin_ids]
 }
 
-load_human = function(exp, name) {
-    read_csv(glue('../data/processed/{exp}/{name}.csv')) %>% 
+join_limits = function(...) {
+    # map(list(...), ~ layer_scales(.x)$y$range$range)
+    ylo = list(...) %>% 
+        map(~ layer_scales(.x)$y$range$range[[1]]) %>% 
+        unlist %>% 
+        min
+    yhi = list(...) %>% 
+        map(~ layer_scales(.x)$y$range$range[[2]]) %>% 
+        unlist %>% 
+        max
+    c(ylo, yhi)
+}
+
+load_human = function(exp, file) {
+    read_csv(glue('../data/processed/{exp}/{file}.csv')) %>% 
         mutate(name = 'Human')
 }
 
-load_model_human = function(run, exp, name, random='empirical', n=1) {
+load_model = function(run, exp, file, name, n=1) {
+    glue('../model/results/{run}_{exp}/simulations/{name}_{file}/{n}.csv') %>% 
+        read_csv(col_types = cols()) %>% 
+        mutate(name=name, wid = glue('{name}-{n}'))
+}
+
+MODELS = c("empirical", "optimal")
+ALL_MODELS = c("optimal", "empirical", "empirical_fixndt", "empirical_fixall", "empirical_old", "flexible", "flexible_ndt")
+load_model_human = function(run, exp, file="trials", models=MODELS, n=1) {
+    print(models)
     bind_rows(
-        read_csv(glue('../data/processed/{exp}/{name}.csv'), 
-            col_types = cols()) %>% mutate(name='human'),
-        read_csv(glue('../model/results/{run}_{exp}/simulations/optimal_{name}/{n}.csv'), col_types = cols()) %>% 
-            mutate(name='optimal', wid = glue('optimal-{n}')),
-        # read_csv(glue('../model/results/{run}_{exp}/simulations/random_{name}/{n}.csv'), col_types = cols()) %>% 
-        #     mutate(name='random', wid = glue('random-{n}')),
-        # read_csv(glue('../model/results/{run}_{exp}/simulations/lesioned_{name}/{n}.csv'), col_types = cols()) %>% 
-        #     mutate(name='lesioned', wid = glue('lesioned-{n}')),
-        # read_csv(glue('../model/results/{run}_{exp}/simulations/random_ndt_{name}/{n}.csv'), col_types = cols()) %>% 
-        #     mutate(name='random', wid = glue('random-{n}')),
-        read_csv(glue('../model/results/{run}_{exp}/simulations/empirical_gamma_{name}/{n}.csv'), col_types = cols()) %>% 
-            mutate(name='empirical', wid = glue('empirical-{n}')),
+        load_human(exp, file),
+        map(models, ~ load_model(run, exp, file, .))
     ) %>% 
     mutate(name = recode_factor(name, 
         "optimal" = "Optimal Metamemory", 
-        "empirical" = "No Meta-Level Control",
-        'random' = "Gamma Stopping",
-        'lesioned' = "Lesioned Optimal",
-        "human" = "Human",
+        # "empirical" = "No Meta-Level Control",
+        "empirical" = "Empirical",
+        "empirical_fixndt" = "Empirical (fix NDT)",
+        "empirical_fixall" = "Empirical (fix all)",
+        "empirical_old" = "Empirical (old)",
+        "flexible" = "Flexible",
+        "flexible_ndt" = "Flexible (fix NDT)",
+        "human" = "Human"
     ), ordered=T)
 }
 
@@ -211,7 +227,7 @@ plot_effect = function(df, x, y, color, collapser, min_n=10, geom="pointrange") 
         ggplot(aes({{x}}, {{y}}, color={{color}})) +
             stat_summary(fun=mean, geom="line", position=dodge) +
             stat_summary(fun.data=mean_cl_boot, geom=geom, position=dodge) +
-            facet_grid(~name)
+            facet_wrap(~name)
             # theme(legend.position="none") +
             # pal +
 }
@@ -224,7 +240,7 @@ plot_effect_continuous = function(data, x, y, color, collapser) {
         ggplot(aes({{x}}, {{y}}, group=color)) +
             stat_summary(aes(color=color), fun=mean, geom="line", size=.9) +
             stat_summary(fun.data=mean_cl_boot, geom="ribbon", alpha=0.08) +
-            facet_grid(~name) 
+            facet_wrap(~name) 
             # + 
             # theme(panel.grid.major.x = element_line(color="#EDEDED"))
 }

@@ -4,7 +4,7 @@ SIZE = 2.7
 MAKE_PDF = TRUE
 STEP_SIZE = 100
 
-RUN = "may25"
+RUN = "jun14"
 OUT = "exp1"
 
 savefig = function(name, width, height) {
@@ -13,13 +13,14 @@ savefig = function(name, width, height) {
 system(glue('mkdir -p figs/{OUT}'))
 
 # %% ==================== load data ====================
-
+MODELS = c("optimal", "flexible")
 # pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
 df = load_model_human(RUN, "exp1", "trials", n=1) %>% 
     mutate(
         skip=response_type=="empty", correct=response_type=="correct",
         response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")
     )
+
 
 # %% ==================== reaction times ====================
 
@@ -52,6 +53,23 @@ judge_rt = df %>%
     theme(plot.tag.position = c(0, 1))
 
 savefig("rt", 3.5, 2.2)
+
+# %% ==================== new skip prob ====================
+
+cutoff = df %>% filter(skip & name == "Human") %>% with(median(rt))
+
+df %>% 
+    filter()
+    filter(rt > cutoff) %>% 
+    mutate(stop_soon = rt < cutoff + 1000) %>% 
+    filter(!(correct)) %>% 
+    mutate(y=stop_soon & skip) %>% 
+    plot_effect(pretest_accuracy, y, "null", mean)
+
+
+savefig("new_skip", 3.5, 1.1)
+
+
 
 # %% ==================== cummulative probabilities ====================
 
@@ -117,14 +135,14 @@ savefig("p_skip_simple", 3.5, 1.1)
 pskip = df %>% 
     filter(name == "Human") %>% 
     filter(response_type == "Skipped") %>% 
-    plot_effect(pretest_accuracy, judgement, response_type) +
+    plot_effect(pretest_accuracy, judgement, response_type, median) +
     theme(legend.position="none") +
     labs(x="Pretest Accuracy", y="Feeling of Knowing")
 
 prec = df %>% 
     filter(name == "Human") %>% 
     filter(response_type == "Recalled") %>% 
-    plot_effect(pretest_accuracy, judgement, response_type) +
+    plot_effect(pretest_accuracy, judgement, response_type, median) +
     labs(x="Pretest Accuracy", y="Confidence")
 
 (pskip + prec) &

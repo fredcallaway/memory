@@ -34,7 +34,12 @@ trials = all_trials %>% filter(wid %in% keep_wids)
 trials = trials %>% 
     mutate(drop = response_type %nin% c("correct","empty")) %T>% 
     with(write_tex(n_pct(drop), "N/error")) %>% 
+    filter(!drop) %>% 
+    mutate(drop = is.na(rt)) %T>% 
+    with(write_tex(sum(drop), "N/short")) %>% 
     filter(!drop)
+
+
 
 # %% ==================== Select and augment ====================
 

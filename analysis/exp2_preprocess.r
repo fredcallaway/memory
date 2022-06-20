@@ -35,7 +35,8 @@ trials = all_trials %>% filter(wid %in% keep_wids)
 # %% ==================== Select and Augment ====================
 
 trials = trials %>% transmute(
-    wid, response_type, rt, first_word, second_word,
+    wid, response_type, first_word, second_word,
+    raw_rt = rt,
     presentation_times = map(presentation_times, fromJSON),
     first_pres_time = map_dbl(presentation_times, 1, .default=NaN),
     second_pres_time = map_dbl(presentation_times, 2, .default=NaN),
@@ -49,6 +50,8 @@ trials = trials %>% transmute(
     total_second = replace_na(map_dbl(presentation_times, ~
         sum(unlist(.x[c(F, T)])),
         .default=0), 0),
+    rt = total_first + total_second,
+    trial_id = row_number(),
 )
 
 pretest_performance = summarise_pretest(pretest)
@@ -59,10 +62,8 @@ trials = trials %>%
 # %% ==================== Unroll fixations ====================
 
 fixations = trials %>% 
-    transmute(
-        wid, presentation_times, n_pres, pretest_accuracy_first, pretest_accuracy_second, response_type, choose_first,
-        trial_id = row_number(),
-    ) %>% 
+    select(wid, presentation_times, n_pres, pretest_accuracy_first, pretest_accuracy_second,
+           response_type, choose_first, trial_id ) %>%
     filter(n_pres >= 1) %>% 
     unnest_longer(presentation_times, "duration", indices_to="presentation")
 
