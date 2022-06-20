@@ -158,8 +158,7 @@ empirical_results = write_sims("empirical_old", empirical_policies)
     RandomStoppingPolicy(pretest_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
     RandomSwitchingPolicy(exp2_mdp(prm), Gamma(prm.α_switch, prm.θ_switch), Gamma(prm.α_stop, prm.θ_stop)),
 )
-
-
+@everywhere include("exp2_fitting.jl")
 flex_box = Box(
     drift_μ = (-0.5, 0.5),
     between_σ = (0, 1),
@@ -177,23 +176,47 @@ flex_box = Box(
     α_ndt = (1, 100, :log)
 )
 
-prms = sample_params(flex_box, 5)
-ss = compute_sumstats("flexible", flexible_policies, prms)
+prms = sample_params(flex_box, 10_000)
+sumstats = compute_sumstats("flexible", flexible_policies, prms; read_only=true)
 
 # %% --------
-@chain ss.tri begin
-    @rtransform :rel_pretest = :pretest_accuracy_first - :pretest_accuracy_second
-    @bywrap :rel_pretest mean(:prop_first)
+fillnan(x, repl=0.) = isnan(x) ? repl : x
+ok_sumstats = filter(sumstats) do ss
+    ss.accuracy > 0.5 &&
+    sum((!isnan).(ss.nonfixated)) == 3 &&
+    sum((!isnan).(ss.fixated)) == 3 &&
+    sum((!isnan).(ss.prop_first)) == 5 &&
+    true
 end
 
+fixated_effect(ss) = ss.fixated[2] - ss.fixated[1]
+nonfixated_effect(ss) = ss.nonfixated[1] - ss.nonfixated[3]
+final_effect(ss) = ss.final[2] - ss.final[1]
+prop_first_effect(ss) = ss.prop_first[5] - ss.prop_first[1]
+
+
+ss_human = exp2_sumstats(human_trials, human_fixations)
 
 
 
-# compute_trends(flexible_policies, flex_box)
+fixated_effect(ss_human)
+ss_human.nonfixated
+prop_first_effect(ss_human)
+
+argmax(ok_sumstats) do ss
+    fixated_effect(ss)
+
+ss.nonfixated
+ss.fixated
+
+
+ss.nonfixated
+ss.fixated
+
+ss.final
+
 
 # %% --------
-
-
 
 function fit_exp2_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
     print_header(name)
