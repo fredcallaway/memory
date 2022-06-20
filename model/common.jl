@@ -11,6 +11,8 @@ const MAX_TIME = 15000
 const MS_PER_SAMPLE = 100
 const MAX_STEP = Int(MAX_TIME / MS_PER_SAMPLE)
 
+SMOOTHING = 1e-5
+
 quantize(x, q=MS_PER_SAMPLE) = q * cld(x, q)
 load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
 stringify(nt::NamedTuple) = replace(string(map(x->round(x; digits=8), nt::NamedTuple)), ([" ", "(", ")"] .=> "")...)
@@ -51,7 +53,6 @@ function smooth_uniform!(x, ε::Float64=1e-6)
     x
 end
 
-
 # convolves two binned pdfs over a non-negative domain
 function convolve!(result::AbstractVector, pdf_x::AbstractVector, pdf_y::AbstractVector)
     # note: we identify bins with the left bound, so pdf_y[1] is p(Y = 0)
@@ -84,13 +85,13 @@ function convolve!(result, pdf_x::KeyedArray, y::Distribution)
     convolve!(result, pdf_x, pdf_y)
 end
 
-function likelihood(model, human, ndt, tmp=zeros(size(model)); ε=1e-5)
+function likelihood(model, human, ndt, tmp=zeros(size(model)); ε::Float64=SMOOTHING)
     convolve!(tmp, model, ndt)
     smooth_uniform!(tmp, ε)
     crossentropy(human, tmp)
 end
 
-function optimize_ndt(model::KeyedArray, human::KeyedArray; ε=1e-5)
+function optimize_ndt(model::KeyedArray, human::KeyedArray; ε::Float64=SMOOTHING)
     tmp = zeros(size(model))
     optimize([10., 10.]) do x
         any(xi < 0 for xi in x) && return Inf
@@ -98,17 +99,19 @@ function optimize_ndt(model::KeyedArray, human::KeyedArray; ε=1e-5)
     end
 end
 
-function optimize_stopping_model(trials, α_ndt, θ_ndt; ε=1e-5, dt=MS_PER_SAMPLE, maxt=MAX_TIME)
-    human = @chain trials begin
+function skip_rt_hist(trials; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
+    @chain trials begin
         @rsubset :response_type == "empty" && :rt < MAX_TIME
         @rtransform :rt = quantize(:rt, dt)
         wrap_counts(rt = dt:dt:maxt)
         normalize!
     end
+end
 
+function optimize_stopping_model(human, α_ndt, θ_ndt; ε::Float64=SMOOTHING)
     ndt_dist = Gamma(α_ndt, θ_ndt)
     ndt_only = similar(human)    
-    ndt_only .= diff([0; cdf(ndt_dist, ndt_only.rt)])
+    ndt_only .= diff([0; cdf(ndt_dist, axiskeys(human, 1))])
 
     # RT = NDT + stop_time; NDT is fixed, so we can optimize the stopping dist
     # in the same way we optimize NDT for the optimal model.

@@ -2,7 +2,7 @@ if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
 
-RUN = "may25"
+RUN = "jun14"
 @everywhere include("common.jl")
 @everywhere include("exp2_base.jl")
 mkpath("results/$(RUN)_exp2")
@@ -19,10 +19,13 @@ human_trials = @chain human_trials begin
     @rsubset :n_pres > 0
     @rsubset :response_type != "intrusion"
     @rtransform :choose_first = :response_type == "correct" ? :choose_first : missing
+    @rtransform :rt = :total_first + :total_second
 end
 
 human_trials_witherr = @chain human_trials_witherr begin
     @rsubset :n_pres > 0 && !ismissing(:rt)
+    @rtransform :choose_first = :response_type == "correct" ? :choose_first : missing
+    @rtransform :rt = :total_first + :total_second
 end
 
 @everywhere human_trials = $human_trials
@@ -30,10 +33,7 @@ end
 @everywhere human_pretest = $human_pretest
 @everywhere human_fixations = $human_fixations
 
-# const ss_human = exp2_sumstats(human_trials, human_fixations);
-
 function write_sims(name, make_policies; ndt=:optimize, n_top=1)
-
     top_table = deserialize("results/$(RUN)_exp1/fits/$name/top")
     exp1_top = eachrow(top_table)[1:n_top]
     prms = map(exp1_top) do prm
@@ -55,9 +55,9 @@ function write_sims(name, make_policies; ndt=:optimize, n_top=1)
             sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
             res = optimize_duration_noise(sim, human_fixations)
             α_ndt, θ_ndt = res.minimizer
-            serialize(fitpath, (;prm..., α_ndt, θ_ndt))
             ndt = Gamma(α_ndt, θ_ndt)
         end
+        serialize(fitpath, (;prm..., α_ndt=ndt.α, θ_ndt=ndt.θ))
 
         sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
         add_duration_noise!(sim, ndt)
@@ -65,9 +65,7 @@ function write_sims(name, make_policies; ndt=:optimize, n_top=1)
         trials = make_trials(sim); fixations = make_fixations(sim)
         CSV.write("$trialdir/$i.csv", trials)
         CSV.write("$fixdir/$i.csv", fixations)
-        # ss = exp2_sumstats(trials, fixations)
-        # ss
-        # (;ss..., res)
+
     end
 end
 
@@ -81,15 +79,10 @@ end
 optimal_results = write_sims("optimal", optimal_policies)
 serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
 
-# %% ==================== empirical gamma ====================
+# %% ==================== empirical ====================
 
 function optimize_switching_model(α_ndt, θ_ndt)
-    @chain human_fixations begin
-        DataFrames.rename(:duration => :rt)
-        @rtransform :response_type = "empty"  # a hack to prevent the filtering in optimize_stopping_model
-        # @rsubset :presentation ≠ :n_pres
-        optimize_stopping_model(α_ndt, θ_ndt)
-    end
+    optimize_stopping_model(duration_hist(human_fixations), prm.α_ndt, prm.θ_ndt)
 end
 
 function optimize_stopping_model_exp2(α_ndt, θ_ndt)
@@ -99,7 +92,7 @@ function optimize_stopping_model_exp2(α_ndt, θ_ndt)
 
     human = @chain human_trials_witherr begin
         @rsubset :response_type == "empty" && 1 ≤ :n_pres ≤ 5
-        @rtransform :rt = quantize(:total_first + :total_second, dt)
+        @rtransform :rt = quantize(:rt, dt)
         wrap_counts(rt = dt:dt:maxt, n_pres=1:5)
         normalize!
     end
@@ -111,84 +104,38 @@ function optimize_stopping_model_exp2(α_ndt, θ_ndt)
         ndt_only[:, n_pres] .= wts[n_pres] .* diff([0; cdf(ndt_dist, ndt_only.rt)])
     end
 
-    α, θ = optimize_ndt(ndt_only, human).minimizer
+    α, θ = optimize_ndt(ssum(ndt_only, :n_pres), ssum(human, :n_pres)).minimizer
     # α, θ = optimize_ndt(ndt_only, human).minimizer
     Gamma(α, θ / MS_PER_SAMPLE)  # convert to units of samples
 end
 
 pretest_stopping = let
-    exp1_prm = first(eachrow(deserialize("results/$(RUN)_exp1/fits/empirical_gamma/top")))
-    optimize_stopping_model(human_pretest, exp1_prm.rt_α, exp1_prm.rt_θ)
-    # deserialize("results/$(RUN)_exp1/fits/empirical/pretest_gamma")
+    exp1_prm = first(eachrow(deserialize("results/$(RUN)_exp1/fits/empirical_fixndt/top")))
+    optimize_stopping_model(skip_rt_hist(human_pretest), exp1_prm.α_ndt, exp1_prm.θ_ndt)
 end
 
 (;α_ndt, θ_ndt) = deserialize("results/$(RUN)_exp2/fits/optimal")
-# crit_switching = optimize_switching_model(1e-3, 1e-3)
-# crit_stopping = optimize_stopping_model_exp2(1e-3, 1e-3)
-crit_switching = optimize_switching_model(α_ndt, θ_ndt)
+crit_switching = optimize_stopping_model(duration_hist(human_fixations), α_ndt, θ_ndt)
 crit_stopping = optimize_stopping_model_exp2(α_ndt, θ_ndt)
+
 
 @everywhere begin
     pretest_stopping = $pretest_stopping
     crit_switching = $crit_switching
     crit_stopping = $crit_stopping
 
-    empirical_gamma_policies(prm) = (
+    empirical_policies(prm) = (
         RandomStoppingPolicy(pretest_mdp(prm), pretest_stopping),
         RandomSwitchingPolicy(exp2_mdp(prm), crit_switching, crit_stopping),
     )
 end
 
-# write_sims("empirical_gamma", empirical_gamma_policies; ndt=Gamma(α_ndt, θ_ndt))
+write_sims("empirical_fixndt", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
+write_sims("empirical_fixall", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
+write_sims("flexible_ndt", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
+write_sims("flexible", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
 
-# %% --------
-
-prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/empirical_gamma/top"))))
-prm = (;prm..., switch_cost=0)
-sim = simulate_exp2(empirical_gamma_policies, prm, 100000)
-add_duration_noise!(sim, Gamma(α_ndt, θ_ndt))
-trials = make_trials(sim); fixations = make_fixations(sim)
-
-@show mean(trials.response_type .== "correct")
-
-@chain fixations begin
-    @rsubset :response_type == "correct"
-    @rtransform :final = :presentation == :n_pres
-    @bywrap :final mean(:duration)
-end
-
-function final_nonfinal(fixations)
-    @chain fixations begin
-        @rsubset :response_type == "correct"
-        @rtransform :final = :presentation == :n_pres
-        @bywrap :final mean(:duration)
-    end
-end
-# %% --------
-pre_pol, crit_pol = empirical_gamma_policies(prm)
-crit_pol.stop_dist
-crit_pol = mutate(crit_pol, stop_dist=Gamma(1000, 1000))
-crit_pol = mutate(crit_pol, m=mutate(crit_pol.m, prior=Normal(0.3, 0)))
-
-
-
-trials = make_trials(sim); fixations = make_fixations(sim)
-final_nonfinal(fixations)
-mean(trials.response_type .== "correct")
-# %% --------
-
-prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
-prm = (;prm..., switch_cost=prm.sample_cost)
-pre_pol, crit_pol = optimal_policies(prm)
-sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
-# opt_sim = sim;
-trials = make_trials(sim); fixations = make_fixations(sim)
-
-
-# %% --------
-
-
-# %% ==================== empirical ====================
+# %% ==================== empirical (old) ====================
 
 @everywhere begin
     plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
@@ -201,6 +148,7 @@ trials = make_trials(sim); fixations = make_fixations(sim)
         RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
     )
 end
-empirical_results = write_sims("empirical", empirical_policies)
+empirical_results = write_sims("empirical_old", empirical_policies)
+
 
 

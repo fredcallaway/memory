@@ -5,7 +5,7 @@ mkpath("results/exp1")
 mkpath("tmp")
 
 N_SOBOL = 50_000
-RUN = "jun13"
+RUN = "jun14"
 
 print_header("beginning run $RUN")
 
@@ -61,10 +61,18 @@ end
 
 function simulate_one(name, make_policies, prm)
     sim = simulate_exp1(make_policies, prm)
-    sim.rt = sim.rt .+ rand(Gamma(prm.α_ndt, prm.θ_ndt), nrow(sim))
+    ndt = Gamma(prm.α_ndt, prm.θ_ndt)
+    loss = likelihood(make_hist(sim), human_hist, Gamma(prm.α_ndt, prm.θ_ndt))
+    sim.rt = sim.rt .+ rand(ndt, nrow(sim))
     simdir = get_simdir(name)
     mkpath(simdir)
     CSV.write("$simdir/1.csv", sim)
+
+    tbl = DataFrame([prm])
+    tbl.loss = [loss]
+    path = "results/$(RUN)_exp1/fits/$name/top"
+    mkpath(dirname(path))
+    serialize(path, tbl)
 end
 
 # %% ==================== optimal ====================
@@ -90,8 +98,8 @@ opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal
 # %% ==================== empirical ====================
 
 @everywhere function empirical_policies(prm)
-    pretest_dist = optimize_stopping_model(human_pretest, prm.α_ndt, prm.θ_ndt)
-    crit_dist = optimize_stopping_model(human_trials, prm.α_ndt, prm.θ_ndt)
+    pretest_dist = optimize_stopping_model(skip_rt_hist(human_pretest), prm.α_ndt, prm.θ_ndt)
+    crit_dist = optimize_stopping_model(skip_rt_hist(human_trials), prm.α_ndt, prm.θ_ndt)
     (
         RandomStoppingPolicy(pretest_mdp(prm), pretest_dist),
         RandomStoppingPolicy(exp1_mdp(prm), crit_dist)
@@ -145,28 +153,3 @@ end
 
 empirical_old_box = modify(optimal_box, sample_cost=0)
 empirical_old_tbl = fit_exp1_model("empirical_old", old_empirical_policies, empirical_old_box)
-
-
-# # %% ==================== decision bound ====================
-
-
-# @everywhere bound_policies(prm) = (
-#     ConstantBoundPolicy(pretest_mdp(prm), prm.θ),
-#     ConstantBoundPolicy(exp1_mdp(prm), prm.θ),
-# )
-
-# bound_prms = sobol(N_SOBOL, Box(
-#     drift_μ = (-0.5, 0.5),
-#     noise = (0.1, 2.),
-#     drift_σ = (0.5, 2),
-#     threshold = (2, 20),
-#     sample_cost = 0.,
-#     θ = (1, 15),
-#     τ = (.001, 1, :log),
-#     strength_noise=(0,1),
-#     judgement_noise=1,
-# ))
-
-# bound_sumstats = fit_exp1_model("bound", bound_policies, bound_prms);
-
-# println("Done!")

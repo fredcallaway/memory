@@ -1,3 +1,5 @@
+# %% ==================== simulate ====================
+
 function exp2_mdp(prm; maxt=MAX_TIME)
     time_cost = @isdefined(PRETEST_COST) ? (MS_PER_SAMPLE / MAX_TIME) * .25 : 0
     m2 = MetaMDP{2}(;allow_stop=true, max_step=Int(maxt / MS_PER_SAMPLE), miss_cost=2,
@@ -64,16 +66,17 @@ end
 
 # %% ==================== NDT on fixation durations ====================
 
-function nonfinal_duration_hist(fixations; dt=MS_PER_SAMPLE, maxt=10000)
+function duration_hist(fixations; nonfinal=false, dt=MS_PER_SAMPLE, maxt=MAX_TIME)
     @chain fixations begin
-        @rsubset :presentation ≠ :n_pres
+        @rsubset :duration < MAX_TIME && (!nonfinal || :presentation ≠ :n_pres)
+        @rtransform :duration = quantize(:duration, dt)
         wrap_counts(duration = dt:dt:maxt)
     end
 end
 
 function optimize_duration_noise(model_df::DataFrame, human_fixations::DataFrame)
-    model = nonfinal_duration_hist(make_fixations(model_df))
-    target = nonfinal_duration_hist(human_fixations)
+    model = duration_hist(make_fixations(model_df); nonfinal=true)
+    target = duration_hist(human_fixations; nonfinal=true)
     optimize_ndt(model, target)
 end
 
@@ -81,94 +84,4 @@ function add_duration_noise!(df, d)
     for x in df.presentation_times
         x .+= rand(d, length(x))
     end
-end
-
-# %% ==================== summary statistics ====================
-
-function unroll_trial!(P, durations, choice; dt)
-    max_step = size(P, 1)
-    breaks = round.(Int, cumsum(durations) / dt)
-
-    start = 1
-    for (i, stop) in enumerate(breaks)
-        stop = min(stop, max_step)
-        fix = iseven(i) ? 2 : 1
-        P[start:stop, fix] .+= 1
-        start = stop + 1
-        start > max_step && return
-    end
-    if ismissing(choice)
-        P[start:max_step, 5] .+= 1        
-    else
-        P[start:max_step, choice+2] .+= 1
-    end
-end
-
-function unroll_time(fixations; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
-    @chain fixations begin
-        @rsubset :response_type == "correct"
-        groupby([:pretest_accuracy_first, :pretest_accuracy_second, :choose_first])
-        combine(_) do d
-            P = zeros(Int(maxt/dt), 5)
-            grp = groupby(d, :trial_id)
-            for d in grp
-                choice = 2 - d.choose_first[1]
-                unroll_trial!(P, d.duration, choice; dt)
-            end
-            P ./= length(grp)
-            Ref(P)  # prevents unrolling the array
-        end
-        DataFrames.rename(:x1 => :timecourse)
-        @orderby :pretest_accuracy_first :pretest_accuracy_second
-        # @rtransform :rel_pretest_accuracy = :pretest_accuracy_first - :pretest_accuracy_second
-        # @with combinedims(:x1)
-        # @catch_missing KeyedArray(_,
-        #     time=dt:dt:maxt, 
-        #     event=[:fix1, :fix2, :choose1, :choose2, :skip],
-        #     rel_pretest_accuracy=-1:.5:1
-        # )
-    end 
-end
-
-function exp2_sumstats(trials, fixations)
-    accuracy = mean(trials.response_type .== "correct")
-
-    # tri = @chain trials begin
-    #     @rsubset :response_type == "correct" 
-    #     groupby([:wid, :pretest_accuracy_first, :pretest_accuracy_second, :choose_first])
-    #     @combine begin
-    #         :rt_μ = mean(:rt)
-    #         :rt_σ = std(:rt)
-    #         :prop_first = mean(:total_first ./ (:total_first .+ :total_second))
-    #         :total_first = mean(:total_first)
-    #         :total_second = mean(:total_second)
-    #         :n = length(:rt)
-    #     end
-    # end
-
-    tri = @chain trials begin
-        groupby([:wid, :pretest_accuracy_first, :pretest_accuracy_second, :choose_first, :n_pres])
-        @combine :n = length(:rt)
-    end
-
-    fix = @chain fixations begin
-        @rsubset :response_type == "correct"
-        @rtransform :final = :presentation == :n_pres
-        @rtransform :presentation = min(:presentation, 10)
-        groupby([:wid, :presentation, :pretest_accuracy_first, :pretest_accuracy_second, :final, :choose_first])
-        @combine begin
-            :duration_μ = mean(:duration) 
-            :duration_σ = std(:duration) 
-            :n = length(:duration)
-        end
-    end
-
-    nonfinal = @chain fixations begin
-        @rsubset :response_type == "correct"
-        nonfinal_duration_hist
-    end
-
-    unrolled = unroll_time(fixations)
-
-    (;accuracy, tri, fix, unrolled, nonfinal)
 end
