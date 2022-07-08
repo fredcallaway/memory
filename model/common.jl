@@ -17,6 +17,12 @@ quantize(x, q=MS_PER_SAMPLE) = q * cld(x, q)
 load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
 stringify(nt::NamedTuple) = replace(string(map(x->round(x; digits=8), nt::NamedTuple)), ([" ", "(", ")"] .=> "")...)
 
+using GLM
+macro regress(data, expr)
+    :(lm(@formula($expr), $(esc(data))))
+end
+get_coef(m) = coef(m)[2], confint(m)[2, :]
+
 function sample_strengths(pol, N=10000; between_σ, within_σ)
     @assert pol.m.prior.σ^2 ≈ between_σ^2 + within_σ^2
     underlying_strength_dist = Normal(pol.m.prior.μ, between_σ)

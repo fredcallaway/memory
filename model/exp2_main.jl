@@ -154,11 +154,13 @@ empirical_results = write_sims("empirical_old", empirical_policies)
 
 # %% ==================== flexible ====================
 
+@everywhere include("exp2_fitting.jl")
+
 @everywhere flexible_policies(prm) = (
     RandomStoppingPolicy(pretest_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
     RandomSwitchingPolicy(exp2_mdp(prm), Gamma(prm.α_switch, prm.θ_switch), Gamma(prm.α_stop, prm.θ_stop)),
 )
-@everywhere include("exp2_fitting.jl")
+
 flex_box = Box(
     drift_μ = (-0.5, 0.5),
     between_σ = (0, 1),
@@ -168,88 +170,50 @@ flex_box = Box(
     switch_cost = 0,
     within_σ=0,
     judgement_noise=0.1,
-    αθ_stop = (1, 20),
-    α_stop = (1, 100, :log),
-    αθ_switch = (1, 20),
-    α_switch = (1, 100, :log),
+    αθ_stop = (1, 60),
+    α_stop = (.1, 100, :log),
+    αθ_switch = (1, 30),
+    α_switch = (.1, 100, :log),
     αθ_ndt = (100, 1500, :log),
     α_ndt = (1, 100, :log)
 )
 
-prms = sample_params(flex_box, 10_000)
-sumstats = compute_sumstats("flexible", flexible_policies, prms; read_only=true)
-
+prms = sample_params(flex_box, 500_000)
+effects = compute_effects("flexible", flexible_policies, prms)
 # %% --------
-fillnan(x, repl=0.) = isnan(x) ? repl : x
-ok_sumstats = filter(sumstats) do ss
-    ss.accuracy > 0.5 &&
-    sum((!isnan).(ss.nonfixated)) == 3 &&
-    sum((!isnan).(ss.fixated)) == 3 &&
-    sum((!isnan).(ss.prop_first)) == 5 &&
-    true
+three_fix_prop(ef) = sum(ef.nfix[3:end]) / sum(ef.nfix)
+
+function score(ef::NamedTuple, name, minimize=false)
+    ismissing(ef) && return 0.
+    ef.accuracy ≥ 0.75 || return 0.
+    three_fix_prop(ef) ≥ .05 || return 0.
+
+    ci = getfield(ef, name)[2]
+    fillnan(minimize ? -ci[2] : ci[1])
+end
+score(effects::Vector, name, minimize=false) = map(ef->score(ef, name, minimize), effects)
+
+sc, i = findmax(score(effects, :prop_first))
+sc, i = findmax(score(effects, :final))
+sc, i = findmin(score(effects, :nonfixated, true))
+sc, i = findmax(score(effects, :fixated))
+
+function top_score(effects, name, minimize=false)
+    top = partialsortperm(-score(effects, name, minimize), 1:100)
+    top_prms = prms[top]
+    top_effects = compute_effects("flexible", flexible_policies, top_prms; N=1_000_000)
+    sc, i = findmax(score(top_effects, name))
+    getfield(top_effects[i], name), top[i]
 end
 
-fixated_effect(ss) = ss.fixated[2] - ss.fixated[1]
-nonfixated_effect(ss) = ss.nonfixated[1] - ss.nonfixated[3]
-final_effect(ss) = ss.final[2] - ss.final[1]
-prop_first_effect(ss) = ss.prop_first[5] - ss.prop_first[1]
+sc, i = top_score(effects, :prop_first)
+sc, i = top_score(effects, :final)
+sc, i = top_score(effects, :fixated)
+sc, i = top_score(effects, :nonfixated, true)
+check = compute_effects("flexible", flexible_policies, prms[i:i]; N=10000000)[1]
 
-
-ss_human = exp2_sumstats(human_trials, human_fixations)
-
-
-
-fixated_effect(ss_human)
-ss_human.nonfixated
-prop_first_effect(ss_human)
-
-argmax(ok_sumstats) do ss
-    fixated_effect(ss)
-
-ss.nonfixated
-ss.fixated
-
-
-ss.nonfixated
-ss.fixated
-
-ss.final
-
-
-# %% --------
-
-function fit_exp2_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
-    print_header(name)
-    fitdir = "results/$(RUN)_exp1/fits/$name/"
-    mkpath(fitdir)
-
-    prms = sample_params(box, n_init)
-    hists = compute_histograms(name, make_policies, prms);
-    tbl = compute_loss(hists, prms)
-    serialize("$fitdir/full", tbl)
-
-    top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
-    top_hists = compute_histograms(name, make_policies, top_prms; N=n_sim_top);
-    top_tbl = compute_loss(top_hists, top_prms)
-    top_tbl.judgement_noise = 0.5 .* top_tbl.drift_σ
-    display(top_tbl[1:13, :])
-
-    simdir = get_simdir(name)
-    mkpath(simdir)
-    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
-        ndt = Gamma(row.α_ndt, row.θ_ndt)
-        prm = NamedTuple(row)
-        sim = simulate_exp1(make_policies, prm, n_sim_top)
-        sim.rt = sim.rt .+ rand(ndt, nrow(sim))
-        CSV.write("$simdir/$i.csv", sim)
-    end
-
-    serialize("$fitdir/top", top_tbl)
-    top_tbl
-end
-
-
-
+df = prms[partialsortperm(-score(effects, :prop_first), 1:10)] |> DataFrame
+select(df, [:αθ_stop, :α_stop, :αθ_switch, :α_switch, :αθ_ndt, :α_ndt])
 
 
 

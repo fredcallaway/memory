@@ -13,7 +13,7 @@ savefig = function(name, width, height) {
 system(glue('mkdir -p figs/{OUT}'))
 
 # %% ==================== load data ====================
-MODELS = c("optimal", "flexible")
+MODELS = c("optimal", "flexible_ndt")
 # pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
 df = load_model_human(RUN, "exp1", "trials", n=1) %>% 
     mutate(
@@ -38,14 +38,14 @@ acc_rt = df %>%
     labs(x="Pretest Accuracy", y='Response Time (s)') +
     scale_x_continuous(labels = scales::percent, n.breaks=3) +
     style
-# savefig("acc_rt", 3.5, 1.1)
+savefig("acc_rt", 3.5, 1.1)
 
 judge_rt = df %>% 
     mutate(rt = rt/1000) %>% 
     plot_effect(judgement, rt, response_type, median) +
     labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Response Time (s)') +
     scale_x_continuous(n.breaks=5) + style
-# savefig("judge_rt", 3.5, 1.1)
+savefig("judge_rt", 3.5, 1.1)
 
 (judge_rt / acc_rt) +
     plot_layout(guides = "collect") + 
@@ -53,22 +53,6 @@ judge_rt = df %>%
     theme(plot.tag.position = c(0, 1))
 
 savefig("rt", 3.5, 2.2)
-
-# %% ==================== new skip prob ====================
-
-cutoff = df %>% filter(skip & name == "Human") %>% with(median(rt))
-
-df %>% 
-    filter()
-    filter(rt > cutoff) %>% 
-    mutate(stop_soon = rt < cutoff + 1000) %>% 
-    filter(!(correct)) %>% 
-    mutate(y=stop_soon & skip) %>% 
-    plot_effect(pretest_accuracy, y, "null", mean)
-
-
-savefig("new_skip", 3.5, 1.1)
-
 
 
 # %% ==================== cummulative probabilities ====================

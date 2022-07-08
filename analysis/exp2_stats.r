@@ -7,8 +7,9 @@ write_tex = tex_writer("stats/exp2")
 
 pretest = read_csv('../data/processed/exp2/pretest.csv', col_types = cols())
 
+all_trials =  load_human("exp2", "trials_witherr")
+
 trials = load_human("exp2", "trials") %>% 
-    filter(response_type == "correct") %>% 
     mutate(rel_pretest_accuracy = pretest_accuracy_first - pretest_accuracy_second)
 
 fixations = load_human("exp2", "fixations") %>%
@@ -24,6 +25,14 @@ fixations = load_human("exp2", "fixations") %>%
         )
     )
 fmt_percent = function(prop) glue("{round(100 * prop)}\\%")
+
+# %% ==================== accuracy ====================
+
+all_trials %>% 
+    with(mean(response_type == "correct")) %>% 
+    fmt_percent %>% 
+    write_tex("accuracy")
+
 
 # %% ==================== overall proportion ====================
 

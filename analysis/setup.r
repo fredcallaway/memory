@@ -135,12 +135,13 @@ load_model_human = function(run, exp, file="trials", models=MODELS, n=1) {
     mutate(name = recode_factor(name, 
         "optimal" = "Optimal Metamemory", 
         # "empirical" = "No Meta-Level Control",
-        "empirical" = "Empirical",
-        "empirical_fixndt" = "Empirical (fix NDT)",
-        "empirical_fixall" = "Empirical (fix all)",
-        "empirical_old" = "Empirical (old)",
-        "flexible" = "Flexible",
-        "flexible_ndt" = "Flexible (fix NDT)",
+        # "empirical" = "Empirical",
+        # "empirical_fixndt" = "Empirical (fix NDT)",
+        # "empirical_fixall" = "Empirical (fix all)",
+        # "empirical_old" = "Empirical (old)",
+        # "flexible" = "Flexible",
+        # "flexible_ndt" = "Flexible (fix NDT)",
+        "flexible_ndt" = "No Meta-Level Control",
         "human" = "Human"
     ), ordered=T)
 }
