@@ -23,6 +23,22 @@ macro regress(data, expr)
 end
 get_coef(m) = coef(m)[2], confint(m)[2, :]
 
+function compute_cached(job_fn, job_name, prms; read_only=false, enable_cache=true)
+    dir = "cache/$(RUN)_$(job_name)"
+    mkpath(dir)
+    map = read_only ? asyncmap : pmap
+    @showprogress "$job_name "  map(prms) do prm
+        cache("$dir/$(hash(prm))"; read_only, disable=!enable_cache) do
+            try
+                job_fn(prm)
+            catch
+                # println("Error, skipping")
+                missing
+            end
+        end
+    end;
+end
+
 function sample_strengths(pol, N=10000; between_σ, within_σ)
     @assert pol.m.prior.σ^2 ≈ between_σ^2 + within_σ^2
     underlying_strength_dist = Normal(pol.m.prior.μ, between_σ)

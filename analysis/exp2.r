@@ -12,6 +12,7 @@ savefig = function(name, width, height) {
 }
 system(glue('mkdir -p figs/{OUT}'))
 
+
 # %% ==================== load data ====================
 MODELS = c("optimal", "flexible_ndt")
 
@@ -32,9 +33,6 @@ fixations = load_model_human(RUN, "exp2", "fixations") %>%
         )
     )
 
-fixations %>% 
-    group_by(name, last_fix) %>% 
-    summarise(mean(duration))
 # # %% ==================== overall proportion and timecourse ====================
 
 timecourse = fixations %>% 

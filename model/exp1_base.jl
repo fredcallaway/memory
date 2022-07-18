@@ -59,19 +59,9 @@ function make_hist(trials::DataFrame; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
 end
 
 function compute_histograms(name, make_policies, prms; N=100000, read_only=false, enable_cache=true)
-    dir = "cache/$(RUN)_exp1_$(name)_histograms_$N"
-    mkpath(dir)
-    map = read_only ? asyncmap : pmap
-    @showprogress "histograms " map(prms) do prm
-        cache("$dir/$(hash(prm))"; read_only, disable=!enable_cache) do
-            try
-                make_hist(simulate_exp1(make_policies, prm, N))
-            catch
-                # println("Error, skipping")
-                missing
-            end
-        end
-    end;
+    compute_cached("exp1_$(name)_histograms_$N", ) do prm
+        make_hist(simulate_exp1(make_policies, prm, N)
+    end
 end
 
 function compute_loss(histograms, prms; sort=true)

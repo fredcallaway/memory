@@ -11,18 +11,18 @@ include("exp2_base.jl")
 pyplot(label="", dpi=300, size=(400,300), lw=2, grid=false, widen=true, 
     background_color=:white, foreground_color=:black)
 
-# %% --------
+# %% ==================== solve ====================
 
 m = MetaMDP{2}(allow_stop=true, miss_cost=2, sample_cost=.01, switch_cost=.01,
     threshold=7, noise=.5, max_step=100, prior=Normal(0, 1)
 )
 
 B = BackwardsInduction(m; dv=0.2, verbose=true)
+pol = OptimalPolicy(B)
 
 # %% ==================== accumulation ====================
 
 Random.seed!(15)
-pol = OptimalPolicy(B)
 # colors = RGB.([.2, .6])
 figure(size=(700, 300), widen=false) do
     plot!(
@@ -49,26 +49,6 @@ end
 
 
 # %% ==================== policy heatmap ====================
-
-# m = MetaMDP{2}(sample_cost=.1, threshold=4, noise=2, switch_cost=.1,
-#         max_step=30, prior=Normal(0.5, 2)
-# )
-
-# m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.1, threshold=4, noise=2, switch_cost=0,
-#         max_step=30, prior=Normal(0.5, 2)
-# )
-
-# m = MetaMDP{2}(allow_stop=true, miss_cost=3, sample_cost=.03, switch_cost=.03,
-#     threshold=14, noise=2, max_step=100, prior=Normal(1, 1)
-# )
-
-m = MetaMDP{2}(allow_stop=true, miss_cost=2, sample_cost=.01, switch_cost=.01,
-    threshold=7, noise=.5, max_step=100, prior=Normal(0, 1)
-)
-
-B = BackwardsInduction(m; dv=0.2, verbose=true)
-
-# %% --------
 
 fig(f, name; pdf=false, kws...) = figure(f, name; base="/Users/fred/Papers/meta-memory/model-diagram", pdf, kws...)
 
@@ -139,9 +119,6 @@ function plot_sim(beliefs, color=:black)
     # end
     x = min.(x, m.threshold + pol.B.dv)
     plot!(to_idx_space.(x[1:end]); color, lw=1.5)
-    
-    # x = 15 / √(1 + s^2 * 15) # trying to get length about the same (too lazy to do math right)
-    # plot!([1, x+1], to_idx_space.([0, x] .* s); color, lw=1, ls=:dash, arrow=true)
 end
 
 function plot_predictions(ev2, t2)
@@ -161,12 +138,15 @@ function plot_predictions(ev2, t2)
         Random.seed!(seed)
         beliefs = simulate(pol; b=deepcopy(b), s, belief_log=BeliefLog2()).belief_log.beliefs
         plot_sim(beliefs, color)
+
+        x = 15 / √(1 + s[1]^2 * 15) # trying to get length about the same (too lazy to do math right)
+        plot!([1, x+1], to_idx_space.([0, x] .* s[1]); color, lw=1, ls=:dash, arrow=true)
     end
 end
-
 fig("exp2_policy_0") do
     plot_predictions(0.1, 10)
 end
+# %% --------
 
 fig("exp2_policy_1") do
     plot_predictions(1, 10)

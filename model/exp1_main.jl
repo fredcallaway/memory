@@ -50,7 +50,7 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
         ndt = Gamma(row.α_ndt, row.θ_ndt)
         prm = NamedTuple(row)
-        sim = simulate_exp1(make_policies, prm, n_sim_top)
+        sim = simulate_exp1(_policies, prm, n_sim_top)
         sim.rt = sim.rt .+ rand(ndt, nrow(sim))
         CSV.write("$simdir/$i.csv", sim)
     end
@@ -129,14 +129,14 @@ simulate_one("empirical_fixall", empirical_policies, opt_prm)
     )
 end
 
-random_box = modify(optimal_box, 
+flexible_box = modify(optimal_box, 
     sample_cost=0,
     αθ_stop = (1, 20),
     α_stop = (1, 100, :log),
 )
-fit_exp1_model("flexible", flexible_policies, random_box)
+fit_exp1_model("flexible", flexible_policies, flexible_box)
 
-flexible_fixndt_box = modify(random_box; opt_prm.α_ndt, opt_prm.θ_ndt)
+flexible_fixndt_box = modify(flexible_box; opt_prm.α_ndt, opt_prm.θ_ndt)
 fit_exp1_model("flexible_ndt", flexible_policies, flexible_fixndt_box)
 
 # %% ==================== old empirical ====================
@@ -151,5 +151,46 @@ fit_exp1_model("flexible_ndt", flexible_policies, flexible_fixndt_box)
     )
 end
 
+
 empirical_old_box = modify(optimal_box, sample_cost=0)
 empirical_old_tbl = fit_exp1_model("empirical_old", old_empirical_policies, empirical_old_box)
+
+
+# %% ==================== flexible fit effects ====================
+
+@everywhere include("exp1_fit_effects.jl")
+
+full_flex_box = modify(flexible_box,
+    αθ_ndt = (100, 1500, :log),
+    α_ndt = (1, 100, :log)
+)
+
+prms = sample_params(full_flex_box, 100_000)
+effects = compute_effects("flexible", flexible_policies, prms)
+
+function score(ef, effect)
+    ismissing(ef) && return 0.
+    (.1 ≤ ef.accuracy ≤ .9) || return 0.
+
+    ci = getfield(ef, effect)[2]
+    fillnan(ci[1])
+end
+
+score(effects::Vector, effect) = map(ef->score(ef, effect), effects)
+
+sc, i = findmax(score(effects, :empty_judgement))
+sc, i = findmax(score(effects, :empty_pretest))
+
+
+function top_score(name, make_policies, effects, effect)
+    top = partialsortperm(-score(effects, effect), 1:100)
+    top_prms = prms[top]
+    top_effects = compute_effects(name, make_policies, top_prms; N=1_000_000)
+    sc, i = findmax(score(top_effects, effect))
+    getfield(top_effects[i], effect), top[i]
+end
+
+sc, i = top_score("flexible", flexible_policies, effects, :empty_judgement)
+sc, i = top_score("flexible", flexible_policies, effects, :empty_pretest)
+
+
