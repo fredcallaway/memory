@@ -25,11 +25,13 @@ human_hist = make_hist(human_trials);
 @everywhere human_pretest = $human_pretest
 # @everywhere human_hist = $human_hist
 
+NO_RUN = true
 # %% ==================== fitting pipeline ====================
 
 get_simdir(name) = "results/$(RUN)_exp1/simulations/$(name)_trials"
 
 function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
+    NO_RUN && return
     print_header(name)
     fitdir = "results/$(RUN)_exp1/fits/$name/"
     mkpath(fitdir)
@@ -60,6 +62,7 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
 end
 
 function simulate_one(name, make_policies, prm)
+    NO_RUN && return
     sim = simulate_exp1(make_policies, prm)
     ndt = Gamma(prm.α_ndt, prm.θ_ndt)
     loss = likelihood(make_hist(sim), human_hist, Gamma(prm.α_ndt, prm.θ_ndt))
@@ -120,7 +123,7 @@ empirical_fixndt_tbl = fit_exp1_model("empirical_fixndt", empirical_policies, em
 # all parameters fixed
 simulate_one("empirical_fixall", empirical_policies, opt_prm)
 
-# %% ==================== flexible stopping ====================
+# %% ==================== flexible ====================
 
 @everywhere begin
     flexible_policies(prm) = (
@@ -151,14 +154,60 @@ fit_exp1_model("flexible_ndt", flexible_policies, flexible_fixndt_box)
     )
 end
 
-
 empirical_old_box = modify(optimal_box, sample_cost=0)
 empirical_old_tbl = fit_exp1_model("empirical_old", old_empirical_policies, empirical_old_box)
 
+# %% ==================== fit statistics ====================
 
-# %% ==================== flexible fit effects ====================
+ALL_MODELS = ["optimal", "empirical", "empirical_fixndt", "empirical_fixall", "empirical_old", "flexible", "flexible_ndt"]
+
+useful_columns(x) = select(x, [:drift_μ, :drift_σ, :noise, :sample_cost, :α_ndt, :θ_ndt, :loss])
+function load_fits(name, run=RUN; full=false)
+    x = deserialize("results/$(run)_exp1/fits/$name/top")
+    full ? x : useful_columns(x)
+end
+
+mle = map(ALL_MODELS) do model
+    row = first(eachrow(load_fits(model)))
+    (;model, row...)
+end |> DataFrame
+
+sort!(mle, :loss)  # WRONG
+
+@transform mle :mean_ndt = :α_ndt .* :θ_ndt
+# %% --------
+
+function likelihood(make_policies::Function, prm)
+    sim = simulate_exp1(make_policies, prm)
+    likelihood(make_hist(sim), human_hist, Gamma(prm.α_ndt, prm.θ_ndt))
+end
+
+# %% ==================== can the null model get the effects? ====================
 
 @everywhere include("exp1_fit_effects.jl")
+
+function lower_ci(ef, effect)
+    ci = getfield(ef, effect)[2]
+    fillnan(ci[1])
+end
+
+function reasonable_wrapper(f)
+    function wrapped(ef)
+        ismissing(ef) && return -Inf
+        (.1 ≤ ef.accuracy ≤ .9) || return -Inf
+        f(ef)
+    end
+end
+
+function top_score(score_fn, name, make_policies, effects)
+    score = reasonable_wrapper(score_fn)
+    scores = map(score, effects)
+    top = partialsortperm(-scores, 1:100)
+    top_prms = prms[top]
+    top_effects = compute_effects(name, make_policies, top_prms; N=1_000_000)
+    sc, i = findmax(map(score, top_effects))
+    sc, top_effects[i], top[i]
+end
 
 full_flex_box = modify(flexible_box,
     αθ_ndt = (100, 1500, :log),
@@ -166,31 +215,59 @@ full_flex_box = modify(flexible_box,
 )
 
 prms = sample_params(full_flex_box, 100_000)
-effects = compute_effects("flexible", flexible_policies, prms)
+effects = compute_effects("flexible", flexible_policies, prms);
 
-function score(ef, effect)
-    ismissing(ef) && return 0.
-    (.1 ≤ ef.accuracy ≤ .9) || return 0.
+top_score("flexible", flexible_policies, effects) do ef
+    min(lower_ci(ef, :empty_judgement), lower_ci(ef, :correct_judgement))
+end
 
+top_score("flexible", flexible_policies, effects) do ef
+    min(lower_ci(ef, :empty_pretest), lower_ci(ef, :correct_pretest))
+end
+
+# %% --------
+
+full_optimal_box = modify(optimal_box,
+    α_ndt = 1,
+    θ_ndt = 1,
+)
+
+prms = sample_params(full_optimal_box, 1000)
+effects = compute_effects("optimal", optimal_policies, prms);
+
+human_acc = mean(human_trials.response_type .== "correct")
+filter!(effects) do ef
+    !ismissing(ef) && 
+    (abs(ef.accuracy - human_acc) < .1)
+    # (.1 ≤ ef.accuracy ≤ .9)
+end
+
+function upper_ci(ef, effect)
     ci = getfield(ef, effect)[2]
-    fillnan(ci[1])
+    fillnan(ci[2])
 end
 
-score(effects::Vector, effect) = map(ef->score(ef, effect), effects)
+pass = map(effects) do ef
+    min(mle(ef, :empty_pretest) > 0, mle(ef, :correct_pretest) > 0)
+end
+bad = findall(.!pass)
+effects[bad[1]]
 
-sc, i = findmax(score(effects, :empty_judgement))
-sc, i = findmax(score(effects, :empty_pretest))
+# %% --------
 
 
-function top_score(name, make_policies, effects, effect)
-    top = partialsortperm(-score(effects, effect), 1:100)
-    top_prms = prms[top]
-    top_effects = compute_effects(name, make_policies, top_prms; N=1_000_000)
-    sc, i = findmax(score(top_effects, effect))
-    getfield(top_effects[i], effect), top[i]
+prms = sample_params(empirical_box, 10_000)
+effects = compute_effects("empirical", empirical_policies, prms);
+
+top_score("empirical", empirical_policies, effects) do ef
+    ismissing(ef) && return -Inf
+    (.1 ≤ ef.accuracy ≤ .9) || return -Inf
+    min(lower_ci(ef, :empty_judgement), lower_ci(ef, :correct_judgement))
 end
 
-sc, i = top_score("flexible", flexible_policies, effects, :empty_judgement)
-sc, i = top_score("flexible", flexible_policies, effects, :empty_pretest)
-
+top_score("empirical", empirical_policies, effects) do ef
+    ismissing(ef) && return -Inf
+    (.1 ≤ ef.accuracy ≤ .9) || return -Inf
+    min(lower_ci(ef, :empty_pretest), lower_ci(ef, :correct_pretest))
+end
 
