@@ -9,11 +9,11 @@ function exp2_mdp(prm; maxt=MAX_TIME)
     )
 end
 
-function simulate_exp2(make_policies, prm::NamedTuple, N=1_000_000; kws...)
+function simulate_exp2(make_policies::Function, prm::NamedTuple, N=1_000_000)
     simulate_exp2(make_policies(prm)..., N; prm.within_σ, prm.between_σ)
 end
 
-function simulate_exp2(pre_pol, crit_pol, N=1_000_000; within_σ, between_σ)
+function simulate_exp2(pre_pol::Policy, crit_pol::Policy, N=1_000_000; within_σ, between_σ)
     strengths = sample_strengths(pre_pol,  2N; within_σ, between_σ)
     pairs = map(1:2:2N) do i
         s1, pretest_accuracy_first = strengths[i]
@@ -38,7 +38,6 @@ function make_trials(df)
     safeindex(x, i) = length(x) < i ? NaN : x[i]
     @chain df begin
          @rtransform begin
-            :trial_id = 1:nrow(df)
             :first_pres_time = safeindex(:presentation_times, 1)
             :second_pres_time = safeindex(:presentation_times, 2)
             :third_pres_time = safeindex(:presentation_times, 3)
@@ -48,7 +47,10 @@ function make_trials(df)
             :total_second = sum(:presentation_times[2:2:end])
             :wid = "optimal"
         end
-        @transform :rt = :total_first .+ :total_second
+        @transform begin
+            :rt = :total_first .+ :total_second
+            :trial_id = 1:nrow(df)
+        end
         select(names(human_trials))
     end
 end
@@ -63,6 +65,53 @@ function make_fixations(df)
         select(names(human_fixations))
     end
 end
+
+# %% ==================== likelihood ====================
+
+function make_hist(trials::DataFrame; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
+    @chain trials begin
+        @rsubset :response_type in ("correct", "empty")
+        @rtransform! :response = (
+            :response_type == "empty" ? "skip" :
+            :choose_first ? "first" :
+            "second"
+        )
+        @rtransform! :rt = quantize(:rt, dt)
+        wrap_counts(
+            rt=dt:dt:maxt, 
+            response=["skip", "first", "second"], 
+            pretest_accuracy_first=0:0.5:1,
+            pretest_accuracy_second=0:0.5:1,
+        ) 
+        normalize!
+    end
+end
+
+function compute_histograms(name, make_policies, prms; N=100000, read_only=false, enable_cache=true)
+    compute_cached("exp2_$(name)_histograms_$N", prms) do prm
+        make_hist(make_trials(simulate_exp2(make_policies, prm, N)))
+    end
+end
+
+function compute_loss(histograms, prms; sort=true)
+    tbl = DataFrame(prms)
+    results = @showprogress "loss " pmap(histograms, prms) do model_hist, prm
+        ismissing(model_hist) && return [Inf, 1000., 1000.]  # 1000 gives super long RT (a warning flag)
+        if hasfield(typeof(prm), :α_ndt)
+            (;α_ndt, θ_ndt) = prm
+            lk = likelihood(model_hist, human_hist, Gamma(α_ndt, θ_ndt))
+            [lk, α_ndt, θ_ndt]
+        else
+            @assert false
+            res = optimize_ndt(model_hist, human_hist)
+            [res.minimum; res.minimizer]
+        end
+    end
+    tbl.loss, tbl.α_ndt, tbl.θ_ndt = invert(results)
+    sort && sort!(tbl, :loss)
+    tbl
+end
+
 
 # %% ==================== NDT on fixation durations ====================
 

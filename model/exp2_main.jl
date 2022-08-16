@@ -2,10 +2,12 @@ if isinteractive()
     Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
 end
 
-RUN = "jun14"
+EXP1_RUN = "jun14"
+RUN = "aug15"
 @everywhere include("common.jl")
 @everywhere include("exp2_base.jl")
 mkpath("results/$(RUN)_exp2")
+N_SOBOL = 50_000
 
 # %% ==================== load data ====================
 
@@ -34,8 +36,10 @@ end
 @everywhere human_pretest = $human_pretest
 @everywhere human_fixations = $human_fixations
 
+@everywhere human_hist = make_hist(human_trials_witherr)
+
 function write_sims(name, make_policies; ndt=:optimize, n_top=1)
-    top_table = deserialize("results/$(RUN)_exp1/fits/$name/top")
+    top_table = deserialize("results/$(EXP1_RUN)_exp1/fits/$name/top")
     exp1_top = eachrow(top_table)[1:n_top]
     prms = map(exp1_top) do prm
         (;prm..., switch_cost=prm.sample_cost)
@@ -56,18 +60,56 @@ function write_sims(name, make_policies; ndt=:optimize, n_top=1)
             sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
             res = optimize_duration_noise(sim, human_fixations)
             α_ndt, θ_ndt = res.minimizer
-            ndt = Gamma(α_ndt, θ_ndt)
+            @show (;α_ndt, θ_ndt)
+            ndt_dist = Gamma(α_ndt, θ_ndt)
+        else
+            ndt_dist = ndt  # note: untested (possibe variable scope issue)
         end
-        serialize(fitpath, (;prm..., α_ndt=ndt.α, θ_ndt=ndt.θ))
+        serialize(fitpath, (;prm..., α_ndt=ndt_dist.α, θ_ndt=ndt_dist.θ))
 
         sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
+        add_duration_noise!(sim, ndt_dist)
+
+        trials = make_trials(sim); fixations = make_fixations(sim)
+        CSV.write("$trialdir/$i.csv", trials)
+        CSV.write("$fixdir/$i.csv", fixations)
+    end
+end
+
+function fit_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
+    print_header(name)
+    fitdir = "results/$(RUN)_exp2/fits/$name/"
+    mkpath(fitdir)
+
+    prms = sample_params(box, n_init)
+    hists = compute_histograms(name, make_policies, prms);
+    tbl = compute_loss(hists, prms)
+    display(tbl[1:10, :])
+
+    serialize("$fitdir/full", tbl)
+
+    top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
+    top_hists = compute_histograms(name, make_policies, top_prms; N=n_sim_top);
+    top_tbl = compute_loss(top_hists, top_prms)
+    display(top_tbl[1:10, :])
+    serialize("$fitdir/top", top_tbl)
+    
+    trialdir = "results/$(RUN)_exp2/simulations/$(name)_trials"
+    fixdir = "results/$(RUN)_exp2/simulations/$(name)_fixations"
+    mkpath(trialdir)
+    mkpath(fixdir)
+
+    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:3])) do (i, row)
+        prm = NamedTuple(row)
+        sim = simulate_exp2(make_policies, prm)
+        ndt = Gamma(prm.α_ndt, prm.θ_ndt)
         add_duration_noise!(sim, ndt)
 
         trials = make_trials(sim); fixations = make_fixations(sim)
         CSV.write("$trialdir/$i.csv", trials)
         CSV.write("$fixdir/$i.csv", fixations)
-
     end
+    top_tbl
 end
 
 # %% ==================== optimal ====================
@@ -82,11 +124,11 @@ serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
 
 # %% ==================== empirical ====================
 
-function optimize_switching_model(α_ndt, θ_ndt)
+@everywhere function optimize_switching_model(α_ndt, θ_ndt)
     optimize_stopping_model(duration_hist(human_fixations), prm.α_ndt, prm.θ_ndt)
 end
 
-function optimize_stopping_model_exp2(α_ndt, θ_ndt)
+@everywhere function optimize_stopping_model_exp2(α_ndt, θ_ndt)
     # we have to split by number of fixations because the
     # total NDT is the sum of NDT on each fixation
     dt = MS_PER_SAMPLE; maxt = MAX_TIME
@@ -110,8 +152,62 @@ function optimize_stopping_model_exp2(α_ndt, θ_ndt)
     Gamma(α, θ / MS_PER_SAMPLE)  # convert to units of samples
 end
 
+# For pretest trials, assume NDT parameters fit from experiment 1
 pretest_stopping = let
-    exp1_prm = first(eachrow(deserialize("results/$(RUN)_exp1/fits/empirical_fixndt/top")))
+    exp1_prm = first(eachrow(deserialize("results/$(EXP1_RUN)_exp1/fits/empirical/top")))
+    optimize_stopping_model(skip_rt_hist(human_pretest), exp1_prm.α_ndt, exp1_prm.θ_ndt)
+end
+
+@everywhere begin
+    pretest_stopping = $pretest_stopping
+    
+    function empirical_policies(prm)
+        (;α_ndt, θ_ndt) = prm
+        crit_switching = optimize_stopping_model(duration_hist(human_fixations), α_ndt, θ_ndt)
+        crit_stopping = optimize_stopping_model_exp2(α_ndt, θ_ndt)
+        (
+            RandomStoppingPolicy(pretest_mdp(prm), pretest_stopping),
+            RandomSwitchingPolicy(exp2_mdp(prm), crit_switching, crit_stopping),
+        )
+    end
+end
+
+
+max_ndt = @chain human_fixations begin
+    @rsubset :presentation != :n_pres
+    @with mean(:duration) - MS_PER_SAMPLE
+end
+
+empirical_box = Box(
+    drift_μ = (-1, 1),
+    between_σ = (0, 1),
+    noise = (0, 1),
+    threshold = 1,
+    sample_cost = 0,
+    switch_cost = 0,
+    within_σ=0,
+    αθ_ndt = (100, max_ndt),
+    α_ndt = (1, 10)
+)
+# %% --------
+fit_model("empirical", empirical_policies, empirical_box; n_init=10_000)
+
+exp1_prm = first(eachrow(deserialize("results/$(EXP1_RUN)_exp1/fits/empirical/top")))
+exp1_empirical_box = modify(empirical_box;
+    exp1_prm.drift_μ, exp1_prm.between_σ, exp1_prm.noise,
+)
+fit_model("empirical_exp1_fit", empirical_policies, exp1_empirical_box; n_init=10_000)
+
+# %% --------
+
+
+
+
+# %% ==================== fix NDT ====================
+
+
+pretest_stopping = let
+    exp1_prm = first(eachrow(deserialize("results/$(EXP1_RUN)_exp1/fits/empirical_fixndt/top")))
     optimize_stopping_model(skip_rt_hist(human_pretest), exp1_prm.α_ndt, exp1_prm.θ_ndt)
 end
 
@@ -131,10 +227,16 @@ crit_stopping = optimize_stopping_model_exp2(α_ndt, θ_ndt)
     )
 end
 
+# %% --------
+
 write_sims("empirical_fixndt", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
 write_sims("empirical_fixall", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
 write_sims("flexible_ndt", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
 write_sims("flexible", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
+
+# %% --------
+
+
 
 # %% ==================== empirical (old) ====================
 

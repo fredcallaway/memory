@@ -71,7 +71,9 @@ end
 
 function reparameterize(prm)
     drift_σ = √(prm.between_σ^2 + prm.within_σ^2)
-    prm = (;prm..., drift_σ)
+    judgement_noise = 0.5 .* drift_σ
+    prm = (;prm..., drift_σ, judgement_noise)
+
     if hasfield(typeof(prm), :αθ_stop)
         prm = (;prm..., θ_stop = prm.αθ_stop / prm.α_stop)
     end
@@ -98,15 +100,6 @@ function convolve!(result::AbstractVector, pdf_x::AbstractVector, pdf_y::Abstrac
     for z in axes(pdf_x, 1)
         result[z] = sum(1:z) do x
             y = z - x
-            @inbounds pdf_x[x] * pdf_y[y + 1]
-        end
-    end
-end
-
-function subtract_convolve!(result::AbstractVector, pdf_x::AbstractVector, pdf_y::AbstractVector)
-    for z in axes(pdf_x, 1)
-        result[z] = sum(z:length(pdf_x)) do x
-            y = x - z
             @inbounds pdf_x[x] * pdf_y[y + 1]
         end
     end
@@ -153,7 +146,7 @@ function optimize_stopping_model(human, α_ndt, θ_ndt; ε::Float64=SMOOTHING)
     ndt_only .= diff([0; cdf(ndt_dist, axiskeys(human, 1))])
 
     # RT = NDT + stop_time; NDT is fixed, so we can optimize the stopping dist
-    # in the same way we optimize NDT for the optimal model.
+    # in the same way we optimize NDT.
     α, θ = optimize_ndt(ndt_only, human; ε).minimizer
     Gamma(α, θ / MS_PER_SAMPLE)  # convert to units of samples
 end
