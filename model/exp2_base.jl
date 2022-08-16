@@ -70,22 +70,68 @@ end
 
 function make_hist(trials::DataFrame; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
     @chain trials begin
-        @rsubset :response_type in ("correct", "empty")
+        @rsubset :response_type == "correct"
+        # @rsubset :response_type in ("correct", "empty")
         @rtransform! :response = (
             :response_type == "empty" ? "skip" :
             :choose_first ? "first" :
             "second"
         )
+        @rtransform! :n_pres = clip(:n_pres, 0, 5)
         @rtransform! :rt = quantize(:rt, dt)
         wrap_counts(
             rt=dt:dt:maxt, 
-            response=["skip", "first", "second"], 
+            response=["first", "second"], 
+            # response=["skip", "first", "second"], 
+            n_pres=1:5,
             pretest_accuracy_first=0:0.5:1,
             pretest_accuracy_second=0:0.5:1,
         ) 
         normalize!
     end
 end
+
+# max_fix_time = @chain human_fixations begin
+#     @rsubset :presentation == :n_pres
+#     @with quantile(:duration, 0.95)
+#     quantize(100)
+# end  -> 4600 (hardcoding this)
+
+# function make_hist(fixations::DataFrame; dt=MS_PER_SAMPLE, maxt=4600)
+#     @chain fixations begin
+#         @rsubset :response_type == "correct"
+#         @rtransform! begin 
+#             :fixated = isodd(:presentation) ? :pretest_accuracy_first : :pretest_accuracy_second
+#             :nonfixated = iseven(:presentation) ? :pretest_accuracy_first : :pretest_accuracy_second
+#             :duration = clip(quantize(:duration, dt), 0, maxt)
+#             :final = :presentation == :n_pres
+#             :presentation = clip(:presentation, 0, 4)
+#         end
+#         wrap_counts(
+#             duration=dt:dt:maxt, 
+#             # response=["first", "second"], 
+#             final=[false,true],
+#             presentation=1:4,
+#             fixated=0:0.5:1,
+#             nonfixated=0:0.5:1,
+#         ) 
+#         normalize!
+#     end
+# end
+
+# function make_hist(trials::DataFrame; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
+#     @chain trials begin
+#         @rsubset :response_type == "correct"
+#         # @rsubset :response_type in ("correct", "empty")
+#         @rtransform! :n_pres = clip(:n_pres, 0, 5)
+#         @rtransform! :rt = quantize(:rt, dt)
+#         wrap_counts(
+#             rt=dt:dt:maxt, 
+#             n_pres=1:5,
+#         ) 
+#         normalize!
+#     end
+# end
 
 function compute_histograms(name, make_policies, prms; N=100000, read_only=false, enable_cache=true)
     compute_cached("exp2_$(name)_histograms_$N", prms) do prm

@@ -36,7 +36,7 @@ end
 @everywhere human_pretest = $human_pretest
 @everywhere human_fixations = $human_fixations
 
-@everywhere human_hist = make_hist(human_trials_witherr)
+@everywhere human_hist = make_hist(human_trials)
 
 function write_sims(name, make_policies; ndt=:optimize, n_top=1)
     top_table = deserialize("results/$(EXP1_RUN)_exp1/fits/$name/top")
@@ -114,13 +114,13 @@ end
 
 # %% ==================== optimal ====================
 
-@everywhere optimal_policies(prm) = (
-    OptimalPolicy(pretest_mdp(prm)),
-    OptimalPolicy(exp2_mdp(prm)),
-)
+# @everywhere optimal_policies(prm) = (
+#     OptimalPolicy(pretest_mdp(prm)),
+#     OptimalPolicy(exp2_mdp(prm)),
+# )
 
-optimal_results = write_sims("optimal", optimal_policies)
-serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
+# optimal_results = write_sims("optimal", optimal_policies)
+# serialize("tmp/$(RUN)_exp2_optimal_results", optimal_results)
 
 # %% ==================== empirical ====================
 
@@ -172,7 +172,6 @@ end
     end
 end
 
-
 max_ndt = @chain human_fixations begin
     @rsubset :presentation != :n_pres
     @with mean(:duration) - MS_PER_SAMPLE
@@ -189,18 +188,45 @@ empirical_box = Box(
     αθ_ndt = (100, max_ndt),
     α_ndt = (1, 10)
 )
+
 # %% --------
-fit_model("empirical", empirical_policies, empirical_box; n_init=10_000)
+
+fit_model("empirical2", empirical_policies, empirical_box; n_init=10_000)
+
+# %% --------
 
 exp1_prm = first(eachrow(deserialize("results/$(EXP1_RUN)_exp1/fits/empirical/top")))
 exp1_empirical_box = modify(empirical_box;
     exp1_prm.drift_μ, exp1_prm.between_σ, exp1_prm.noise,
 )
-fit_model("empirical_exp1_fit", empirical_policies, exp1_empirical_box; n_init=10_000)
 
-# %% --------
+fit_model("empirical_exp1_fit2", empirical_policies, exp1_empirical_box; n_init=1000)
 
 
+# %% ==================== flexible ====================
+
+flexible_box = Box(
+    drift_μ = (-0.5, 0.5),
+    between_σ = (0, 1),
+    noise = (0, 1),
+    threshold = 1,
+    sample_cost = 0,
+    switch_cost = 0,
+    within_σ=0,
+    judgement_noise=0.1,
+    αθ_stop = (1, 60),
+    α_stop = (.1, 100, :log),
+    αθ_switch = (1, 30),
+    α_switch = (.1, 100, :log),
+    αθ_ndt = (100, max_ndt, :log),
+    α_ndt = (1, 100, :log)
+)
+
+@everywhere flexible_policies(prm) = (
+    RandomStoppingPolicy(pretest_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
+    RandomSwitchingPolicy(exp2_mdp(prm), Gamma(prm.α_switch, prm.θ_switch), Gamma(prm.α_stop, prm.θ_stop)),
+)
+fit_model("flexible", flexible_policies, flexible_box)
 
 
 # %% ==================== fix NDT ====================
@@ -234,10 +260,6 @@ write_sims("empirical_fixall", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
 write_sims("flexible_ndt", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
 write_sims("flexible", empirical_policies; ndt=Gamma(α_ndt, θ_ndt))
 
-# %% --------
-
-
-
 # %% ==================== empirical (old) ====================
 
 @everywhere begin
@@ -254,14 +276,38 @@ end
 empirical_results = write_sims("empirical_old", empirical_policies)
 
 
-# %% ==================== flexible ====================
+# %% ==================== can the null model get the effects? ====================
 
-@everywhere include("exp2_fitting.jl")
+@everywhere include("exp2_fit_effects.jl")
 
-@everywhere flexible_policies(prm) = (
-    RandomStoppingPolicy(pretest_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
-    RandomSwitchingPolicy(exp2_mdp(prm), Gamma(prm.α_switch, prm.θ_switch), Gamma(prm.α_stop, prm.θ_stop)),
-)
+function lower_ci(ef, effect)
+    ci = getfield(ef, effect)[2]
+    fillnan(ci[1])
+end
+
+function reasonable_wrapper(f)
+    function wrapped(ef)
+        ismissing(ef) && return -Inf
+        0.1 ≤ ef.accuracy || return -Inf
+        prop_nfix(ef, 2) > .05 || return -Inf
+        f(ef)
+    end
+end
+
+function top_score(score_fn, name, make_policies, prms, effects; double_check=false)
+    score = reasonable_wrapper(score_fn)
+    scores = map(score, effects)
+    if double_check
+        top = partialsortperm(-scores, 1:100)
+        top_prms = prms[top]
+        top_effects = compute_effects(name, make_policies, top_prms; N=1_000_000)
+        sc, i = findmax(map(score, top_effects))
+        sc, top_effects[i], top_prms[i]
+    else
+        sc, i = findmax(scores)
+        sc, effects[i], prms[i]
+    end
+end
 
 flex_box = Box(
     drift_μ = (-0.5, 0.5),
@@ -276,12 +322,101 @@ flex_box = Box(
     α_stop = (.1, 100, :log),
     αθ_switch = (1, 30),
     α_switch = (.1, 100, :log),
-    αθ_ndt = (100, 1500, :log),
+    αθ_ndt = (100, max_ndt, :log),
     α_ndt = (1, 100, :log)
 )
 
-prms = sample_params(flex_box, 500_000)
-effects = compute_effects("flexible", flexible_policies, prms)
+prop_nfix(ef, num) = sum(ef.nfix[num:end]) / sum(ef.nfix)
+rt_µ, rt_σ = juxt(mean, std)(human_trials.rt)
+acc = mean(human_trials_witherr.response_type .== "correct")
+
+@everywhere flexible_policies(prm) = (
+    RandomStoppingPolicy(pretest_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
+    RandomSwitchingPolicy(exp2_mdp(prm), Gamma(prm.α_switch, prm.θ_switch), Gamma(prm.α_stop, prm.θ_stop)),
+)
+
+flex_prms = sample_params(flex_box, 100_000)
+flex_effects = compute_effects("flexible", flexible_policies, flex_prms);
+
+top_score("flexible", flexible_policies, flex_prms, flex_effects) do ef
+    lower_ci(ef, :prop_first)
+end
+
+sc, ef, prm = top_score("flexible", flexible_policies, flex_prms, flex_effects) do ef
+    abs(ef.accuracy - acc) < .2 || return -Inf
+    abs(ef.rt - rt_µ) < 1000 || return -Inf
+    lower_ci(ef, :final)
+end
+
+sc, ef, prm = top_score("flexible", flexible_policies, flex_prms, flex_effects) do ef
+    # .05 ≤ ef.accuracy ≤ 0.95 || return -Inf
+    abs(ef.accuracy - acc) < .2 || return -Inf
+    abs(ef.rt - rt_µ) < 1000 || return -Inf
+    lower_ci(ef, :fixated)
+end
+
+sc, ef, prm = top_score("flexible", flexible_policies, flex_prms, flex_effects) do ef
+    prop_nfix(ef, 3) > .05 || return -Inf
+    0.5 ≤ ef.accuracy ≤ 0.95 || return -Inf
+    lower_ci(ef, :nonfixated)
+end
+
+# %% --------
+
+prms = sample_params(empirical_box, 100_000)
+effects = compute_effects("empirical", empirical_policies, prms);
+
+top_score("empirical", empirical_policies, prms, effects) do ef
+    lower_ci(ef, :prop_first)
+end
+
+sc, ef, prm = top_score("empirical", empirical_policies, prms, effects) do ef
+    # 0.8 ≤ ef.accuracy ≤ 0.9 || return -Inf
+    abs(ef.rt - rt_µ) < rt_σ || return -Inf
+    lower_ci(ef, :final)
+end
+
+sc, ef, prm  = top_score("empirical", empirical_policies, prms, effects) do ef
+    .05 ≤ ef.accuracy ≤ 0.95 || return -Inf
+    lower_ci(ef, :fixated)
+end
+
+top_score("empirical", empirical_policies, prms, effects) do ef
+    prop_nfix(ef, 3) > .05 || return -Inf
+    0.5 ≤ ef.accuracy ≤ 0.95 || return -Inf
+    lower_ci(ef, :nonfixated)
+end
+
+# %% --------
+
+
+
+# @everywhere flexible_policies(prm) = (
+#     RandomStoppingPolicy(pretest_mdp(prm), Gamma(prm.α_stop, prm.θ_stop)),
+#     RandomSwitchingPolicy(exp2_mdp(prm), Gamma(prm.α_switch, prm.θ_switch), Gamma(prm.α_stop, prm.θ_stop)),
+# )
+
+# flex_box = Box(
+#     drift_μ = (-0.5, 0.5),
+#     between_σ = (0, 1),
+#     noise = (0, 1),
+#     threshold = 1,
+#     sample_cost = 0,
+#     switch_cost = 0,
+#     within_σ=0,
+#     judgement_noise=0.1,
+#     αθ_stop = (1, 60),
+#     α_stop = (.1, 100, :log),
+#     αθ_switch = (1, 30),
+#     α_switch = (.1, 100, :log),
+#     αθ_ndt = (100, max_ndt, :log),
+#     α_ndt = (1, 100, :log)
+# )
+
+# prms = sample_params(flex_box, 1_000)
+
+
+# effects = compute_effects("flexible", flexible_policies, prms)
 # %% --------
 three_fix_prop(ef) = sum(ef.nfix[3:end]) / sum(ef.nfix)
 
