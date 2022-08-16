@@ -59,8 +59,8 @@ function make_hist(trials::DataFrame; dt=MS_PER_SAMPLE, maxt=MAX_TIME)
 end
 
 function compute_histograms(name, make_policies, prms; N=100000, read_only=false, enable_cache=true)
-    compute_cached("exp1_$(name)_histograms_$N", ) do prm
-        make_hist(simulate_exp1(make_policies, prm, N)
+    compute_cached("exp1_$(name)_histograms_$N", prms) do prm
+        make_hist(simulate_exp1(make_policies, prm, N))
     end
 end
 
