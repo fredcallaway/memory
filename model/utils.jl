@@ -60,9 +60,9 @@ function pooled_mean_std(ns::AbstractVector{<:Integer},
     return meanc, .√(varc)
 end
 
-function cache(f, file; disable=false, read_only=false)
+function cache(f, file; disable=false, read_only=false, overwrite=false)
     disable && return f()
-    isfile(file) && return deserialize(file)
+    !overwrite && isfile(file) && return deserialize(file)
     read_only && error("No cached result $file")
     result = f()
     serialize(file, result)

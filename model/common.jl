@@ -23,17 +23,20 @@ macro regress(data, expr)
 end
 get_coef(m) = coef(m)[2], confint(m)[2, :]
 
-function compute_cached(job_fn, job_name, prms; read_only=false, enable_cache=true)
+function compute_cached(job_fn, job_name, prms; read_only=false, enable_cache=true, overwrite=false, catch_errors=true)
     dir = "cache/$(RUN)_$(job_name)"
     mkpath(dir)
     map = read_only ? asyncmap : pmap
     @showprogress "$job_name "  map(prms) do prm
-        cache("$dir/$(hash(prm))"; read_only, disable=!enable_cache) do
+        cache("$dir/$(hash(prm))"; read_only, disable=!enable_cache, overwrite) do
             try
                 job_fn(prm)
             catch
-                # println("Error, skipping")
-                missing
+                if !catch_errors
+                    rethrow()
+                else
+                    missing
+                end
             end
         end
     end;

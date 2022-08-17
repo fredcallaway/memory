@@ -5,7 +5,7 @@ mkpath("results/exp1")
 mkpath("tmp")
 
 N_SOBOL = 50_000
-RUN = "jun14"
+RUN = "aug16_exp1"
 
 print_header("beginning run $RUN")
 
@@ -25,15 +25,17 @@ human_hist = make_hist(human_trials);
 @everywhere human_pretest = $human_pretest
 # @everywhere human_hist = $human_hist
 
-NO_RUN = true
+NO_RUN = false
+
+
 # %% ==================== fitting pipeline ====================
 
-get_simdir(name) = "results/$(RUN)_exp1/simulations/$(name)_trials"
+get_simdir(name) = "results/$(RUN)/simulations/$(name)_trials"
 
 function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
     NO_RUN && return
     print_header(name)
-    fitdir = "results/$(RUN)_exp1/fits/$name/"
+    fitdir = "results/$(RUN)/fits/$name/"
     mkpath(fitdir)
 
     prms = sample_params(box, n_init)
@@ -49,10 +51,10 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
 
     simdir = get_simdir(name)
     mkpath(simdir)
-    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:5])) do (i, row)
+    @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:3])) do (i, row)
         ndt = Gamma(row.α_ndt, row.θ_ndt)
         prm = NamedTuple(row)
-        sim = simulate_exp1(_policies, prm, n_sim_top)
+        sim = simulate_exp1(make_policies, prm, n_sim_top)
         sim.rt = sim.rt .+ rand(ndt, nrow(sim))
         CSV.write("$simdir/$i.csv", sim)
     end
@@ -61,24 +63,8 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
     top_tbl
 end
 
-function simulate_one(name, make_policies, prm)
-    NO_RUN && return
-    sim = simulate_exp1(make_policies, prm)
-    ndt = Gamma(prm.α_ndt, prm.θ_ndt)
-    loss = likelihood(make_hist(sim), human_hist, Gamma(prm.α_ndt, prm.θ_ndt))
-    sim.rt = sim.rt .+ rand(ndt, nrow(sim))
-    simdir = get_simdir(name)
-    mkpath(simdir)
-    CSV.write("$simdir/1.csv", sim)
 
-    tbl = DataFrame([prm])
-    tbl.loss = [loss]
-    path = "results/$(RUN)_exp1/fits/$name/top"
-    mkpath(dirname(path))
-    serialize(path, tbl)
-end
-
-# %% ==================== optimal ====================
+# %% ==================== optimal model ====================
 
 @everywhere optimal_policies(prm) = (
     OptimalPolicy(pretest_mdp(prm)),
@@ -96,34 +82,10 @@ optimal_box = Box(
 )
 
 optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
-opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)_exp1/fits/optimal/top"))))
+opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)/fits/optimal/top"))))
 
-# %% ==================== empirical ====================
 
-@everywhere function empirical_policies(prm)
-    pretest_dist = optimize_stopping_model(skip_rt_hist(human_pretest), prm.α_ndt, prm.θ_ndt)
-    crit_dist = optimize_stopping_model(skip_rt_hist(human_trials), prm.α_ndt, prm.θ_ndt)
-    (
-        RandomStoppingPolicy(pretest_mdp(prm), pretest_dist),
-        RandomStoppingPolicy(exp1_mdp(prm), crit_dist)
-    )
-end
-
-empirical_box = modify(optimal_box; 
-    sample_cost = 0,
-    αθ_ndt = (100, 1500, :log),
-    α_ndt = (1, 100, :log)
-)
-empirical_tbl = fit_exp1_model("empirical", empirical_policies, empirical_box)
-
-# again with NDT fixed to optimal's value
-empirical_fixndt_box = modify(optimal_box; sample_cost=0, opt_prm.α_ndt, opt_prm.θ_ndt)
-empirical_fixndt_tbl = fit_exp1_model("empirical_fixndt", empirical_policies, empirical_fixndt_box)
-
-# all parameters fixed
-simulate_one("empirical_fixall", empirical_policies, opt_prm)
-
-# %% ==================== flexible ====================
+# %% ==================== new flexible null model ====================
 
 @everywhere begin
     flexible_policies(prm) = (
@@ -139,10 +101,8 @@ flexible_box = modify(optimal_box,
 )
 fit_exp1_model("flexible", flexible_policies, flexible_box)
 
-flexible_fixndt_box = modify(flexible_box; opt_prm.α_ndt, opt_prm.θ_ndt)
-fit_exp1_model("flexible_ndt", flexible_policies, flexible_fixndt_box)
 
-# %% ==================== old empirical ====================
+# %% ==================== old empirical null model ====================
 
 @everywhere begin
     @isdefined(emp_pretest_stop_dist) || const emp_pretest_stop_dist = empirical_distribution(@subset(human_pretest, :response_type .== "empty").rt)
@@ -157,30 +117,6 @@ end
 empirical_old_box = modify(optimal_box, sample_cost=0)
 empirical_old_tbl = fit_exp1_model("empirical_old", old_empirical_policies, empirical_old_box)
 
-# %% ==================== fit statistics ====================
-
-ALL_MODELS = ["optimal", "empirical", "empirical_fixndt", "empirical_fixall", "empirical_old", "flexible", "flexible_ndt"]
-
-useful_columns(x) = select(x, [:drift_μ, :drift_σ, :noise, :sample_cost, :α_ndt, :θ_ndt, :loss])
-function load_fits(name, run=RUN; full=false)
-    x = deserialize("results/$(run)_exp1/fits/$name/top")
-    full ? x : useful_columns(x)
-end
-
-mle = map(ALL_MODELS) do model
-    row = first(eachrow(load_fits(model)))
-    (;model, row...)
-end |> DataFrame
-
-sort!(mle, :loss)  # WRONG
-
-@transform mle :mean_ndt = :α_ndt .* :θ_ndt
-# %% --------
-
-function likelihood(make_policies::Function, prm)
-    sim = simulate_exp1(make_policies, prm)
-    likelihood(make_hist(sim), human_hist, Gamma(prm.α_ndt, prm.θ_ndt))
-end
 
 # %% ==================== can the null model get the effects? ====================
 
@@ -209,65 +145,20 @@ function top_score(score_fn, name, make_policies, effects)
     sc, top_effects[i], top[i]
 end
 
-full_flex_box = modify(flexible_box,
+flexible_ndt_box = modify(flexible_box,
     αθ_ndt = (100, 1500, :log),
     α_ndt = (1, 100, :log)
 )
 
-prms = sample_params(full_flex_box, 100_000)
+prms = sample_params(flexible_ndt_box, 100_000)
 effects = compute_effects("flexible", flexible_policies, prms);
 
-top_score("flexible", flexible_policies, effects) do ef
+sc, ef, prm = top_score("flexible", flexible_policies, effects) do ef
     min(lower_ci(ef, :empty_judgement), lower_ci(ef, :correct_judgement))
 end
+@assert sc ≤ 10 # effectively zero
 
-top_score("flexible", flexible_policies, effects) do ef
+sc, ef, prm = top_score("flexible", flexible_policies, effects) do ef
     min(lower_ci(ef, :empty_pretest), lower_ci(ef, :correct_pretest))
 end
-
-# %% --------
-
-full_optimal_box = modify(optimal_box,
-    α_ndt = 1,
-    θ_ndt = 1,
-)
-
-prms = sample_params(full_optimal_box, 1000)
-effects = compute_effects("optimal", optimal_policies, prms);
-
-human_acc = mean(human_trials.response_type .== "correct")
-filter!(effects) do ef
-    !ismissing(ef) && 
-    (abs(ef.accuracy - human_acc) < .1)
-    # (.1 ≤ ef.accuracy ≤ .9)
-end
-
-function upper_ci(ef, effect)
-    ci = getfield(ef, effect)[2]
-    fillnan(ci[2])
-end
-
-pass = map(effects) do ef
-    min(mle(ef, :empty_pretest) > 0, mle(ef, :correct_pretest) > 0)
-end
-bad = findall(.!pass)
-effects[bad[1]]
-
-# %% --------
-
-
-prms = sample_params(empirical_box, 10_000)
-effects = compute_effects("empirical", empirical_policies, prms);
-
-top_score("empirical", empirical_policies, effects) do ef
-    ismissing(ef) && return -Inf
-    (.1 ≤ ef.accuracy ≤ .9) || return -Inf
-    min(lower_ci(ef, :empty_judgement), lower_ci(ef, :correct_judgement))
-end
-
-top_score("empirical", empirical_policies, effects) do ef
-    ismissing(ef) && return -Inf
-    (.1 ≤ ef.accuracy ≤ .9) || return -Inf
-    min(lower_ci(ef, :empty_pretest), lower_ci(ef, :correct_pretest))
-end
-
+@assert sc ≤ 10 # effectively zero
