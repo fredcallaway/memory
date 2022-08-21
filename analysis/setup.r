@@ -15,6 +15,7 @@ library(knitr)
 library(ggside)
 library(broom.mixed)
 library(lmerTest)
+library(optigrab)
 
 options(
     "summ-model.info"=FALSE, 
@@ -141,7 +142,8 @@ load_model_human = function(run, exp, file="trials", models=MODELS, n=1) {
         # "empirical_old" = "Empirical (old)",
         # "flexible" = "Flexible",
         # "flexible_ndt" = "Flexible (fix NDT)",
-        "flexible_ndt" = "No Meta-Level Control",
+        # "flexible_ndt" = "No Meta-Level Control",
+        "funny" = "No Meta-Level Control",
         "human" = "Human"
     ), ordered=T)
 }

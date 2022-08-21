@@ -4,8 +4,12 @@ SIZE = 2.7
 MAKE_PDF = TRUE
 STEP_SIZE = 100
 
-RUN = "jun14"
-OUT = "exp1"
+library(optigrab)
+RUN = opt_get("run", default="aug16")
+OUT = opt_get("out", default="exp1")
+MODELS = opt_get("models", default="optimal,flexible") %>% 
+    strsplit(",") %>% 
+    unlist
 
 savefig = function(name, width, height) {
     fig(glue("{OUT}/{name}"), width*SIZE, height*SIZE, pdf=MAKE_PDF)
@@ -13,7 +17,7 @@ savefig = function(name, width, height) {
 system(glue('mkdir -p figs/{OUT}'))
 
 # %% ==================== load data ====================
-MODELS = c("optimal", "flexible_ndt")
+
 # pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
 df = load_model_human(RUN, "exp1", "trials", n=1) %>% 
     mutate(
@@ -38,14 +42,14 @@ acc_rt = df %>%
     labs(x="Pretest Accuracy", y='Response Time (s)') +
     scale_x_continuous(labels = scales::percent, n.breaks=3) +
     style
-savefig("acc_rt", 3.5, 1.1)
+# savefig("acc_rt", 3.5, 1.1)
 
 judge_rt = df %>% 
     mutate(rt = rt/1000) %>% 
     plot_effect(judgement, rt, response_type, median) +
     labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Response Time (s)') +
     scale_x_continuous(n.breaks=5) + style
-savefig("judge_rt", 3.5, 1.1)
+# savefig("judge_rt", 3.5, 1.1)
 
 (judge_rt / acc_rt) +
     plot_layout(guides = "collect") + 
