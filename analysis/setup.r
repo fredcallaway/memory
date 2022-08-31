@@ -94,6 +94,10 @@ n_pct = function(x) {
     glue("{sum(x)} ({round(100*mean(x))}\\%)")
 }
 
+quibble <- function(x, q = c(0.25, 0.5, 0.75)) {
+  tibble(x = quantile(x, q), q = q)
+}
+
 midbins = function(x, breaks) {
     bin_ids = cut(x, breaks, labels=FALSE)
     left = breaks[-length(breaks)]
@@ -125,9 +129,8 @@ load_model = function(run, exp, file, name, n=1) {
         mutate(name=name, wid = glue('{name}-{n}'))
 }
 
-MODELS = c("empirical", "optimal")
 ALL_MODELS = c("optimal", "empirical", "empirical_fixndt", "empirical_fixall", "empirical_old", "flexible", "flexible_ndt")
-load_model_human = function(run, exp, file="trials", models=MODELS, n=1) {
+load_model_human = function(run, exp, file, models, n=1) {
     print(models)
     bind_rows(
         load_human(exp, file),
@@ -135,15 +138,10 @@ load_model_human = function(run, exp, file="trials", models=MODELS, n=1) {
     ) %>% 
     mutate(name = recode_factor(name, 
         "optimal" = "Optimal Metamemory", 
-        # "empirical" = "No Meta-Level Control",
-        # "empirical" = "Empirical",
-        # "empirical_fixndt" = "Empirical (fix NDT)",
-        # "empirical_fixall" = "Empirical (fix all)",
-        # "empirical_old" = "Empirical (old)",
-        # "flexible" = "Flexible",
-        # "flexible_ndt" = "Flexible (fix NDT)",
-        # "flexible_ndt" = "No Meta-Level Control",
-        "funny" = "No Meta-Level Control",
+        "fixed_optimal" = "Optimal Metamemory",
+        "flexible" = "No Meta-Level Control",
+        "empirical_old" = "Empirical No Control",
+        "fixed_empirical_old" = "Empirical No Control",
         "human" = "Human"
     ), ordered=T)
 }
@@ -205,6 +203,24 @@ fig = function(name="tmp", w=4, h=4, dpi=320, pdf=exists("MAKE_PDF") && MAKE_PDF
 }
 
 # %% ==================== Plotting ====================
+
+mute = function(x, amt=.15) {
+    x %>% 
+        colorspace::lighten(amt) %>% 
+        colorspace::desaturate(2*amt)
+}
+
+`-.gg` <- function(plot, layer) {
+    if (missing(layer)) {
+        stop("Cannot use `-.gg()` with a single argument. Did you accidentally put - on a new line?")
+    }
+    if (!is.ggplot(plot)) {
+        stop('Need a plot on the left side')
+    }
+    plot$layers = c(layer, plot$layers)
+    plot
+}
+
 collapse_participants = function(data, f, y, ...) {
     data %>% 
         group_by(name, wid, ...) %>% 
@@ -212,7 +228,7 @@ collapse_participants = function(data, f, y, ...) {
         ungroup()
 }
 
-plot_effect = function(df, x, y, color, collapser, min_n=10, geom="pointrange") {
+plot_effect = function(df, x, y, color=NULL, collapser=mean, min_n=10, geom="pointrange") {
     dat = collapse_participants(df, collapser, {{y}}, {{x}}, {{color}})
 
     enough_data = dat %>% 
@@ -227,7 +243,7 @@ plot_effect = function(df, x, y, color, collapser, min_n=10, geom="pointrange") 
 
     dat %>% 
         right_join(enough_data) %>% 
-        ggplot(aes({{x}}, {{y}}, color={{color}})) +
+        ggplot(aes({{x}}, {{y}}, group={{color}}, color={{color}})) +
             stat_summary(fun=mean, geom="line", position=dodge) +
             stat_summary(fun.data=mean_cl_boot, geom=geom, position=dodge) +
             facet_wrap(~name)
