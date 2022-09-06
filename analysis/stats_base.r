@@ -37,3 +37,5 @@ write_model = function(model, name, logistic=F, standardized=F) {
             write_tex("{name}/{term}")
         ))        
 }
+
+fmt_percent = function(prop) glue("{round(100 * prop)}\\%")

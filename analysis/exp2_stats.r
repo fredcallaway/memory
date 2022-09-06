@@ -24,7 +24,6 @@ fixations = load_human("exp2", "fixations") %>%
             pretest_accuracy_first < pretest_accuracy_second ~ 1*!fix_first
         )
     )
-fmt_percent = function(prop) glue("{round(100 * prop)}\\%")
 
 # %% ==================== accuracy ====================
 

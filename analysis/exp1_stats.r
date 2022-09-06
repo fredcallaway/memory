@@ -15,6 +15,13 @@ participants = load_human('exp1', 'participants')
 write_tex = tex_writer("stats/exp1")
 
 
+# %% ==================== accuracy ====================
+
+trials %>% 
+    with(mean(correct)) %>% 
+    fmt_percent %>% 
+    write_tex("accuracy")
+
 # %% ==================== judgement accuracy ====================
 
 trials %>% 

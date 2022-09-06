@@ -19,12 +19,11 @@ system(glue('mkdir -p figs/{OUT}'))
 # %% ==================== load data ====================
 
 # pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
-df = load_model_human(RUN, "exp1", "trials", n=1) %>% 
+df = load_model_human(RUN, "exp1", "trials", MODELS) %>% 
     mutate(
         skip=response_type=="empty", correct=response_type=="correct",
         response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")
     )
-
 
 # %% ==================== reaction times ====================
 
