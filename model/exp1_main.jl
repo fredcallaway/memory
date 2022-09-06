@@ -25,7 +25,7 @@ human_hist = make_hist(human_trials);
 @everywhere human_pretest = $human_pretest
 # @everywhere human_hist = $human_hist
 
-NO_RUN = false
+NO_RUN = true
 
 
 # %% ==================== fitting pipeline ====================
@@ -96,7 +96,7 @@ end
 
 flexible_box = modify(optimal_box, 
     sample_cost=0,
-    αθ_stop = (1, 20),
+    αθ_stop = (1, 50, :log),
     α_stop = (1, 100, :log),
 )
 fit_exp1_model("flexible", flexible_policies, flexible_box)
@@ -117,48 +117,134 @@ end
 empirical_old_box = modify(optimal_box, sample_cost=0)
 empirical_old_tbl = fit_exp1_model("empirical_old", old_empirical_policies, empirical_old_box)
 
+# %% ==================== report parameters ====================
+mkpath("results/tex/exp1/")
+
+open("results/tex/exp1/mle_optimal", "w") do f
+    fit = load_fit("optimal")
+    writev(f,
+        "\\(
+            \\mu_0 = $(round3(fit.drift_µ)),\\ 
+            \\sigma_0 = $(round3(fit.drift_σ)),\\ 
+            \\sigma = $(round3(fit.noise)),\\ 
+            \\samplecost = $(round3(fit.sample_cost)),\\ 
+            \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
+            \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
+        \\)\\unskip"
+    )
+end
+
+open("results/tex/exp1/mle_flexible", "w") do f
+    fit = load_fit("flexible")
+    writev(f,
+        "\\(
+            \\mu_0 = $(round3(fit.drift_µ)),\\ 
+            \\sigma_0 = $(round3(fit.drift_σ)),\\ 
+            \\sigma = $(round3(fit.noise)),\\ 
+            \\mu_\\text{stop} = $(MS_PER_SAMPLE * round2(fit.αθ_stop)),\\ 
+            \\alpha_\\text{stop} = $(round2(fit.α_stop)),\\ 
+            \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
+            \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
+        \\)\\unskip"
+    )
+end
+
+for name in ["optimal", "flexible", "empirical_old"]
+    fit = load_fit(name)
+    open("results/tex/exp1/nll_$name", "w") do f
+        writev(f, string(round(Int, fit.loss * nrow(human_trials))))
+    end
+end
 
 # %% ==================== can the null model get the effects? ====================
 
-@everywhere include("exp1_fit_effects.jl")
-
-function lower_ci(ef, effect)
-    ci = getfield(ef, effect)[2]
-    fillnan(ci[1])
-end
+acc = mean(human_trials.response_type .== "correct")
 
 function reasonable_wrapper(f)
     function wrapped(ef)
         ismissing(ef) && return -Inf
-        (.1 ≤ ef.accuracy ≤ .9) || return -Inf
+        (.01 ≤ ef.accuracy ≤ 0.99) || return -Inf
         f(ef)
     end
 end
 
-function top_score(score_fn, name, make_policies, effects)
+function top_score(score_fn, name, make_policies, prms, effects; double_check=true)
     score = reasonable_wrapper(score_fn)
     scores = map(score, effects)
-    top = partialsortperm(-scores, 1:100)
-    top_prms = prms[top]
-    top_effects = compute_effects(name, make_policies, top_prms; N=1_000_000)
-    sc, i = findmax(map(score, top_effects))
-    sc, top_effects[i], top[i]
+    if double_check
+        top = partialsortperm(-scores, 1:100)
+        top_prms = prms[top]
+        top_effects = compute_effects(name, make_policies, top_prms; N=1_000_000)
+        @everywhere GC.gc()
+        sc, i = findmax(map(score, top_effects))
+        sc, top_effects[i], top_prms[i]
+    else
+        sc, i = findmax(scores)
+        sc, effects[i], prms[i]
+    end
 end
+
 
 flexible_ndt_box = modify(flexible_box,
     αθ_ndt = (100, 1500, :log),
     α_ndt = (1, 100, :log)
 )
 
-prms = sample_params(flexible_ndt_box, 100_000)
+prms = sample_params(flexible_ndt_box, 100_000);
 effects = compute_effects("flexible", flexible_policies, prms);
 
-sc, ef, prm = top_score("flexible", flexible_policies, effects) do ef
+
+# ---------- correct ---------- #
+MIN_EFFECT = 5  # milis
+
+sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
+    lower_ci(ef, :correct_judgement)
+end
+@info "correct judgement" ef.correct_judgement ef.accuracy
+write_tex("lesion_search/correct_judgement", fmt_ci(ef.correct_judgement))
+
+@assert sc > MIN_EFFECT
+
+sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
+    lower_ci(ef, :correct_pretest)
+end
+@info "correct pretest" ef.correct_pretest ef.accuracy
+write_tex("lesion_search/correct_judgement", fmt_ci(ef.correct_pretest))
+@assert sc > MIN_EFFECT
+
+# ---------- empty ---------- #
+
+sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
+    lower_ci(ef, :empty_judgement)
+end
+@info "empty judgement" ef.empty_judgement ef.correct_judgement ef.accuracy
+@assert sc > MIN_EFFECT
+@assert lower_ci(ef, :correct_judgement) < MIN_EFFECT
+
+write_tex("lesion_search/empty_judgement", fmt_ci(ef.empty_judgement))
+write_tex("lesion_search/empty_judgement_correct", fmt_ci(ef.correct_judgement; negate=true))
+
+sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
+    x = lower_ci(ef, :empty_pretest)
+    isfinite(x) ? x : -Inf
+end
+@info "empty pretest" ef.empty_pretest ef.correct_pretest ef.accuracy
+# @assert ef.empty_pretest[1] < MIN_EFFECT
+write_tex("lesion_search/empty_pretest", fmt_ci(ef.empty_pretest))
+
+# ---------- crossover ---------- #
+
+sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     min(lower_ci(ef, :empty_judgement), lower_ci(ef, :correct_judgement))
 end
-@assert sc ≤ 10 # effectively zero
+@info "judgements" ef.empty_judgement ef.correct_judgement ef.accuracy
+@assert ef.empty_pretest[1] < MIN_EFFECT
+
+# sc ≤ 10 # effectively zero
 
 sc, ef, prm = top_score("flexible", flexible_policies, effects) do ef
     min(lower_ci(ef, :empty_pretest), lower_ci(ef, :correct_pretest))
 end
-@assert sc ≤ 10 # effectively zero
+@info "pretest" ef.empty_pretest ef.correct_pretest ef.accuracy
+@assert ef.empty_pretest[1] < MIN_EFFECT
+# @assert sc ≤ 10 # effectively zero

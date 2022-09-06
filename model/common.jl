@@ -153,3 +153,47 @@ function optimize_stopping_model(human, α_ndt, θ_ndt; ε::Float64=SMOOTHING)
     α, θ = optimize_ndt(ndt_only, human; ε).minimizer
     Gamma(α, θ / MS_PER_SAMPLE)  # convert to units of samples
 end
+
+function load_fit(name, run=RUN)
+    top = deserialize("results/$run/fits/$name/top")
+    first(eachrow(top))
+end
+
+
+function write_tex(name, x, experiment=split(RUN, "_")[2])
+    fname = "results/tex/$experiment/$name.tex"
+    mkpath(dirname(fname))
+    str = string(x) * "\\unskip"
+    println(fname, ":\n", x)
+    open(fname, "w") do f
+        write(f, x)
+    end
+    return
+end
+
+write_tex(name) = x -> write_tex(name, x)
+
+function lower_ci(ef, effect)
+    ci = getfield(ef, effect)[2]
+    fillnan(ci[1])
+end
+
+function fmt_ci((est, (lo, hi)), digits=3; convert_to_seconds=true, negate=false)
+    est, lo, hi = map((est, lo, hi)) do x
+        if convert_to_seconds
+            x /= 1000
+        end
+        x = round(x; digits)
+        if digits == 0
+            x = Int(x)
+        end
+        if negate
+            x = -x
+        end
+        x
+    end
+    if negate
+        lo, hi = hi, lo
+    end
+    "B = $est; 95\\% CI [$lo, $hi]"
+end

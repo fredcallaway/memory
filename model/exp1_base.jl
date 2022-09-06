@@ -105,6 +105,7 @@ end
 
 function exp1_effects(trials)
     accuracy = mean(trials.response_type .== "correct")
+    pretest_accuracy = mean(trials.pretest_accuracy)
 
     empty_judgement = @chain trials begin
         @rsubset :response_type == "empty"
@@ -130,7 +131,7 @@ function exp1_effects(trials)
         get_coef
     end
 
-    (;accuracy, empty_judgement, empty_pretest, correct_judgement, correct_pretest)
+    (;pretest_accuracy, accuracy, empty_judgement, empty_pretest, correct_judgement, correct_pretest)
 end
 
 

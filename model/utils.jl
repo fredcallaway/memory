@@ -123,6 +123,11 @@ keymax(x::KeyedArray{<:Real, 1}) = axiskeys(x, 1)[argmax(x)]
 keymin(X::KeyedArray) = (; (d=>x[i] for (d, x, i) in zip(dimnames(X), axiskeys(X), argmin(X).I))...)
 keymin(x::KeyedArray{<:Real, 1}) = axiskeys(x, 1)[argmin(x)]
 
+round1(x) = round(x; digits=1)
+round2(x) = round(x; digits=2)
+round3(x) = round(x; digits=3)
+round4(x) = round(x; digits=4)
+
 function Base.diff(K::KeyedArray; dims, removefirst::Bool=true)
     range = removefirst ? (2:size(K, dims)) : (1:size(K,dims)-1)
     out = similar(selectdim(K, dims, range) )

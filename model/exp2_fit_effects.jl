@@ -1,8 +1,8 @@
 
 # const ss_human = exp2_effects(human_trials, human_fixations);
 
-function compute_effects(name, make_policies, prms; N=100000, read_only=false, enable_cache=true)
-    compute_cached("exp2_$(name)_effects_$N", prms; read_only, enable_cache) do prm
+function compute_effects(name, make_policies, prms; N=100000, kws...)
+    compute_cached("$(name)_effects_$N", prms; kws...) do prm
         exp2_effects(make_policies, prm, N)
     end
 end
@@ -52,5 +52,15 @@ function exp2_effects(trials, fixations)
         get_coef
     end
 
-    (;accuracy, pretest_accuracy, rt, nfix, duration, prop_first, final, fixated, nonfixated)
+    final_dist = @chain fix begin
+        @rsubset :final
+        @with (gamma=fit(Gamma, :duration), normal=fit(Normal, :duration))
+    end
+
+    nonfinal_dist = @chain fix begin
+        @rsubset !:final
+        @with (gamma=fit(Gamma, :duration), normal=fit(Normal, :duration))
+    end
+
+    (;accuracy, pretest_accuracy, rt, nfix, duration, prop_first, final, final_dist, nonfinal_dist, fixated, nonfixated)
 end
