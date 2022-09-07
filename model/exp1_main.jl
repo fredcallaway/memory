@@ -120,45 +120,34 @@ empirical_old_tbl = fit_exp1_model("empirical_old", old_empirical_policies, empi
 # %% ==================== report parameters ====================
 mkpath("results/tex/exp1/")
 
-open("results/tex/exp1/mle_optimal", "w") do f
-    fit = load_fit("optimal")
-    writev(f,
-        "\\(
-            \\mu_0 = $(round3(fit.drift_µ)),\\ 
-            \\sigma_0 = $(round3(fit.drift_σ)),\\ 
-            \\sigma = $(round3(fit.noise)),\\ 
-            \\samplecost = $(round3(fit.sample_cost)),\\ 
-            \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
-            \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
-        \\)\\unskip"
-    )
-end
 
-open("results/tex/exp1/mle_flexible", "w") do f
-    fit = load_fit("flexible")
-    writev(f,
-        "\\(
-            \\mu_0 = $(round3(fit.drift_µ)),\\ 
-            \\sigma_0 = $(round3(fit.drift_σ)),\\ 
-            \\sigma = $(round3(fit.noise)),\\ 
-            \\mu_\\text{stop} = $(MS_PER_SAMPLE * round2(fit.αθ_stop)),\\ 
-            \\alpha_\\text{stop} = $(round2(fit.α_stop)),\\ 
-            \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
-            \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
-        \\)\\unskip"
-    )
-end
+fit = load_fit("optimal")
+write_tex("mle_optimal", "\\(
+    \\mu_0 = $(round3(fit.drift_µ)),\\ 
+    \\sigma_0 = $(round3(fit.drift_σ)),\\ 
+    \\sigma = $(round3(fit.noise)),\\ 
+    \\samplecost = $(round3(fit.sample_cost)),\\ 
+    \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
+    \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
+\\)")
+
+fit = load_fit("flexible")
+write_tex("mle_flexible", "\\(
+    \\mu_0 = $(round3(fit.drift_µ)),\\ 
+    \\sigma_0 = $(round3(fit.drift_σ)),\\ 
+    \\sigma = $(round3(fit.noise)),\\ 
+    \\mu_\\text{stop} = $(MS_PER_SAMPLE * round2(fit.αθ_stop)),\\ 
+    \\alpha_\\text{stop} = $(round2(fit.α_stop)),\\ 
+    \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
+    \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
+\\)")
 
 for name in ["optimal", "flexible", "empirical_old"]
     fit = load_fit(name)
-    open("results/tex/exp1/nll_$name", "w") do f
-        writev(f, string(round(Int, fit.loss * nrow(human_trials))))
-    end
+    write_tex("nll_$name", string(round(Int, fit.loss * nrow(human_trials))))
 end
 
 # %% ==================== can the null model get the effects? ====================
-
-acc = mean(human_trials.response_type .== "correct")
 
 function reasonable_wrapper(f)
     function wrapped(ef)
@@ -184,15 +173,13 @@ function top_score(score_fn, name, make_policies, prms, effects; double_check=tr
     end
 end
 
-
 flexible_ndt_box = modify(flexible_box,
     αθ_ndt = (100, 1500, :log),
     α_ndt = (1, 100, :log)
 )
 
 prms = sample_params(flexible_ndt_box, 100_000);
-effects = compute_effects("flexible", flexible_policies, prms);
-
+effects = compute_effects("flexible", flexible_policies, prms; read_only=true);
 
 # ---------- correct ---------- #
 MIN_EFFECT = 5  # milis
@@ -202,14 +189,13 @@ sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
 end
 @info "correct judgement" ef.correct_judgement ef.accuracy
 write_tex("lesion_search/correct_judgement", fmt_ci(ef.correct_judgement))
-
-@assert sc > MIN_EFFECT
+@assert 5sc > MIN_EFFECT  # multiply by 5 to capture full range
 
 sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     lower_ci(ef, :correct_pretest)
 end
 @info "correct pretest" ef.correct_pretest ef.accuracy
-write_tex("lesion_search/correct_judgement", fmt_ci(ef.correct_pretest))
+write_tex("lesion_search/correct_pretest", fmt_ci(ef.correct_pretest))
 @assert sc > MIN_EFFECT
 
 # ---------- empty ---------- #
@@ -218,7 +204,7 @@ sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     lower_ci(ef, :empty_judgement)
 end
 @info "empty judgement" ef.empty_judgement ef.correct_judgement ef.accuracy
-@assert sc > MIN_EFFECT
+@assert 5sc > MIN_EFFECT
 @assert lower_ci(ef, :correct_judgement) < MIN_EFFECT
 
 write_tex("lesion_search/empty_judgement", fmt_ci(ef.empty_judgement))
@@ -229,7 +215,7 @@ sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     isfinite(x) ? x : -Inf
 end
 @info "empty pretest" ef.empty_pretest ef.correct_pretest ef.accuracy
-# @assert ef.empty_pretest[1] < MIN_EFFECT
+@assert sc < MIN_EFFECT
 write_tex("lesion_search/empty_pretest", fmt_ci(ef.empty_pretest))
 
 # ---------- crossover ---------- #
@@ -238,11 +224,11 @@ sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     min(lower_ci(ef, :empty_judgement), lower_ci(ef, :correct_judgement))
 end
 @info "judgements" ef.empty_judgement ef.correct_judgement ef.accuracy
-@assert ef.empty_pretest[1] < MIN_EFFECT
+@assert 5ef.empty_pretest[1] < MIN_EFFECT
 
 # sc ≤ 10 # effectively zero
 
-sc, ef, prm = top_score("flexible", flexible_policies, effects) do ef
+sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     min(lower_ci(ef, :empty_pretest), lower_ci(ef, :correct_pretest))
 end
 @info "pretest" ef.empty_pretest ef.correct_pretest ef.accuracy

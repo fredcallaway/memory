@@ -267,11 +267,6 @@ end
 
 @everywhere include("exp2_fit_effects.jl")
 
-function lower_ci(ef, effect)
-    ci = getfield(ef, effect)[2]
-    fillnan(ci[1])
-end
-
 prop_nfix(ef, num) = sum(ef.nfix[num:end]) / sum(ef.nfix)
 rt_µ, rt_σ = juxt(mean, std)(human_trials.rt)
 acc = mean(human_trials_witherr.response_type .== "correct")
@@ -280,7 +275,7 @@ function reasonable_wrapper(f)
     function wrapped(ef)
         ismissing(ef) && return -Inf
         # abs(ef.accuracy - acc) ≤ 0.5 || return -Inf
-        0.05 < ef.accuracy < 0.95 || return -Inf
+        0.01 < ef.accuracy < 0.99 || return -Inf
         # .05 ≤ ef.accuracy ≤ 0.95  || return -Inf
         # 0.1 ≤ ef.accuracy || return -Inf
         prop_nfix(ef, 2) > .01 || return -Inf
