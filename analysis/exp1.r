@@ -5,7 +5,7 @@ MAKE_PDF = TRUE
 STEP_SIZE = 100
 
 library(optigrab)
-RUN = opt_get("run", default="aug16")
+RUN = opt_get("run", default="sep7")
 OUT = opt_get("out", default="exp1")
 MODELS = opt_get("models", default="optimal,flexible") %>% 
     strsplit(",") %>% 
@@ -144,5 +144,3 @@ prec = df %>%
     coord_cartesian(xlim=c(0, 1), ylim=c(1, 5))
 
 savefig("accuracy", 2.5, 1)
-
-

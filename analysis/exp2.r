@@ -3,7 +3,7 @@ SIZE = 2.7
 MAKE_PDF = TRUE
 STEP_SIZE = .1
 
-RUN = opt_get("run", default="aug16")
+RUN = opt_get("run", default="sep7")
 OUT = opt_get("out", default="exp2")
 MODELS = opt_get("models", default="fixed_optimal,flexible") %>% 
     strsplit(",") %>% 

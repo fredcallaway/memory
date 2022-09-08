@@ -20,6 +20,18 @@ regress = function(data, form, standardize=F) {
     lmer(form, data=data)
 }
 
+regress_logistic = function(data, form, standardize=F) {
+    preds = deparse(rhs(form))
+    data = tibble(data)
+    if (standardize) {
+        for (k in get.vars(form)) {
+            data[[k]] = zscore(data[[k]])
+        }
+    }
+    form = as.formula(glue("{form} + ({preds} | wid)"))
+    glmer(form, data=data, family=binomial)
+}
+
 regression_tex = function(logistic=F, standardized=T) {
     beta = if(standardized) "$\\beta = {estimate:.3}$" else "$B = {estimate:.3}$"
     ci = "95\\% CI [{conf.low:.3}, {conf.high:.3}]"

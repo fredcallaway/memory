@@ -22,7 +22,16 @@ fixations = load_human("exp2", "fixations") %>%
             pretest_accuracy_first == pretest_accuracy_second ~ NaN,
             pretest_accuracy_first > pretest_accuracy_second ~ 1*fix_first,
             pretest_accuracy_first < pretest_accuracy_second ~ 1*!fix_first
-        )
+        ),
+        fixated = case_when(
+            mod(presentation, 2) == 1 ~ pretest_accuracy_first,
+            mod(presentation, 2) == 0 ~ pretest_accuracy_second,
+        ),
+        nonfixated = case_when(
+            mod(presentation, 2) == 1 ~ pretest_accuracy_second,
+            mod(presentation, 2) == 0 ~ pretest_accuracy_first,
+        ),
+        relative = fixated - nonfixated
     )
 
 # %% ==================== accuracy ====================
@@ -100,8 +109,6 @@ nonfinal = fixations %>%
         )
     ) %>% mutate(relative = fixated - nonfixated)
 
-# %% --------
-
 nonfinal %>% 
     regress(duration ~ fixated) %>% 
     write_model("nonfinal")
@@ -111,43 +118,12 @@ nonfinal %>%
     regress(duration ~ nonfixated) %>% 
     write_model("nonfinal")
 
+# %% ==================== rational commitment ====================
 
-# %% --------
-nonfinal %>%
-    group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
-    participant_means(duration, fixated) %>% 
-    group_by(fixated) %>% 
-    summarise(mean(duration))
-
-# %% --------
-nonfinal %>% 
-    regress(duration ~ fixated) %>% 
-    summ
-
-# %% --------
-
-nonfinal %>%
-    filter(presentation > 1) %>% 
-    group_by(name, wid) %>% mutate(duration = scale(duration, center=T, scale=F)) %>% 
-    participant_means(duration, nonfixated) %>% 
-    group_by(nonfixated) %>% 
-    summarise(mean(duration))
-
-
-
-# simple %>% 
-#     group_by(wid) %>% 
-#     filter(block == max(block)) %>% 
-#     filter(n() == 80) %>% 
-#     count(response_type) %>% 
-#     mutate(prop=prop.table(n)) %>% 
-#     group_by(response_type) %>% 
-#     summarise(mean=mean(prop), sd=sd(prop)) %>%
-#     rowwise() %>% group_walk(~ with(.x, 
-#         write_tex("simple_response_pct/{response_type}", "{100*mean:.1}\\% $\\pm$ {100*sd:.1}\\%")
-#     ))
-
-
+fixations %>% 
+    mutate(bad = relative < 0) %>% 
+    regress_logistic(bad ~ duration, data=.) %>% 
+    write_model("prop_bad", logistic=T)
 
 
 

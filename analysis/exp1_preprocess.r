@@ -24,7 +24,7 @@ excl = all_trials %>%
     mutate(keep=skip_rate < .9)
 
 nrow(excl) %>% write_tex("N/recruited")
-sum(!excl$keep) %>% write_tex("N/excluded")
+n_pct(!excl$keep) %>% write_tex("N/excluded")
 sum(excl$keep) %>% write_tex("N/final")
 
 keep_wids = excl %>% filter(keep) %>% with(wid)
