@@ -4,6 +4,7 @@ using SplitApplyCombine
 import Base.Iterators: product
 using Statistics
 using DataFrames, DataFramesMeta, CSV
+using Printf
 
 # %% ==================== Project-specific ====================
 
@@ -127,6 +128,8 @@ round1(x) = round(x; digits=1)
 round2(x) = round(x; digits=2)
 round3(x) = round(x; digits=3)
 round4(x) = round(x; digits=4)
+
+fmt(digits, x) = Printf.format(Printf.Format("%.$(digits)f"), x)
 
 function Base.diff(K::KeyedArray; dims, removefirst::Bool=true)
     range = removefirst ? (2:size(K, dims)) : (1:size(K,dims)-1)

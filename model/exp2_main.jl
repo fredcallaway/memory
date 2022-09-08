@@ -3,8 +3,8 @@ if isinteractive()
 end
 
 @everywhere begin
-    EXP1_RUN = "aug16_exp1"
-    RUN = "aug16_exp2"
+    EXP1_RUN = "sep7_exp1"
+    RUN = "sep7_exp2"
     include("common.jl")
     include("exp2_base.jl")
     N_SOBOL = 50_000
@@ -127,33 +127,33 @@ end
 
 @spawn write_sims("optimal", optimal_policies)
 
-optimal_box = Box(
-    drift_μ = (-0.1, 0.1),
-    noise = (0, 0.3),
-    threshold = 1,
-    sample_cost = (0, .03),
-    switch_cost = (0, .1),
-    between_σ = (0, .4),
-    within_σ=0,
-    judgement_noise=0,
-)
+# optimal_box = Box(
+#     drift_μ = (-0.1, 0.1),
+#     noise = (0, 0.3),
+#     threshold = 1,
+#     sample_cost = (0, .03),
+#     switch_cost = (0, .1),
+#     between_σ = (0, .4),
+#     within_σ=0,
+#     judgement_noise=0,
+# )
 
 # fit_model("optimal", optimal_policies, optimal_box; n_init=5_000)
 
-exp1_fit = load_fit("optimal", EXP1_RUN)
+# exp1_fit = load_fit("optimal", EXP1_RUN)
 
-constrained_optimal_box = Box(
-    drift_μ = (exp1_fit.drift_µ, 0.2),
-    noise = exp1_fit.noise,
-    threshold = 1,
-    sample_cost = exp1_fit.sample_cost,
-    switch_cost = (0, .05),
-    between_σ = (0, 2 * exp1_fit.between_σ),
-    within_σ=0,
-    judgement_noise=0,
-)
+# constrained_optimal_box = Box(
+#     drift_μ = (exp1_fit.drift_µ, 0.2),
+#     noise = exp1_fit.noise,
+#     threshold = 1,
+#     sample_cost = exp1_fit.sample_cost,
+#     switch_cost = (0, .05),
+#     between_σ = (0, 2 * exp1_fit.between_σ),
+#     within_σ=0,
+#     judgement_noise=0,
+# )
 
-fit_model("constrained_optimal", optimal_policies, constrained_optimal_box; n_init=5_000)
+# fit_model("constrained_optimal", optimal_policies, constrained_optimal_box; n_init=5_000)
 
 # if I want to take out the presentation dimension
 # hists = compute_histograms("optimal", optimal_policies, sample_params(optimal_box, 5000); read_only=true)
@@ -179,18 +179,18 @@ flexible_box = Box(
     RandomSwitchingPolicy(exp2_mdp(prm), Gamma(prm.α_switch, prm.θ_switch), Gamma(prm.α_stop, prm.θ_stop)),
 )
 
-# fit_model("flexible", flexible_policies, flexible_box)
+fit_model("flexible", flexible_policies, flexible_box)
 
-exp1_fit = @chain deserialize("results/$(EXP1_RUN)/fits/flexible/top") begin
-    select([:drift_μ, :between_σ, :noise])
-    eachrow
-    first
-end
+# exp1_fit = @chain deserialize("results/$(EXP1_RUN)/fits/flexible/top") begin
+#     select([:drift_μ, :between_σ, :noise])
+#     eachrow
+#     first
+# end
 
-fit_model("fixed_flexible", flexible_policies, modify(flexible_box; exp1_fit...))
+# fit_model("fixed_flexible", flexible_policies, modify(flexible_box; exp1_fit...))
 # %% --------
-@chain deserialize("results/$(RUN)/fits/fixed_flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
-@chain deserialize("results/$(RUN)/fits/flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
+# @chain deserialize("results/$(RUN)/fits/fixed_flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
+# @chain deserialize("results/$(RUN)/fits/flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
 
 
 # %% ==================== empirical (old) ====================
@@ -213,53 +213,40 @@ end
 
 # %% ==================== report parameters ====================
 
-mkpath("results/fits/exp2/")
-open("results/fits/exp2/fixed_optimal", "w") do f
-    fit = deserialize("results/$RUN/fits/fixed_optimal")
-    writev(f,
-        "\\(
-            \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
-            \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
-        \\)\\unskip"
-    )
-end
+x = deserialize("results/$RUN/fits/fixed_optimal")
+write_tex("mle_fixed_optimal", "\\(
+    \\mu_\\text{NDT} = $(fmt(0, x.α_ndt * x.θ_ndt)),\\ 
+    \\alpha_\\text{NDT} = $(fmt(2, x.α_ndt))
+\\)")
 
-open("results/fits/exp2/optimal", "w") do f
-    fit = load_fit("optimal")
-    writev(f,
-        "\\(
-            \\mu_0 = $(round3(fit.drift_µ)),\\ 
-            \\sigma_0 = $(round3(fit.drift_σ)),\\ 
-            \\sigma = $(round3(fit.noise)),\\ 
-            \\samplecost = $(round3(fit.sample_cost)),\\ 
-            \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
-            \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
-        \\)\\unskip"
-    )
-end
+# x = load_fit("optimal")
+# write_tex("optimal", "\\(
+#     \\mu_0 = $(fmt(3, x.drift_µ)),\\ 
+#     \\sigma_0 = $(fmt(3, x.drift_σ)),\\ 
+#     \\sigma_x = $(fmt(3, x.noise)),\\ 
+#     \\samplecost = $(fmt(3, x.sample_cost)),\\ 
+#     \\mu_\\text{NDT} = $(fmt(0, x.α_ndt * x.θ_ndt)),\\ 
+#     \\alpha_\\text{NDT} = $(fmt(2, x.α_ndt))
+# \\)")
 
 
-open("results/fits/exp2/flexible", "w") do f
-    fit = load_fits("flexible")
-    writev(f,
-        "\\(
-            \\mu_0 = $(round3(fit.drift_µ)),\\ 
-            \\sigma_0 = $(round3(fit.drift_σ)),\\ 
-            \\sigma = $(round3(fit.noise)),\\ 
-            \\mu_\\text{stop} = $(MS_PER_SAMPLE * round2(fit.αθ_stop)),\\ 
-            \\alpha_\\text{stop} = $(round2(fit.α_stop)),\\ 
-            \\mu_\\text{switch} = $(MS_PER_SAMPLE * round2(fit.αθ_switch)),\\ 
-            \\alpha_\\text{switch} = $(round2(fit.α_switch)),\\ 
-            \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
-            \\alpha_\\text{NDT} = $(round2(fit.α_ndt)),\\ 
-        \\)\\unskip"
-    )
-end
+x = load_fit("flexible")
+write_tex("mle_flexible", "\\(
+    \\mu_0 = $(fmt(3, x.drift_µ)),\\ 
+    \\sigma_0 = $(fmt(3, x.drift_σ)),\\ 
+    \\sigma_x = $(fmt(3, x.noise)),\\ 
+    \\mu_\\text{stop} = $(fmt(0, MS_PER_SAMPLE * x.αθ_stop)),\\ 
+    \\alpha_\\text{stop} = $(fmt(2, x.α_stop)),\\ 
+    \\mu_\\text{switch} = $(fmt(0, MS_PER_SAMPLE * x.αθ_switch)),\\ 
+    \\alpha_\\text{switch} = $(fmt(2, x.α_switch)),\\ 
+    \\mu_\\text{NDT} = $(fmt(0, x.α_ndt * x.θ_ndt)),\\ 
+    \\alpha_\\text{NDT} = $(fmt(2, x.α_ndt)),\\ 
+\\)")
 
 # for name in ["optimal", "flexible"]
-#     fit = load_fits(name)
-#     open("results/fits/exp2/nll_$name", "w") do f
-#         writev(f, round(Int, fit.loss * nrow(human_trials)))
+#     x = load_xs(name)
+#     open("results/xs/exp2/nll_$name", "w") do f
+#         writev(f, round(Int, x.loss * nrow(human_trials)))
 #     end
 # end
 
@@ -309,7 +296,7 @@ flexible_ndt_box = modify(flexible_box,
 )
 
 prms = sample_params(flexible_ndt_box, 100_000);
-effects = compute_effects("flexible", flexible_policies, prms; read_only=true);
+effects = compute_effects("flexible", flexible_policies, prms);
 
 # %% --------
 
@@ -319,6 +306,7 @@ sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     lower_ci(ef, :prop_first)
 end
 @info "prop_first" ef.prop_first ef.accuracy ef.rt
+write_tex("lesion_search/prop_first", fmt_ci(ef.prop_first))
 @assert sc > .01
 
 # %% --------
@@ -327,6 +315,7 @@ sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     lower_ci(ef, :final)
 end
 @info "final" ef.final ef.accuracy ef.rt
+write_tex("lesion_search/final", fmt_ci(ef.final))
 @assert sc > MIN_EFFECT
 # sim = simulate_exp2(flexible_policies, prm);
 

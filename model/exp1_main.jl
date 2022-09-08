@@ -5,7 +5,7 @@ mkpath("results/exp1")
 mkpath("tmp")
 
 N_SOBOL = 50_000
-RUN = "aug16_exp1"
+RUN = "sep7_exp1"
 
 print_header("beginning run $RUN")
 
@@ -25,7 +25,7 @@ human_hist = make_hist(human_trials);
 @everywhere human_pretest = $human_pretest
 # @everywhere human_hist = $human_hist
 
-NO_RUN = true
+NO_RUN = false
 
 
 # %% ==================== fitting pipeline ====================
@@ -118,33 +118,31 @@ empirical_old_box = modify(optimal_box, sample_cost=0)
 empirical_old_tbl = fit_exp1_model("empirical_old", old_empirical_policies, empirical_old_box)
 
 # %% ==================== report parameters ====================
-mkpath("results/tex/exp1/")
 
-
-fit = load_fit("optimal")
+x = load_fit("optimal")
 write_tex("mle_optimal", "\\(
-    \\mu_0 = $(round3(fit.drift_µ)),\\ 
-    \\sigma_0 = $(round3(fit.drift_σ)),\\ 
-    \\sigma = $(round3(fit.noise)),\\ 
-    \\samplecost = $(round3(fit.sample_cost)),\\ 
-    \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
-    \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
+    \\mu_0 = $(fmt(3, x.drift_µ)),\\ 
+    \\sigma_0 = $(fmt(3, x.drift_σ)),\\ 
+    \\sigma_x = $(fmt(3, x.noise)),\\ 
+    \\samplecost = $(fmt(3, x.sample_cost)),\\ 
+    \\mu_\\text{NDT} = $(fmt(0, x.α_ndt * x.θ_ndt)),\\ 
+    \\alpha_\\text{NDT} = $(fmt(2, x.α_ndt))
 \\)")
 
-fit = load_fit("flexible")
+x = load_fit("flexible")
 write_tex("mle_flexible", "\\(
-    \\mu_0 = $(round3(fit.drift_µ)),\\ 
-    \\sigma_0 = $(round3(fit.drift_σ)),\\ 
-    \\sigma = $(round3(fit.noise)),\\ 
-    \\mu_\\text{stop} = $(MS_PER_SAMPLE * round2(fit.αθ_stop)),\\ 
-    \\alpha_\\text{stop} = $(round2(fit.α_stop)),\\ 
-    \\mu_\\text{NDT} = $(round2(fit.α_ndt * fit.θ_ndt)),\\ 
-    \\alpha_\\text{NDT} = $(round2(fit.α_ndt))
+    \\mu_0 = $(fmt(3, x.drift_µ)),\\ 
+    \\sigma_0 = $(fmt(3, x.drift_σ)),\\ 
+    \\sigma_x = $(fmt(3, x.noise)),\\ 
+    \\mu_\\text{stop} = $(fmt(0, MS_PER_SAMPLE * x.αθ_stop)),\\ 
+    \\alpha_\\text{stop} = $(fmt(2, x.α_stop)),\\ 
+    \\mu_\\text{NDT} = $(fmt(0, x.α_ndt * x.θ_ndt)),\\ 
+    \\alpha_\\text{NDT} = $(fmt(2, x.α_ndt))
 \\)")
 
 for name in ["optimal", "flexible", "empirical_old"]
-    fit = load_fit(name)
-    write_tex("nll_$name", string(round(Int, fit.loss * nrow(human_trials))))
+    x = load_fit(name)
+    write_tex("nll_$name", string(round(Int, x.loss * nrow(human_trials))))
 end
 
 # %% ==================== can the null model get the effects? ====================
@@ -179,26 +177,26 @@ flexible_ndt_box = modify(flexible_box,
 )
 
 prms = sample_params(flexible_ndt_box, 100_000);
-effects = compute_effects("flexible", flexible_policies, prms; read_only=true);
+effects = compute_effects("flexible", flexible_policies, prms);
 
-# ---------- correct ---------- #
+# %% ---------- correct ---------- #
 MIN_EFFECT = 5  # milis
 
 sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     lower_ci(ef, :correct_judgement)
 end
 @info "correct judgement" ef.correct_judgement ef.accuracy
-write_tex("lesion_search/correct_judgement", fmt_ci(ef.correct_judgement))
+write_tex("lesion_search/correct_judgement", fmt_ci(ef.correct_judgement; negate=true))
 @assert 5sc > MIN_EFFECT  # multiply by 5 to capture full range
 
 sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     lower_ci(ef, :correct_pretest)
 end
 @info "correct pretest" ef.correct_pretest ef.accuracy
-write_tex("lesion_search/correct_pretest", fmt_ci(ef.correct_pretest))
+write_tex("lesion_search/correct_pretest", fmt_ci(ef.correct_pretest; negate=true))
 @assert sc > MIN_EFFECT
 
-# ---------- empty ---------- #
+# %% ---------- empty ---------- #
 
 sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     lower_ci(ef, :empty_judgement)
@@ -218,7 +216,7 @@ end
 @assert sc < MIN_EFFECT
 write_tex("lesion_search/empty_pretest", fmt_ci(ef.empty_pretest))
 
-# ---------- crossover ---------- #
+# %% ---------- crossover ---------- #
 
 sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     min(lower_ci(ef, :empty_judgement), lower_ci(ef, :correct_judgement))

@@ -166,7 +166,7 @@ function write_tex(name, x, experiment=split(RUN, "_")[2])
     str = string(x) * "\\unskip"
     println(fname, ":\n", x)
     open(fname, "w") do f
-        write(f, x)
+        write(f, str)
     end
     return
 end
@@ -183,17 +183,14 @@ function fmt_ci((est, (lo, hi)), digits=3; convert_to_seconds=true, negate=false
         if convert_to_seconds
             x /= 1000
         end
-        x = round(x; digits)
-        if digits == 0
-            x = Int(x)
-        end
         if negate
-            x = -x
+            x *= -1
         end
         x
     end
     if negate
         lo, hi = hi, lo
     end
-    "B = $est; 95\\% CI [$lo, $hi]"
+    est, lo, hi = fmt.(digits, (est, lo, hi))
+    "\$B = $est\$; 95\\% CI [$lo, $hi]"
 end
