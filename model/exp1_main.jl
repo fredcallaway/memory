@@ -17,8 +17,8 @@ end
 
 human_pretest = load_data("exp1/pretest")
 human_trials = load_data("exp1/trials")
-filter!(t-> !ismissing(t.rt), human_pretest)
-filter!(t-> !ismissing(t.rt), human_trials)
+# filter!(t-> !ismissing(t.rt), human_pretest)
+# filter!(t-> !ismissing(t.rt), human_trials)
 human_hist = make_hist(human_trials);
 
 @everywhere human_trials = $human_trials
@@ -26,6 +26,11 @@ human_hist = make_hist(human_trials);
 # @everywhere human_hist = $human_hist
 
 NO_RUN = false
+
+open("results/$RUN/checksum", "w") do f
+    check = string(Int(floor(sum((human_trials.rt)))))
+    write(f, check)
+end
 
 
 # %% ==================== fitting pipeline ====================

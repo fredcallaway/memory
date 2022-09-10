@@ -25,6 +25,11 @@ df = load_model_human(RUN, "exp1", "trials", MODELS) %>%
         response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")
     )
 
+
+our_check = df %>% filter(name == "Human") %>% with(sum(rt)) %>% floor %>% as.integer
+model_check = glue("../model/results/{RUN}_exp1/checksum") %>% read_file %>% as.integer
+stopifnot(our_check == model_check)
+
 # %% ==================== reaction times ====================
 
 style = list(

@@ -45,6 +45,10 @@ fixations = load_model_human(RUN, "exp2", "fixations", MODELS) %>%
         relative = fixated - nonfixated
     )
 
+our_check = df %>% filter(name == "Human") %>% with(sum(rt)) %>% floor %>% as.integer
+model_check = glue("../model/results/{RUN}_exp2/checksum") %>% read_file %>% as.integer
+stopifnot(our_check == model_check)
+
 # %% ==================== nonfinal fixation durations ====================
 
 nonfinal = fixations %>% 

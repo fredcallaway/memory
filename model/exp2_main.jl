@@ -28,6 +28,11 @@ human_trials = @chain human_trials begin
     select(Not(:raw_rt))
 end
 
+open("results/$RUN/checksum", "w") do f
+    check = string(Int(floor(sum((human_trials.rt)))))
+    write(f, check)
+end
+
 human_trials_witherr = @chain human_trials_witherr begin
     @rsubset :n_pres > 0 && !ismissing(:rt)
     @rtransform :choose_first = :response_type == "correct" ? :choose_first : missing
