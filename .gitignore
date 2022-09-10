@@ -38,3 +38,8 @@ model/diagnostics.jl
 model/generate_timecourse.jl
 analysis/Rplots.pdf
 model/exp1_qual_beta.jl
+analysis/test.r
+model/.jukeignore
+model/exp1_unused.jl
+model/exp2_unused.jl
+analysis/bak/
