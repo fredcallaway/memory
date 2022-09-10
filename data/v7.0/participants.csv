@@ -1,3 +1,0 @@
-wid,test_type,overlay,train_presentation_duration,critical_max_time,afc_time,afc_bonus_time,n_pair,n_repeat,n_practice_critical,n_distractor,bonus_rate_critical,bonus_rate_critical_speed,bonus_rate_afc,bonus_rate_distractor,bonus_rate_speed,completed,bonus,version,math_correct
-w2610d96,recognition,True,2000,5000,,5000,20,2,1,10,1,0.1,1,1,0.25,True,1.758359,v7.0,0.0
-wb73e3a0,recognition,True,2000,5000,,5000,20,2,1,10,1,0.1,1,1,0.25,True,1.970715500000001,v7.0,8.0

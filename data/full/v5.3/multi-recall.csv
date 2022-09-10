@@ -1,0 +1,41 @@
+wid,practice,presentation_times,first_seen,first_word,second_word,choice,choice_rt,typing_rt,word,response,response_rt,response_type
+w6dcb1db,True,"[877.7999999988824, 4130.60000000149, 1824.0, 5239.0999999996275]",left,dandelion,roost,left,12071.5,13271.699999999255,dandelion,dandelion,21343.599999999627,correct
+w6dcb1db,False,[1427.5999999996275],left,grizzly,banana,left,1427.5999999996275,1682.800000000745,grizzly,grizzly,3673.9000000003725,correct
+w6dcb1db,False,[894.3000000007451],left,application,tiger,left,894.3000000007451,1053.4000000003725,application,application,2737.300000000745,correct
+w6dcb1db,False,[808.5999999996275],left,gravel,villain,left,808.5999999996275,865.4000000003725,gravel,gravel,3158.9000000003725,correct
+w6dcb1db,False,[876.0],left,goat,electron,left,876.0,1091.300000000745,goat,goat,1722.0999999996275,correct
+w6dcb1db,False,[504.59999999962747],left,walrus,goddess,left,504.59999999962747,4158.4000000003725,walrus,walrus,4931.200000001118,correct
+w6dcb1db,False,[613.8000000007451],left,department,sand,left,613.8000000007451,1092.7000000011176,department,department,2332.10000000149,correct
+w6dcb1db,False,[250.10000000149012],left,idol,jeans,left,250.10000000149012,1162.300000000745,idol,idol,1608.0,correct
+w6dcb1db,False,[294.2999999988824],left,bug,transplant,left,294.2999999988824,1200.5999999996275,bug,bug,1484.0999999996275,correct
+w6dcb1db,False,[229.89999999850988],left,keeper,shoelace,left,229.89999999850988,1132.3999999985099,keeper,keeper,1783.5,correct
+w6dcb1db,False,[338.40000000037253],left,antelope,lover,left,338.40000000037253,407.5,antelope,antelope,2696.5,correct
+w6dcb1db,False,[415.7999999988824],left,suburb,quill,left,415.7999999988824,1272.0,suburb,suburb,3148.0999999996275,correct
+w6dcb1db,False,[729.0],left,well,eagle,left,729.0,891.0,well,well,1397.199999999255,correct
+w6dcb1db,False,[808.0999999996275],left,scapegoat,penguin,left,808.0999999996275,1115.5,scapegoat,scapegoat,2404.2000000011176,correct
+w6dcb1db,False,[407.80000000074506],left,major,house,left,407.80000000074506,1196.300000000745,major,major,1771.199999999255,correct
+w6dcb1db,False,[751.9000000003725],left,consumer,pitchfork,left,751.9000000003725,1390.300000000745,consumer,consumer,2409.300000000745,correct
+w6dcb1db,False,[886.5999999996275],left,elbow,ozone,left,886.5999999996275,1085.5999999996275,elbow,elbow,1937.5999999996275,correct
+w6dcb1db,False,[828.2000000011176],left,pizza,tart,left,828.2000000011176,1154.300000000745,pizza,piizza,1912.7000000011176,correct
+w6dcb1db,False,[1094.5],left,elephant,winner,left,1094.5,1278.4000000003725,elephant,elephant,2265.4000000003725,correct
+w6dcb1db,False,[783.6999999992549],left,hamburger,patient,left,783.6999999992549,1131.199999999255,hamburger,hamburger,2353.199999999255,correct
+wca3807d,True,"[736.8000000119209, 956.6999999880791, 4847.400000035763, 2921.0, 6135.0, 432.0999999642372, 640.5, 1288.0]",left,frog,tart,left,17957.5,20197.80000001192,frog,frog,21252.80000001192,correct
+wca3807d,False,[],,,,right,,,atom,tart,,other
+wca3807d,False,[],,,,right,,,territory,tart,,other
+wca3807d,False,[],,,,right,,,community,tart,,other
+wca3807d,False,[],,,,left,,,tomato,frog,,other
+wca3807d,False,"[686.2000000476837, 984.8999999761581, 760.1000000238419, 359.89999997615814, 575.6000000238419, 2839.7999999523163]",left,hero,tiger,right,6206.5,7375.300000011921,tiger,tiger,7990.700000047684,correct
+wca3807d,False,[1640.5],left,quill,ozone,left,1640.5,2464.0,quill,quill,3287.5,correct
+wca3807d,False,[1775.199999988079],right,traitor,gravel,right,1775.199999988079,2479.5,traitor,traitor,3382.099999964237,correct
+wca3807d,False,[1728.8999999761581],right,pizza,keeper,left,1728.8999999761581,3710.800000011921,keeper,pizza,4310.899999976158,other
+wca3807d,False,[1581.300000011921],right,goddess,pillow,right,1581.300000011921,2293.800000011921,goddess,goddess,3341.100000023842,correct
+wca3807d,False,[1142.6000000238419],right,neck,personnel,right,1142.6000000238419,1695.1000000238419,neck,neck,2270.0,correct
+wca3807d,False,[959.1000000238419],right,society,walrus,left,959.1000000238419,1454.699999988079,walrus,society,2975.0,other
+wca3807d,False,[1527.4000000357628],right,department,tractor,right,1527.4000000357628,1998.0,department,department,4478.5,correct
+wca3807d,False,[1735.1000000238419],right,scapegoat,stairs,right,1735.1000000238419,2312.800000011921,scapegoat,scapegoat,3806.800000011921,correct
+wca3807d,False,[1007.6999999880791],right,rouge,cauliflower,right,1007.6999999880791,1295.6000000238419,rouge,rouge,2511.300000011921,correct
+wca3807d,False,[879.9000000357628],right,jeans,mister,right,879.9000000357628,1271.300000011921,jeans,jeans,1807.7000000476837,correct
+wca3807d,False,[1189.6000000238419],right,ear,volunteer,right,1189.6000000238419,1509.8999999761581,ear,ear,1917.699999988079,correct
+wca3807d,False,[1295.8999999761581],right,barracuda,crook,right,1295.8999999761581,1943.800000011921,barracuda,barracuda,3599.300000011921,correct
+wca3807d,False,[751.1000000238419],right,scenery,refrigerator,right,751.1000000238419,1198.199999988079,scenery,scenery,2494.199999988079,correct
+wca3807d,False,[1269.2999999523163],right,tulip,stranger,right,1269.2999999523163,1789.5999999642372,tulip,tulip,3477.199999988079,correct

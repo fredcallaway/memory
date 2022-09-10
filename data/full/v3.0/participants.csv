@@ -1,0 +1,7 @@
+wid,test_type,overlay,train_presentation_duration,recall_time,afc_bonus_time,n_pair,n_repeat,n_distractor,bonus_rate_critical,bonus_rate_afc,bonus_rate_distractor,bonus_rate_speed,bonus,completed,version,math_correct
+w74eb473,multi,True,3000,10000,5000,10,3,10,2,1,1,0.25,0.86,True,v3.0,10.0
+w79a02ed,multi,True,3000,10000,5000,10,3,10,2,1,1,0.25,0.0,False,v3.0,
+w1a9d92f,multi,True,3000,10000,5000,10,3,10,2,1,1,0.25,0.83,True,v3.0,9.0
+w3d80e3d,multi,True,3000,10000,5000,10,3,10,2,1,1,0.25,0.0,False,v3.0,
+w7fc7332,multi,True,2000,10000,5000,10,3,10,2,1,1,0.25,0.0,False,v3.0,
+w3299ca8,multi,True,3000,10000,5000,10,3,10,2,1,1,0.25,0.82,True,v3.0,9.0
