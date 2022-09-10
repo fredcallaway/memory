@@ -1,0 +1,22 @@
+libs = c(
+    "broom.mixed",
+    "formula.tools",
+    "ggbeeswarm",
+    "ggeffects",
+    "ggside",
+    "jsonlite",
+    "jtools",
+    "knitr",
+    "lme4",
+    "lmerTest",
+    "magrittr",
+    "optigrab",
+    "patchwork",
+    "purrr",
+    "rlang",
+    "rmdformats",
+    "stickylabeller",
+    "tidyjson",
+    "tidyverse"
+)
+install.packages(libs)
