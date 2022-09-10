@@ -1,16 +1,16 @@
-if isinteractive()
-    Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
-end
+RUN = ARGS[1]
 
 @everywhere begin
-    EXP1_RUN = "sep7_exp1"
-    RUN = "sep7_exp2"
+    RUN = $RUN
+    N_SOBOL = 50_000
+    RESULTS = "results/$RUN/exp2"
+    EXP1_RESULTS = "results/$RUN/exp1"
     include("common.jl")
     include("exp2_base.jl")
-    N_SOBOL = 50_000
 end
 
-mkpath("results/$(RUN)")
+mkpath(RESULTS)
+print_header("generating $RESULTS")
 
 # %% ==================== load data ====================
 
@@ -28,7 +28,7 @@ human_trials = @chain human_trials begin
     select(Not(:raw_rt))
 end
 
-open("results/$RUN/checksum", "w") do f
+open("$RESULTS/checksum", "w") do f
     check = string(Int(floor(sum((human_trials.rt)))))
     write(f, check)
 end
@@ -47,15 +47,15 @@ end
 @everywhere human_hist = make_hist(human_fixations)
 
 @everywhere function write_sims(name, make_policies; ndt=:optimize, n_top=1)
-    top_table = deserialize("results/$(EXP1_RUN)/fits/$name/top")
+    top_table = deserialize("$EXP1_RESULTS/fits/$name/top")
     exp1_top = eachrow(top_table)[1:n_top]
     prms = map(exp1_top) do prm
         (;prm..., switch_cost=prm.sample_cost)
     end
 
-    trialdir = "results/$(RUN)/simulations/fixed_$(name)_trials"
-    fixdir = "results/$(RUN)/simulations/fixed_$(name)_fixations"
-    fitpath = "results/$(RUN)/fits/fixed_$name"
+    trialdir = "$RESULTS/simulations/fixed_$(name)_trials"
+    fixdir = "$RESULTS/simulations/fixed_$(name)_fixations"
+    fitpath = "$RESULTS/fits/fixed_$name"
     mkpath(trialdir)
     mkpath(fixdir)
     mkpath(dirname(fitpath))
@@ -87,7 +87,7 @@ end
 
 function fit_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
     print_header(name)
-    fitdir = "results/$(RUN)/fits/$name/"
+    fitdir = "$RESULTS/fits/$name/"
     mkpath(fitdir)
 
     prms = sample_params(box, n_init)
@@ -104,8 +104,8 @@ function fit_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 1
     display(top_tbl[1:10, :])
     serialize("$fitdir/top", top_tbl)
     
-    trialdir = "results/$(RUN)/simulations/$(name)_trials"
-    fixdir = "results/$(RUN)/simulations/$(name)_fixations"
+    trialdir = "$RESULTS/simulations/$(name)_trials"
+    fixdir = "$RESULTS/simulations/$(name)_fixations"
     mkpath(trialdir)
     mkpath(fixdir)
 
@@ -186,7 +186,7 @@ flexible_box = Box(
 
 fit_model("flexible", flexible_policies, flexible_box)
 
-# exp1_fit = @chain deserialize("results/$(EXP1_RUN)/fits/flexible/top") begin
+# exp1_fit = @chain deserialize("$EXP1_RESULTS/fits/flexible/top") begin
 #     select([:drift_μ, :between_σ, :noise])
 #     eachrow
 #     first
@@ -194,8 +194,8 @@ fit_model("flexible", flexible_policies, flexible_box)
 
 # fit_model("fixed_flexible", flexible_policies, modify(flexible_box; exp1_fit...))
 # %% --------
-# @chain deserialize("results/$(RUN)/fits/fixed_flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
-# @chain deserialize("results/$(RUN)/fits/flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
+# @chain deserialize("$RESULTS/fits/fixed_flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
+# @chain deserialize("$RESULTS/fits/flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
 
 
 # %% ==================== empirical (old) ====================
@@ -218,7 +218,7 @@ end
 
 # %% ==================== report parameters ====================
 
-x = deserialize("results/$RUN/fits/fixed_optimal")
+x = deserialize("$RESULTS/fits/fixed_optimal")
 write_tex("mle_fixed_optimal", "\\(
     \\mu_\\text{NDT} = $(fmt(0, x.α_ndt * x.θ_ndt)),\\ 
     \\alpha_\\text{NDT} = $(fmt(2, x.α_ndt))
@@ -256,8 +256,6 @@ write_tex("mle_flexible", "\\(
 # end
 
 # %% ==================== can the null model get the effects? ====================
-
-@everywhere include("exp2_fit_effects.jl")
 
 prop_nfix(ef, num) = sum(ef.nfix[num:end]) / sum(ef.nfix)
 rt_µ, rt_σ = juxt(mean, std)(human_trials.rt)

@@ -3,6 +3,11 @@ include("mdp.jl")
 include("optimal_policy.jl")
 include("box.jl")
 
+if isinteractive()
+    Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
+end
+
+
 using Optim
 using ProgressMeter
 using JuliennedArrays
@@ -160,8 +165,8 @@ function load_fit(name, run=RUN)
 end
 
 
-function write_tex(name, x, experiment=split(RUN, "_")[2])
-    fname = "results/tex/$experiment/$name.tex"
+function write_tex(name, x)
+    fname = "$RESULTS/tex/$name.tex"
     mkpath(dirname(fname))
     str = string(x) * "\\unskip"
     println(fname, ":\n", x)

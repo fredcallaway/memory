@@ -1,20 +1,11 @@
-suppressPackageStartupMessages(source("setup.r"))
-
-SIZE = 2.7
-MAKE_PDF = TRUE
+source("setup.r")
 STEP_SIZE = 100
 
-library(optigrab)
 RUN = opt_get("run", default="sep7")
-OUT = opt_get("out", default="exp1")
+OUT = opt_get("out", default=glue("figs/{RUN}/exp1"))
 MODELS = opt_get("models", default="optimal,flexible") %>% 
     strsplit(",") %>% 
     unlist
-
-savefig = function(name, width, height) {
-    fig(glue("{OUT}/{name}"), width*SIZE, height*SIZE, pdf=MAKE_PDF)
-}
-system(glue('mkdir -p figs/{OUT}'))
 
 # %% ==================== load data ====================
 
@@ -27,7 +18,7 @@ df = load_model_human(RUN, "exp1", "trials", MODELS) %>%
 
 
 our_check = df %>% filter(name == "Human") %>% with(sum(rt)) %>% floor %>% as.integer
-model_check = glue("../model/results/{RUN}_exp1/checksum") %>% read_file %>% as.integer
+model_check = glue("../model/results/{RUN}/exp1/checksum") %>% read_file %>% as.integer
 stopifnot(our_check == model_check)
 
 # %% ==================== reaction times ====================
@@ -110,17 +101,6 @@ p_skip = plot_cum(!(correct & (rt <= cutoff)), skip & (rt <= cutoff)) +
     coord_cartesian(xlim=c(NULL), ylim=c(0, 1))
 
 savefig("cum_probs", 3.5, 2.2)
-
-# %% --------
-
-plot_cum(TRUE, skip & rt <= cutoff) +
-        labs(x="Time (s)", y="Cummulative Skip Probability") +
-        scale_colour_manual("Pretest\nAccuracy", values=c(
-            `0`="#B8648D",
-            `0.5`="#DE79AA",
-            `1`="#FF92C7"
-        ), aesthetics=c("fill", "colour"))
-savefig("p_skip_simple", 3.5, 1.1)
 
 # %% ==================== metacognitive accuracy ====================
 

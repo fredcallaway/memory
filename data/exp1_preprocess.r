@@ -1,9 +1,8 @@
-# VERSIONS = c('v6.5', 'v6.5B', 'v6.5C', 'v6.6', 'v6.7', 'v6.8')
-VERSIONS = c('v6.5E')
+library(optigrab)
+VERSIONS = c(opt_get("version"))
 
-suppressPackageStartupMessages(source("setup.r"))
-source("preprocess_common.r")  # defines all pretest and agg_pretest
-write_tex = tex_writer("stats/exp1")
+source("common.r")
+write_tex = tex_writer("../analysis/stats/exp1")
 
 # %% ==================== Load  ====================
 
@@ -38,8 +37,6 @@ trials = trials %>%
     mutate(drop = is.na(rt)) %T>% 
     with(write_tex(sum(drop), "N/short")) %>% 
     filter(!drop)
-
-
 
 # %% ==================== Select and augment ====================
 

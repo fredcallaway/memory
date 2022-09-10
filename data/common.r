@@ -1,8 +1,10 @@
 # assumes VERSION is already defined
+suppressPackageStartupMessages(source('../analysis/base.r'))
+
 
 load_data = function(type) {
     VERSIONS %>% 
-    map(~ read_csv(glue('../data/{.x}/{type}.csv'), col_types = cols())) %>% 
+    map(~ read_csv(glue('../data/full/{.x}/{type}.csv'), col_types = cols())) %>% 
     bind_rows
 }
 

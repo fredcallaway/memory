@@ -1,33 +1,25 @@
+RUN = ARGS[1]
+
+N_SOBOL = 50_000
+RESULTS = "results/$RUN/exp1"
+mkpath(RESULTS)
 
 @everywhere include("common.jl")
 @everywhere include("exp1_base.jl")
-mkpath("results/exp1")
-mkpath("tmp")
 
-N_SOBOL = 50_000
-RUN = "sep7_exp1"
-
-print_header("beginning run $RUN")
-
-if isinteractive()
-    Base.active_repl.options.iocontext[:displaysize] = (20, displaysize(stdout)[2]-2)
-end
+print_header("generating $RESULTS")
 
 # %% ==================== load data ====================
 
 human_pretest = load_data("exp1/pretest")
 human_trials = load_data("exp1/trials")
-# filter!(t-> !ismissing(t.rt), human_pretest)
-# filter!(t-> !ismissing(t.rt), human_trials)
 human_hist = make_hist(human_trials);
 
 @everywhere human_trials = $human_trials
 @everywhere human_pretest = $human_pretest
 # @everywhere human_hist = $human_hist
 
-NO_RUN = false
-
-open("results/$RUN/checksum", "w") do f
+open("$RESULTS/checksum", "w") do f
     check = string(Int(floor(sum((human_trials.rt)))))
     write(f, check)
 end
@@ -35,12 +27,11 @@ end
 
 # %% ==================== fitting pipeline ====================
 
-get_simdir(name) = "results/$(RUN)/simulations/$(name)_trials"
+get_simdir(name) = "$RESULTS/simulations/$(name)_trials"
 
 function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
-    NO_RUN && return
     print_header(name)
-    fitdir = "results/$(RUN)/fits/$name/"
+    fitdir = "$RESULTS/fits/$name/"
     mkpath(fitdir)
 
     prms = sample_params(box, n_init)
@@ -87,7 +78,7 @@ optimal_box = Box(
 )
 
 optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
-opt_prm = NamedTuple(first(eachrow(deserialize("results/$(RUN)/fits/optimal/top"))))
+opt_prm = NamedTuple(first(eachrow(deserialize("$RESULTS/fits/optimal/top"))))
 
 
 # %% ==================== new flexible null model ====================

@@ -1,8 +1,8 @@
-VERSIONS = c('v5.6B')
+library(optigrab)
+VERSIONS = c(opt_get("version"))
 
-suppressPackageStartupMessages(source("setup.r"))
-source("preprocess_common.r")  # defines all pretest and agg_pretest
-write_tex = tex_writer("stats/exp2")
+source("common.r")
+write_tex = tex_writer("../analysis/stats/exp2")
 
 # %% ==================== Load ====================
 

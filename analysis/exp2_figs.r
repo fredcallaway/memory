@@ -1,21 +1,14 @@
-suppressPackageStartupMessages(source("setup.r"))
-SIZE = 2.7
-MAKE_PDF = TRUE
+source("setup.r")
 STEP_SIZE = .1
 
 RUN = opt_get("run", default="sep7")
-OUT = opt_get("out", default="exp2")
+OUT = opt_get("out", default=glue("figs/{RUN}/exp2"))
 MODELS = opt_get("models", default="fixed_optimal,flexible") %>% 
     strsplit(",") %>% 
     unlist
 
-savefig = function(name, width, height) {
-    fig(glue("{OUT}/{name}"), width*SIZE, height*SIZE, pdf=MAKE_PDF)
-}
-system(glue('mkdir -p figs/{OUT}'))
-
-
 # %% ==================== load data ====================
+
 WIDTH = 1.5 + length(MODELS)
 
 pretest = read_csv('../data/processed/exp2/pretest.csv', col_types = cols())
@@ -46,7 +39,7 @@ fixations = load_model_human(RUN, "exp2", "fixations", MODELS) %>%
     )
 
 our_check = df %>% filter(name == "Human") %>% with(sum(rt)) %>% floor %>% as.integer
-model_check = glue("../model/results/{RUN}_exp2/checksum") %>% read_file %>% as.integer
+model_check = glue("../model/results/{RUN}/exp2/checksum") %>% read_file %>% as.integer
 stopifnot(our_check == model_check)
 
 # %% ==================== nonfinal fixation durations ====================
