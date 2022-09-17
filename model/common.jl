@@ -19,7 +19,7 @@ const MAX_STEP = Int(MAX_TIME / MS_PER_SAMPLE)
 SMOOTHING = 1e-5
 
 quantize(x, q=MS_PER_SAMPLE) = q * cld(x, q)
-load_data(name) = CSV.read("../data/processed/$name.csv", DataFrame, missingstring="NA")
+load_data(name) = CSV.read("../data/processed/$name", DataFrame, missingstring="NA")
 stringify(nt::NamedTuple) = replace(string(map(x->round(x; digits=8), nt::NamedTuple)), ([" ", "(", ")"] .=> "")...)
 
 using GLM
@@ -29,7 +29,7 @@ end
 get_coef(m) = coef(m)[2], confint(m)[2, :]
 
 function compute_cached(job_fn, job_name, prms; read_only=false, enable_cache=true, overwrite=false, catch_errors=true)
-    dir = "cache/$(RUN)_$(job_name)"
+    dir = "cache/$(RUN)_$(EXP_NAME)_$(job_name)"
     mkpath(dir)
     map = read_only ? asyncmap : pmap
     @showprogress "$job_name "  map(prms) do prm
@@ -159,8 +159,8 @@ function optimize_stopping_model(human, α_ndt, θ_ndt; ε::Float64=SMOOTHING)
     Gamma(α, θ / MS_PER_SAMPLE)  # convert to units of samples
 end
 
-function load_fit(name, run=RUN)
-    top = deserialize("results/$run/fits/$name/top")
+function load_fit(name, results=RESULTS)
+    top = deserialize("$results/fits/$name/top")
     first(eachrow(top))
 end
 

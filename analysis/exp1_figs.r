@@ -1,8 +1,9 @@
 source("setup.r")
-STEP_SIZE = 100
+STEP_SIZE = .1
 
-RUN = opt_get("run", default="sep7")
-OUT = opt_get("out", default=glue("figs/{RUN}/exp1"))
+RUN = opt_get("run", default="sep11")
+EXP_NAME = opt_get("exp_name", default="exp1")
+OUT = opt_get("out", default=glue("figs/{RUN}/{EXP_NAME}"))
 MODELS = opt_get("models", default="optimal,flexible") %>% 
     strsplit(",") %>% 
     unlist
@@ -10,15 +11,15 @@ MODELS = opt_get("models", default="optimal,flexible") %>%
 # %% ==================== load data ====================
 
 # pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
-df = load_model_human(RUN, "exp1", "trials", MODELS) %>% 
+df = load_model_human(RUN, EXP_NAME, "trials", MODELS) %>% 
     mutate(
+        rt = rt / 1000,
         skip=response_type=="empty", correct=response_type=="correct",
         response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")
     )
 
-
-our_check = df %>% filter(name == "Human") %>% with(sum(rt)) %>% floor %>% as.integer
-model_check = glue("../model/results/{RUN}/exp1/checksum") %>% read_file %>% as.integer
+our_check = df %>% filter(name == "Human") %>% with(1000*sum(rt)) %>% floor %>% as.integer
+model_check = glue("../model/results/{RUN}/{EXP_NAME}/checksum") %>% read_file %>% as.integer
 stopifnot(our_check == model_check)
 
 # %% ==================== reaction times ====================
@@ -32,7 +33,6 @@ style = list(
 )
 
 acc_rt = df %>%
-    mutate(rt = rt/1000) %>% 
     plot_effect(pretest_accuracy, rt, response_type, median) +
     labs(x="Pretest Accuracy", y='Response Time (s)') +
     scale_x_continuous(labels = scales::percent, n.breaks=3) +
@@ -40,7 +40,6 @@ acc_rt = df %>%
 # savefig("acc_rt", 3.5, 1.1)
 
 judge_rt = df %>% 
-    mutate(rt = rt/1000) %>% 
     plot_effect(judgement, rt, response_type, median) +
     labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Response Time (s)') +
     scale_x_continuous(n.breaks=5) + style

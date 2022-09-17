@@ -2,7 +2,6 @@ library(optigrab)
 VERSIONS = c(opt_get("version"))
 
 source("common.r")
-write_tex = tex_writer("../analysis/stats/exp2")
 
 # %% ==================== Load ====================
 
@@ -76,8 +75,8 @@ trials %>%
     with(write_tex(n_pct(drop), "N/error")) %>% 
     filter(!drop) %>% 
     select(-drop) %>% 
-    write_csv('../data/processed/exp2/trials.csv')
+    write_out('trials.csv')
 
-write_csv(trials, '../data/processed/exp2/trials_witherr.csv')
-write_csv(pretest, '../data/processed/exp2/pretest.csv')
-write_csv(fixations, '../data/processed/exp2/fixations.csv')
+write_out(trials, 'trials_witherr.csv')
+write_out(pretest, 'pretest.csv')
+write_out(fixations, 'fixations.csv')

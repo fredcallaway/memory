@@ -1,19 +1,19 @@
+suppressPackageStartupMessages(source("stats_base.r"))
+EXP_NAME = opt_get("exp_name", default="exp1")
+write_tex = tex_writer(glue("stats/{EXP_NAME}"))
+
 # %% ==================== load data ====================
 
-suppressPackageStartupMessages(source("setup.r"))
-suppressPackageStartupMessages(source("stats_base.r"))
-
 pretest = read_csv('../data/processed/exp1/pretest.csv', col_types = cols())
-trials = load_human("exp1", "trials") %>% 
+
+trials = load_human(EXP_NAME, "trials") %>% 
     mutate(
         rt = rt / 1000,
         skip=response_type=="empty", correct=response_type=="correct",
         response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")
     )
+
 participants = load_human('exp1', 'participants')
-
-write_tex = tex_writer("stats/exp1")
-
 
 # %% ==================== accuracy ====================
 

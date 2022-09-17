@@ -1,8 +1,9 @@
 source("setup.r")
 STEP_SIZE = .1
 
-RUN = opt_get("run", default="sep7")
-OUT = opt_get("out", default=glue("figs/{RUN}/exp2"))
+RUN = opt_get("run", default="sep11")
+EXP_NAME = opt_get("exp_name", default="exp2")
+OUT = opt_get("out", default=glue("figs/{RUN}/{EXP_NAME}"))
 MODELS = opt_get("models", default="fixed_optimal,flexible") %>% 
     strsplit(",") %>% 
     unlist
@@ -12,14 +13,17 @@ MODELS = opt_get("models", default="fixed_optimal,flexible") %>%
 WIDTH = 1.5 + length(MODELS)
 
 pretest = read_csv('../data/processed/exp2/pretest.csv', col_types = cols())
-df = load_model_human(RUN, "exp2", "trials", MODELS) %>% 
-    filter(response_type == "correct") %>% 
-    mutate(rel_pretest_accuracy = pretest_accuracy_first - pretest_accuracy_second)
-
-fixations = load_model_human(RUN, "exp2", "fixations", MODELS) %>%
+df = load_model_human(RUN, EXP_NAME, "trials", MODELS) %>% 
     filter(response_type == "correct") %>% 
     mutate(
-        duration = duration / 1000,
+        rel_pretest_accuracy = pretest_accuracy_first - pretest_accuracy_second,
+        rt = rt / 1000
+    )
+
+fixations = load_model_human(RUN, EXP_NAME, "fixations", MODELS) %>%
+    filter(response_type == "correct") %>% 
+    mutate(
+        duration = duration / 1000, 
         last_fix = as.numeric(presentation == n_pres),
         fix_first = presentation %% 2,
         fix_stronger = case_when(
@@ -38,8 +42,8 @@ fixations = load_model_human(RUN, "exp2", "fixations", MODELS) %>%
         relative = fixated - nonfixated
     )
 
-our_check = df %>% filter(name == "Human") %>% with(sum(rt)) %>% floor %>% as.integer
-model_check = glue("../model/results/{RUN}/exp2/checksum") %>% read_file %>% as.integer
+our_check = df %>% filter(name == "Human") %>% with(1000*sum(rt)) %>% floor %>% as.integer
+model_check = glue("../model/results/{RUN}/{EXP_NAME}/checksum") %>% read_file %>% as.integer
 stopifnot(our_check == model_check)
 
 # %% ==================== nonfinal fixation durations ====================
@@ -211,7 +215,7 @@ plt_overall = df %>%
     labs(x="Relative Pretest Accuracy of First Cue", y="Proportion Fixation\nTime on First Cue")
 # savefig("overall", 3.2, 1)
 
-cutoff = df %>% filter(name == "Human") %>% with(quantile(rt, .95, na.rm=T) / 1000)
+cutoff = df %>% filter(name == "Human") %>% with(quantile(rt, .95, na.rm=T))
 plt_timecourse = timecourse %>% 
     filter(time < cutoff) %>% 
     plot_effect_continuous(time, fix_first, rel_pretest_accuracy, mean) +

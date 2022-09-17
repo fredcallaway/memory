@@ -1,7 +1,7 @@
-suppressPackageStartupMessages(source("setup.r"))
 suppressPackageStartupMessages(source("stats_base.r"))
+EXP_NAME = opt_get("exp_name", default="exp2")
+write_tex = tex_writer(glue("stats/{EXP_NAME}"))
 
-write_tex = tex_writer("stats/exp2")
 
 # %% ==================== load data ====================
 

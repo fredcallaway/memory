@@ -164,7 +164,7 @@ mute = function(x, amt=.15) {
     plot
 }
 
-plot_effect = function(df, x, y, color=NULL, collapser=mean, min_n=10, geom="pointrange") {
+plot_effect = function(df, x, y, color=NULL, collapser=mean, min_n=0, geom="pointrange") {
     dat = collapse_participants(df, collapser, {{y}}, {{x}}, {{color}})
 
     enough_data = dat %>% 

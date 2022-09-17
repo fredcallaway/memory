@@ -1,18 +1,19 @@
 RUN = ARGS[1]
+EXP_NAME = ARGS[2]
 
 N_SOBOL = 50_000
-RESULTS = "results/$RUN/exp1"
+RESULTS = "results/$RUN/$EXP_NAME"
 mkpath(RESULTS)
 
 @everywhere include("common.jl")
 @everywhere include("exp1_base.jl")
 
-print_header("generating $RESULTS")
+print_header("generating $RESULTS for $EXP_NAME")
 
 # %% ==================== load data ====================
 
-human_pretest = load_data("exp1/pretest")
-human_trials = load_data("exp1/trials")
+human_pretest = load_data("$EXP_NAME/pretest.csv")
+human_trials = load_data("$EXP_NAME/trials.csv")
 human_hist = make_hist(human_trials);
 
 @everywhere human_trials = $human_trials
@@ -23,7 +24,6 @@ open("$RESULTS/checksum", "w") do f
     check = string(Int(floor(sum((human_trials.rt)))))
     write(f, check)
 end
-
 
 # %% ==================== fitting pipeline ====================
 
@@ -76,10 +76,7 @@ optimal_box = Box(
     within_σ=0,
     judgement_noise=0.1,
 )
-
-optimal_tbl = fit_exp1_model("optimal", optimal_policies, optimal_box)
-opt_prm = NamedTuple(first(eachrow(deserialize("$RESULTS/fits/optimal/top"))))
-
+fit_exp1_model("optimal", optimal_policies, optimal_box)
 
 # %% ==================== new flexible null model ====================
 

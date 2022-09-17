@@ -1,23 +1,27 @@
 RUN = ARGS[1]
+EXP_NAME = ARGS[2]
+EXP1_NAME = startswith(EXP_NAME, "old") ? "old_exp1" : "exp1"
+RESULTS = "results/$RUN/$EXP_NAME"
+EXP1_RESULTS = "results/$RUN/$EXP1_NAME"
 
 @everywhere begin
     RUN = $RUN
+    RESULTS = $RESULTS
+    EXP1_RESULTS = $EXP1_RESULTS
     N_SOBOL = 50_000
-    RESULTS = "results/$RUN/exp2"
-    EXP1_RESULTS = "results/$RUN/exp1"
     include("common.jl")
     include("exp2_base.jl")
 end
 
 mkpath(RESULTS)
-print_header("generating $RESULTS")
+print_header("generating $RESULTS for $EXP_NAME")
 
 # %% ==================== load data ====================
 
-human_pretest = CSV.read("../data/processed/exp2/pretest.csv", DataFrame, missingstring="NA")
-human_trials = CSV.read("../data/processed/exp2/trials.csv", DataFrame, missingstring="NA")
-human_trials_witherr = CSV.read("../data/processed/exp2/trials_witherr.csv", DataFrame, missingstring="NA")
-human_fixations = CSV.read("../data/processed/exp2/fixations.csv", DataFrame, missingstring="NA")
+human_pretest = load_data("$EXP_NAME/pretest.csv")
+human_trials = load_data("$EXP_NAME/trials.csv")
+human_trials_witherr = load_data("$EXP_NAME/trials_witherr.csv")
+human_fixations = load_data("$EXP_NAME/fixations.csv")
 
 human_pretest = @rsubset human_pretest :practice == false :block == 3
 human_trials = @chain human_trials begin
@@ -87,7 +91,7 @@ end
 
 function fit_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
     print_header(name)
-    fitdir = "$RESULTS/fits/$name/"
+    fitdir = "$RESULTS/fits/$name"
     mkpath(fitdir)
 
     prms = sample_params(box, n_init)
@@ -309,7 +313,7 @@ sc, ef, prm = top_score("flexible", flexible_policies, prms, effects) do ef
     lower_ci(ef, :prop_first)
 end
 @info "prop_first" ef.prop_first ef.accuracy ef.rt
-write_tex("lesion_search/prop_first", fmt_ci(ef.prop_first))
+write_tex("lesion_search/prop_first", fmt_ci(ef.prop_first, convert_to_seconds=false))
 @assert sc > .01
 
 # %% --------

@@ -1,3 +1,4 @@
+source("setup.r")
 library(formula.tools)
 
 tidy = function(model, ...) {

@@ -1,8 +1,4 @@
-library(optigrab)
-VERSIONS = c(opt_get("version"))
-
 source("common.r")
-write_tex = tex_writer("../analysis/stats/exp1")
 
 # %% ==================== Load  ====================
 
@@ -48,9 +44,9 @@ pretest = pretest %>% select(wid, block, word, response_type, rt)
 
 # %% ==================== Save ====================
 
-write_csv(pretest, '../data/processed/exp1/pretest.csv')
-write_csv(trials, '../data/processed/exp1/trials.csv')
-write_csv(excl, '../data/processed/exp1/participants.csv')
+write_out(pretest, 'pretest.csv')
+write_out(trials, 'trials.csv')
+write_out(excl, 'participants.csv')
 
 
 # judgement_breaks = function(tail_size) {
