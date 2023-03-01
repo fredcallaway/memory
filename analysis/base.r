@@ -117,9 +117,11 @@ pval = function(p) {
 
 tex_writer = function(path) {
   # dir.create(path, recursive=TRUE, showWarnings=FALSE)
-  function(tex, name) {
+  function(tex, name, format=T) {
     name = glue(name, .envir=parent.frame()) %>% str_replace("[:*]", "-")
-    tex = fmt(tex, .envir=parent.frame())
+    if (format) {
+        tex = fmt(tex, .envir=parent.frame())
+    }
     file = glue("{path}/{name}.tex")
     dir.create(dirname(file), recursive=TRUE, showWarnings=FALSE)
     print(paste0(file, ": ", tex))
