@@ -1,5 +1,8 @@
 source("common.r")
 
+# VERSIONS = c('v6.5E')
+# EXP_NAME = "exp1"
+
 # %% ==================== Load  ====================
 
 all_pretest = load_data('simple-recall') %>% 
@@ -10,6 +13,12 @@ all_trials = load_data('simple-recall-penalized') %>%
     filter(!practice) %>% 
     preprocess_recall %>% 
     select(-judgement_type)
+
+all_pretest %>%
+    filter((word != response), correct) %>%
+    sample_n(30) %>%
+    select(word, response) %>%
+    print(n=30)
 
 # %% ==================== Exclusions ====================
 
@@ -26,9 +35,16 @@ keep_wids = excl %>% filter(keep) %>% with(wid)
 pretest = all_pretest %>% filter(wid %in% keep_wids)
 trials = all_trials %>% filter(wid %in% keep_wids)
 
+trials %>%
+    left_join(summarise_pretest(pretest)) %>%
+    write_out('all_trials.csv')
+
 trials = trials %>% 
     mutate(drop = response_type %nin% c("correct","empty")) %T>% 
     with(write_tex(n_pct(drop), "N/error")) %>% 
+    with(write_tex(n_pct(response_type == "intrusion"), "N/intrusion")) %T>%
+    with(write_tex(n_pct(response_type == "other"), "N/other")) %T>%
+    with(write_tex(n_pct(response_type == "timeout"), "N/timeout")) %T>%
     filter(!drop) %>% 
     mutate(drop = is.na(rt)) %T>% 
     with(write_tex(sum(drop), "N/short")) %>% 
@@ -38,7 +54,7 @@ trials = trials %>%
 
 trials = trials %>%
     left_join(summarise_pretest(pretest)) %>% 
-    select(wid, response_type, rt, judgement, pretest_accuracy)
+    select(wid, word, response_type, rt, judgement, pretest_accuracy)
 
 pretest = pretest %>% select(wid, block, word, response_type, rt)
 

@@ -72,7 +72,10 @@ trials = trials %>% select(-c(presentation_times, first_word, second_word))
 
 trials %>% 
     mutate(drop = response_type != "correct") %T>% 
-    with(write_tex(n_pct(drop), "N/error")) %>% 
+    with(write_tex(n_pct(drop), "N/error")) %T>%
+    with(write_tex(n_pct(response_type == "intrusion"), "N/intrusion")) %T>%
+    with(write_tex(n_pct(response_type == "other"), "N/other")) %T>%
+    with(write_tex(n_pct(response_type == "timeout"), "N/timeout")) %>%
     filter(!drop) %>% 
     select(-drop) %>% 
     write_out('trials.csv')
