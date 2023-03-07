@@ -1,5 +1,6 @@
 source("setup.r")
 library(formula.tools)
+library(kableExtra)
 
 tidy = function(model, ...) {
     d = broom.mixed::tidy(model, conf.int=T, ...)

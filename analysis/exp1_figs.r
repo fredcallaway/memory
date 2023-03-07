@@ -22,6 +22,26 @@ our_check = df %>% filter(name == "Human") %>% with(1000*sum(rt)) %>% floor %>% 
 model_check = glue("../model/results/{RUN}/{EXP_NAME}/checksum") %>% read_file %>% as.integer
 stopifnot(our_check == model_check)
 
+# %% ==================== accuracy ====================
+
+df %>%
+    plot_effect(pretest_accuracy, correct, collapser=mean)
+
+savefig("accuracy", 3.5, 1.1)
+
+
+# %% --------
+
+df %>%
+    count(name, pretest_accuracy, correct) %>%
+    group_by(name) %>%
+    mutate(prop = n / sum(n)) %>%
+    ggplot(aes(x=pretest_accuracy, y=correct, fill=prop)) +
+    geom_tile() +
+    facet_wrap(~name)
+
+savefig("accuracy", 3.5, 1.1)
+
 # %% ==================== reaction times ====================
 
 style = list(
@@ -32,18 +52,19 @@ style = list(
     coord_cartesian(xlim=c(NULL), ylim=c(0.9, 4.1))
 )
 
+df %>% with(unique(name))
 acc_rt = df %>%
     plot_effect(pretest_accuracy, rt, response_type, median) +
-    labs(x="Pretest Accuracy", y='Response Time (s)') +
-    scale_x_continuous(labels = scales::percent, n.breaks=3) +
+    labs(x = "Pretest Accuracy", y = "Response Time (s)") +
+    scale_x_continuous(labels = scales::percent, n.breaks = 3) +
     style
-# savefig("acc_rt", 3.5, 1.1)
+savefig("acc_rt", 3.5, 1.1)
 
 judge_rt = df %>% 
     plot_effect(judgement, rt, response_type, median) +
     labs(x="Confidence (Recalled) / Feeling of Knowing (Skipped)", y='Response Time (s)') +
     scale_x_continuous(n.breaks=5) + style
-# savefig("judge_rt", 3.5, 1.1)
+savefig("judge_rt", 3.5, 1.1)
 
 (judge_rt / acc_rt) +
     plot_layout(guides = "collect") + 

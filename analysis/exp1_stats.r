@@ -22,8 +22,6 @@ df = load_model_human("sep11", "exp1", "trials", c("optimal", "flexible"))
 
 # %% ==================== accuracy ====================
 
-library(kableExtra)
-
 props = all_trials %>%
     count(pretest_accuracy, response_type) %>%
     group_by(pretest_accuracy) %>%
@@ -46,31 +44,68 @@ props %>%
 
 # %% --------
 
-props = df %>%
-    mutate(correct = (response_type == "correct")) %>%
-    count(name, pretest_accuracy, correct) %>%
-    group_by(name) %>%
-    mutate(prop = n / sum(n))
+accuracy_table = function(xvar, format_xvar=identity) {
+    props = df %>%
+        mutate(correct = (response_type == "correct")) %>%
+        count(name, {{xvar}}, correct) %>%
+        group_by(name) %>%
+        mutate(prop = n / sum(n))
 
-pretest_rates = props %>%
-    group_by(name, pretest_accuracy) %>%
-    summarise(total=sum(prop))
+    pretest_rates = props %>%
+        group_by(name, {{xvar}}) %>%
+        summarise(total=sum(prop))
 
-acc_rates = df %>%
-    mutate(correct = (response_type == "correct")) %>%
-    group_by(name, pretest_accuracy) %>%
-    summarise(acc=mean(correct))
+    acc_rates = df %>%
+        mutate(correct = (response_type == "correct")) %>%
+        group_by(name, {{xvar}}) %>%
+        summarise(acc=mean(correct))
 
-left_join(pretest_rates, acc_rates) %>%
+    left_join(pretest_rates, acc_rates) %>%
+        ungroup() %>%
+        mutate(value = fmt("{acc:.3} ({total:.3})"), .keep="unused") %>%
+        mutate(xvar = format_xvar({{xvar}}), .keep="unused") %>%
+        pivot_wider(names_from=xvar, values_from=value) %>%
+        column_to_rownames(var="name") %>%
+        kbl(format="latex", booktabs=T, digits=3, escape=F) %>%
+        gsub('_', ' ', .) %>%
+        gsub('0\\.', '.', .)
+}
+accuracy_table(pretest_accuracy, fmt_percent) %>% write_tex("accuracy_table", format=F)
+accuracy_table(judgement) %>% write_tex("accuracy_table_conf", format=F)
+
+# %% --------
+
+df %>%
+    filter(name == "Human") %>%
+    count(name, response_type, judgement) %>%
+    group_by(response_type) %>%
+    mutate(prop = n / sum(n), .keep="unused") %>%
     ungroup() %>%
-    mutate(value = fmt("{acc:.3} ({total:.3})"), .keep="unused") %>%
-    mutate(pretest_accuracy = fmt_percent(pretest_accuracy)) %>%
-    pivot_wider(names_from=pretest_accuracy, values_from=value) %>%
+    pivot_wider(names_from=judgement, values_from=prop) %>%
+    select(-name) %>%
+    mutate(response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")) %>%
+    column_to_rownames(var="response_type") %>%
+    kbl(format="latex", booktabs=T, digits=3, escape=F) %>%
+    gsub('_', ' ', .) %>%
+    gsub('0\\.', '.', .) %>% write_tex("confidence_table", format=F)
+
+# %% --------
+
+df %>%
+    count(name, response_type, judgement) %>%
+    group_by(name, response_type) %>%
+    mutate(prop = n / sum(n), .keep="unused") %>%
+    ungroup() %>%
+    pivot_wider(names_from=response_type, values_from=prop) %>%
+    mutate(value = fmt("{correct:.3} / {empty:.3}"), .keep="unused") %>%
+    pivot_wider(names_from=judgement, values_from=value) %>%
+    # mutate(response_type = recode_factor(response_type, "correct" = "Recalled", "empty" = "Skipped")) %>%
     column_to_rownames(var="name") %>%
     kbl(format="latex", booktabs=T, digits=3, escape=F) %>%
     gsub('_', ' ', .) %>%
     gsub('0\\.', '.', .) %>%
-    write_tex("accuracy_table", format=F)
+    write_tex("confidence_table", format=F)
+
 
 # %% --------
 

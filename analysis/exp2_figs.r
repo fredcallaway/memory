@@ -46,6 +46,16 @@ our_check = df %>% filter(name == "Human") %>% with(1000*sum(rt)) %>% floor %>% 
 model_check = glue("../model/results/{RUN}/{EXP_NAME}/checksum") %>% read_file %>% as.integer
 stopifnot(our_check == model_check)
 
+# %% ==================== nfix ====================
+
+df %>%
+    filter(between(n_pres, 1,6)) %>%
+    ggplot(aes(n_pres, ..prop..)) +
+    geom_bar() +
+    facet_wrap(~name)
+
+savefig("nfix", WIDTH, 1)
+
 # %% ==================== nonfinal fixation durations ====================
 
 nonfinal = fixations %>% 
@@ -175,6 +185,22 @@ savefig("commitment", WIDTH, 2)
 
 # # %% ==================== overall proportion and timecourse ====================
 
+style = list(
+    coord_cartesian(xlim=c(NULL), ylim=c(0, 1)),
+    scale_colour_manual(
+        values=c(
+            "#d7191c",
+            "#fdae61",
+            "#ADADAD",
+            "#abd9e9",
+            "#2c7bb6"
+        ),
+        guide = guide_legend(reverse = TRUE),
+        aesthetics=c("colour"),
+        name="Relative\nPretest\nAccuracy"
+    )
+)
+
 timecourse = fixations %>% 
     # filter(n_pres >= 2) %>%
     # filter(n_pres <= 3) %>% 
@@ -186,21 +212,6 @@ timecourse = fixations %>%
     group_by(trial_id) %>% 
     mutate(time = (STEP_SIZE)*row_number())
 
-style = list(
-    coord_cartesian(xlim=c(NULL), ylim=c(0, 1)),
-    scale_colour_manual(
-        values=c(
-            "#d7191c",
-            "#fdae61",
-            "#ADADAD",
-            "#abd9e9",
-            "#2c7bb6"
-        ), 
-        guide = guide_legend(reverse = TRUE), 
-        aesthetics=c("colour"),
-        name="Relative\nPretest\nAccuracy"
-    )
-)
 
 plt_overall = df %>%
     filter(n_pres >= 2) %>%
@@ -221,7 +232,7 @@ plt_timecourse = timecourse %>%
     plot_effect_continuous(time, fix_first, rel_pretest_accuracy, mean) +
     style +
     labs(x="Time (s)", y="Probability Fixate First Cue")
-# savefig("timecourse", 3.5, 1)
+savefig("timecourse", 3.5, 1)
 
 (plt_overall / plt_timecourse) +
     plot_layout(guides = "collect") +
@@ -229,3 +240,33 @@ plt_timecourse = timecourse %>%
     theme(plot.tag.position = c(0, 1))
 
 savefig("overall_timecourse", WIDTH, 2)
+
+# %% --------
+
+alt_timecourse = fixations %>%
+    transmute(trial_id, name, wid, fix_first, duration,
+              total_pretest_accuracy = pretest_accuracy_first + pretest_accuracy_second) %>%
+    group_by(trial_id) %>%
+    mutate(n_step = diff(c(0, round(cumsum(duration/STEP_SIZE))))) %>%
+    uncount(n_step) %>%
+    group_by(trial_id) %>%
+    mutate(time = (STEP_SIZE)*row_number())
+
+cutoff = df %>% filter(name == "Human") %>% with(quantile(rt, .95, na.rm=T))
+plt_timecourse = alt_timecourse %>%
+    filter(time < cutoff) %>%
+    plot_effect_continuous(time, fix_first, total_pretest_accuracy, mean) +
+    labs(x="Time (s)", y="Probability Fixate First Cue", color="Total\nPretest\nAccuracy")
+
+savefig("alt_timecourse", WIDTH, 1)
+
+# %% --------
+df %>%
+    mutate(total_pretest_accuracy = pretest_accuracy_first + pretest_accuracy_second) %>%
+    collapse_participants(median, rt, total_pretest_accuracy) %>%
+    ggplot(aes(total_pretest_accuracy, rt)) +
+    stat_summary(fun=mean, geom="line") +
+    stat_summary(fun.data=mean_cl_boot, geom=geom) +
+    facet_wrap(~name)
+
+savefig("tmp", WIDTH, 1)
