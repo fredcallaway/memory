@@ -160,8 +160,23 @@ function optimize_stopping_model(human, α_ndt, θ_ndt; ε::Float64=SMOOTHING)
 end
 
 function load_fit(name, results=RESULTS)
-    top = deserialize("$results/fits/$name/top")
-    first(eachrow(top))
+    first(eachrow(load_fits(name, results)))
+end
+
+function load_fits(name, results=RESULTS)
+    CSV.read("$results/fits/$name/top.csv", DataFrame)
+end
+
+function write_fits(fits, fit_name, model_name, results=RESULTS)
+    path = "$results/fits/$model_name/$fit_name"
+    mkpath(dirname(path))
+    CSV.write(path, fits)
+end
+
+function write_sim(sim, model_name, idx, data_name="trials", results=RESULTS)
+    path = "$results/simulations/$(model_name)/$(data_name)/$idx.csv"
+    mkpath(dirname(path))
+    CSV.write(path, sim)
 end
 
 

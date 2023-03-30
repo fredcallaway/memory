@@ -51,18 +51,10 @@ end
 @everywhere human_hist = make_hist(human_fixations)
 
 @everywhere function write_sims(name, make_policies; ndt=:optimize, n_top=1)
-    top_table = deserialize("$EXP1_RESULTS/fits/$name/top")
-    exp1_top = eachrow(top_table)[1:n_top]
+    exp1_top = eachrow(load_fits(name, EXP1_RESULTS))[1:n_top]
     prms = map(exp1_top) do prm
         (;prm..., switch_cost=prm.sample_cost)
     end
-
-    trialdir = "$RESULTS/simulations/fixed_$(name)_trials"
-    fixdir = "$RESULTS/simulations/fixed_$(name)_fixations"
-    fitpath = "$RESULTS/fits/fixed_$name"
-    mkpath(trialdir)
-    mkpath(fixdir)
-    mkpath(dirname(fitpath))
 
     map(enumerate(prms)) do (i, prm)
         pre_pol, crit_pol = make_policies(prm)
@@ -77,41 +69,31 @@ end
         else
             ndt_dist = ndt  # note: untested (possibe variable scope issue)
         end
-        serialize(fitpath, (;prm..., α_ndt=ndt_dist.α, θ_ndt=ndt_dist.θ))
+        write_fits(DataFrame((;prm..., α_ndt=ndt_dist.α, θ_ndt=ndt_dist.θ)), "top", name)
 
         sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
         add_duration_noise!(sim, ndt_dist)
 
         trials = make_trials(sim); fixations = make_fixations(sim)
-        CSV.write("$trialdir/$i.csv", trials)
-        CSV.write("$fixdir/$i.csv", fixations)
+        write_sim(trials, name, i, "trials")
+        write_sim(fixations, name, i, "fixations")
     end
-    println("Wrote $trialdir")
 end
 
 function fit_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
     print_header(name)
-    fitdir = "$RESULTS/fits/$name"
-    mkpath(fitdir)
-
     prms = sample_params(box, n_init)
     hists = compute_histograms(name, make_policies, prms);
     name == "optimal" && GC.gc()  # minimimize memory usage
     tbl = compute_loss(hists, prms)
-
-    serialize("$fitdir/full", tbl)
+    write_fits(tbl, "full", name)
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_hists = compute_histograms(name, make_policies, top_prms; N=n_sim_top);
     name == "optimal" && GC.gc()  # minimimize memory usage
     top_tbl = compute_loss(top_hists, top_prms)
     display(top_tbl[1:10, :])
-    serialize("$fitdir/top", top_tbl)
-    
-    trialdir = "$RESULTS/simulations/$(name)_trials"
-    fixdir = "$RESULTS/simulations/$(name)_fixations"
-    mkpath(trialdir)
-    mkpath(fixdir)
+    write_fits(top_tbl, "top", name)
 
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:1])) do (i, row)
         prm = NamedTuple(row)
@@ -120,8 +102,8 @@ function fit_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 1
         add_duration_noise!(sim, ndt)
 
         trials = make_trials(sim); fixations = make_fixations(sim)
-        CSV.write("$trialdir/$i.csv", trials)
-        CSV.write("$fixdir/$i.csv", fixations)
+        write_sim(trials, name, i, "trials")
+        write_sim(fixations, name, i, "fixations")
     end
     top_tbl
 end
@@ -190,18 +172,6 @@ flexible_box = Box(
 
 fit_model("flexible", flexible_policies, flexible_box)
 
-# exp1_fit = @chain deserialize("$EXP1_RESULTS/fits/flexible/top") begin
-#     select([:drift_μ, :between_σ, :noise])
-#     eachrow
-#     first
-# end
-
-# fit_model("fixed_flexible", flexible_policies, modify(flexible_box; exp1_fit...))
-# %% --------
-# @chain deserialize("$RESULTS/fits/fixed_flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
-# @chain deserialize("$RESULTS/fits/flexible/top") select(Not([:threshold, :sample_cost, :switch_cost, :within_σ]))
-
-
 # %% ==================== empirical (old) ====================
 
 @everywhere begin
@@ -222,22 +192,11 @@ end
 
 # %% ==================== report parameters ====================
 
-x = deserialize("$RESULTS/fits/fixed_optimal")
+x = load_fit("fixed_optimal")
 write_tex("mle_fixed_optimal", "\\(
     \\mu_\\text{NDT} = $(fmt(0, x.α_ndt * x.θ_ndt)),\\ 
     \\alpha_\\text{NDT} = $(fmt(2, x.α_ndt))
 \\)")
-
-# x = load_fit("optimal")
-# write_tex("optimal", "\\(
-#     \\mu_0 = $(fmt(3, x.drift_µ)),\\ 
-#     \\sigma_0 = $(fmt(3, x.drift_σ)),\\ 
-#     \\sigma_x = $(fmt(3, x.noise)),\\ 
-#     \\samplecost = $(fmt(3, x.sample_cost)),\\ 
-#     \\mu_\\text{NDT} = $(fmt(0, x.α_ndt * x.θ_ndt)),\\ 
-#     \\alpha_\\text{NDT} = $(fmt(2, x.α_ndt))
-# \\)")
-
 
 x = load_fit("flexible")
 write_tex("mle_flexible", "\\(
@@ -252,13 +211,6 @@ write_tex("mle_flexible", "\\(
     \\alpha_\\text{NDT} = $(fmt(2, x.α_ndt)),\\ 
 \\)")
 
-# for name in ["optimal", "flexible"]
-#     x = load_xs(name)
-#     open("results/xs/exp2/nll_$name", "w") do f
-#         writev(f, round(Int, x.loss * nrow(human_trials)))
-#     end
-# end
-
 # %% ==================== can the null model get the effects? ====================
 
 prop_nfix(ef, num) = sum(ef.nfix[num:end]) / sum(ef.nfix)
@@ -268,10 +220,7 @@ acc = mean(human_trials_witherr.response_type .== "correct")
 function reasonable_wrapper(f)
     function wrapped(ef)
         ismissing(ef) && return -Inf
-        # abs(ef.accuracy - acc) ≤ 0.5 || return -Inf
         0.01 < ef.accuracy < 0.99 || return -Inf
-        # .05 ≤ ef.accuracy ≤ 0.95  || return -Inf
-        # 0.1 ≤ ef.accuracy || return -Inf
         prop_nfix(ef, 2) > .01 || return -Inf
         f(ef)
     end
@@ -324,7 +273,6 @@ end
 @info "final" ef.final ef.accuracy ef.rt
 write_tex("lesion_search/final", fmt_ci(ef.final))
 @assert sc > MIN_EFFECT
-# sim = simulate_exp2(flexible_policies, prm);
 
 # %% --------
 

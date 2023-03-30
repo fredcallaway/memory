@@ -31,13 +31,11 @@ get_simdir(name) = "$RESULTS/simulations/$(name)_trials"
 
 function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
     print_header(name)
-    fitdir = "$RESULTS/fits/$name/"
-    mkpath(fitdir)
 
     prms = sample_params(box, n_init)
     hists = compute_histograms(name, make_policies, prms);
     tbl = compute_loss(hists, prms)
-    serialize("$fitdir/full", tbl)
+    write_fits(tbl, "full", name)
 
     top_prms = map(NamedTuple, eachrow(tbl[1:n_top, :]));
     top_hists = compute_histograms(name, make_policies, top_prms; N=n_sim_top);
@@ -53,9 +51,10 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
         sim = simulate_exp1(make_policies, prm, n_sim_top)
         sim.rt = sim.rt .+ rand(ndt, nrow(sim))
         CSV.write("$simdir/$i.csv", sim)
+        write_sim(sim, name, i)
     end
 
-    serialize("$fitdir/top", top_tbl)
+    write_fits(top_tbl, "top", name)
     top_tbl
 end
 

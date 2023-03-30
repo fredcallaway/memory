@@ -82,12 +82,6 @@ function compute_loss(histograms, prms; sort=true)
     tbl
 end
 
-useful_columns(x) = select(x, [:drift_μ, :drift_σ, :noise, :sample_cost, :α_ndt, :θ_ndt, :loss])
-function load_fits(name, run=RUN; full=false)
-    x = deserialize("results/$(run)/fits/$name/top")
-    full ? x : useful_columns(x)
-end
-
 # %% ==================== effect fitting ====================
 
 function compute_effects(name, make_policies, prms; N=100000, read_only=false, enable_cache=true)
