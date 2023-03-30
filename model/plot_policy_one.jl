@@ -1,7 +1,7 @@
 include("plots_base.jl")
 include("exp1_base.jl")
 
-x = load_fit("optimal", "results/sep11/exp1")
+x = load_fit("optimal", "results/mar23/exp1")
 m = exp1_mdp(x)
 B = BackwardsInduction(m)
 pol = OptimalPolicy(B)
@@ -47,7 +47,7 @@ function plot_sim(i)
     plot!([1, x+1], to_idx_space.([0, x*s]), color=colors[i], lw=1, ls=:dash, arrow=true)
 end
 
-fig("exp1_policy_predictions", pdf=false, size=(600, 200), grid=false, widen=false, dpi=400) do
+figure("exp1_policy_predictions", size=(600, 200), grid=false, widen=false, dpi=400) do
     plot_policy()
     for i in eachindex(sims)
         plot_sim(i)

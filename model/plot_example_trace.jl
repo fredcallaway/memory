@@ -31,7 +31,7 @@ tracked = [1, 14, 31, 60]
 # %% ==================== accumulation ====================
 
 
-fig("accumulation1") do
+figure("accumulation1") do
     plot(size=(700, 230), xlim=(0,62), yaxis=(-8:4:8, (-11, 9)), xlab=" ", ylab=" ", widen=false)
     for (i, sim) in enumerate(sims)
 
@@ -50,7 +50,7 @@ end
 
 
 for (i, b) in enumerate(sims[1][tracked])
-    fig("b$i", widen=false, yaxis=true, size=(150,120), framestyle=:axes) do
+    figure("b$i", widen=false, yaxis=true, size=(150,120), framestyle=:axes) do
         plot!(ylim=(0,2.5), xlim=(-2,2), xticks=-2:2)
         vline!([0], color=:black, lw=1)
         plot!(posterior(m, b)[1], color=colors[1], yticks=false, yaxis=false, xlabel="strength")

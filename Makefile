@@ -10,6 +10,8 @@ sync: # sends results to the paper directory, kind of abusing make here...
 
 	rsync --delete-after --exclude *.png --exclude tmp* -av analysis/figs/$(RUN)/ $(PAPER)/figs/
 
+	rsync -av --delete-after model/figs/ $(PAPER)/model-diagram/model-figs/
+
 all:
 	cd data && make processed
 	cd model && make results/$(RUN)

@@ -1,7 +1,7 @@
 include("plots_base.jl")
 include("exp2_base.jl")
 
-prm = load_fit("optimal", "results/sep11/exp1")
+prm = load_fit("optimal", "results/mar23/exp1")
 prm = (;prm..., switch_cost=prm.sample_cost)
 m = exp2_mdp(prm)
 B = BackwardsInduction(m; verbose=true)
@@ -78,10 +78,10 @@ end
 # %% --------
 
 
-fig("exp2_policy_0", pdf=false) do
+figure("exp2_policy_0") do
     plot_predictions(-.3, 30)
 end
 
-fig("exp2_policy_1", pdf=false) do
+figure("exp2_policy_1") do
     plot_predictions(.1, 30, strong_only=true)
 end
