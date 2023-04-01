@@ -52,4 +52,6 @@ write_model = function(model, name, logistic=F, standardized=F) {
         ))        
 }
 
-fmt_percent = function(prop) glue("{round(100 * prop)}\\%")
+fmt_percent = function(prop, digits=0) {
+    glue("{round(100 * prop, digits)}\\%")
+}
