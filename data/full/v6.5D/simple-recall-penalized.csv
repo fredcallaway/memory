@@ -162,7 +162,7 @@ w480436d,truck,../static/stimuli/images/railway/sun_atutomffrubpoiva.jpg,False,0
 w594989b,ear,../static/stimuli/images/railway/sun_atutomffrubpoiva.jpg,True,0,1302.3999999761581,ear,392.10000002384186,1694.5,correct,confidence,5.0
 w594989b,egg,../static/stimuli/images/skiresort/sun_adyplaxglzqyoynb.jpg,True,0,4437.700000047684,,0.0,4437.700000047684,empty,fok,1.0
 w594989b,dog,../static/stimuli/images/volcano/sun_agobzgvhyhaxalcv.jpg,True,0,3166.399999976158,dog,370.89999997615814,3537.2999999523163,correct,confidence,5.0
-w594989b,puzzle,../static/stimuli/images/street/sun_aadhshmrjrbucdky.jpg,False,0,1799.8999999761581,idk,264.89999997615814,2064.7999999523163,intrusion,confidence,1.0
+w594989b,puzzle,../static/stimuli/images/street/sun_aadhshmrjrbucdky.jpg,False,0,1799.8999999761581,idk,264.89999997615814,2064.7999999523163,other,confidence,1.0
 w594989b,candle,../static/stimuli/images/beach/sun_abrqamdurwzygcjy.jpg,False,0,1546.2000000476837,,0.10000002384185791,1546.3000000715256,empty,fok,1.0
 w594989b,toilet,../static/stimuli/images/castle/sun_aoguwxhjirnhxsgn.jpg,False,0,6798.0,toilet,670.5,7468.5,correct,confidence,5.0
 w594989b,bed,../static/stimuli/images/ziggurat/sun_apdphtulomykrqoa.jpg,False,0,1565.6999999284744,,0.0,1565.6999999284744,empty,fok,1.0
@@ -229,7 +229,7 @@ w956a7c6,dog,../static/stimuli/images/roof/sun_atghhbuspyfvqzao.jpg,False,0,2299
 w956a7c6,door,../static/stimuli/images/warehouse/sun_aivgpdzlwqiklrwe.jpg,False,0,1350.2999999970198,,0.4000000059604645,1350.7000000029802,empty,fok,1.0
 w956a7c6,cat,../static/stimuli/images/waterfall/sun_adtiwvbnsxsyohuw.jpg,False,0,1527.8999999910593,cat,1201.300000011921,2729.2000000029802,correct,confidence,5.0
 w956a7c6,candle,../static/stimuli/images/footballfield/sun_aegayohtofbvbdoa.jpg,False,0,2158.9000000059605,,0.19999998807907104,2159.0999999940395,empty,fok,1.0
-w956a7c6,hay,../static/stimuli/images/garage/sun_dfvgejtxiljzbywb.jpg,False,0,1694.300000011921,gate,1359.3999999910593,3053.7000000029802,intrusion,confidence,1.0
+w956a7c6,hay,../static/stimuli/images/garage/sun_dfvgejtxiljzbywb.jpg,False,0,1694.300000011921,gate,1359.3999999910593,3053.7000000029802,other,confidence,1.0
 w956a7c6,bear,../static/stimuli/images/windmill/sun_arostrfeclmqdszk.jpg,False,0,1093.5,,0.4000000059604645,1093.9000000059605,empty,fok,1.0
 w956a7c6,volcano,../static/stimuli/images/subway/sun_axdrpmtfwsncbewy.jpg,False,0,888.5999999940395,,0.20000000298023224,888.7999999970198,empty,fok,1.0
 w956a7c6,bee,../static/stimuli/images/street/sun_amjwoyuxrszlicsb.jpg,False,0,876.9000000059605,,0.09999999403953552,877.0,empty,fok,1.0
@@ -344,7 +344,7 @@ wabe8957,apple,../static/stimuli/images/skiresort/sun_aqtrvlzivijhozcl.jpg,False
 wabe8957,window,../static/stimuli/images/musuem/sun_aqrchpiffnzkysmc.jpg,False,0,1280.699999988079,window,2055.2000000178814,3335.9000000059605,correct,confidence,5.0
 wabe8957,cat,../static/stimuli/images/laundryroom/sun_dgpgttfvjctszkzz.jpg,False,0,1311.2999999821186,cat,915.5,2226.7999999821186,correct,confidence,5.0
 wabe8957,bag,../static/stimuli/images/airport/sun_aqytxlpqgdgggfum.jpg,False,0,1467.0,bag,1372.300000011921,2839.300000011921,correct,confidence,5.0
-wabe8957,nut,../static/stimuli/images/temple/sun_ardesvcosqecvbes.jpg,False,0,1405.5,hut,1059.5999999940395,2465.0999999940395,correct,confidence,4.0
+wabe8957,nut,../static/stimuli/images/temple/sun_ardesvcosqecvbes.jpg,False,0,1405.5,hut,1059.5999999940395,2465.0999999940395,other,confidence,4.0
 wabe8957,jeans,../static/stimuli/images/forest/sun_aoqjnzwgdikwayvw.jpg,False,0,1420.7000000178814,,0.0,1420.7000000178814,empty,fok,1.0
 wabe8957,bee,../static/stimuli/images/railway/sun_asgcpxncztcqwiyz.jpg,False,0,1047.1000000238419,,0.0,1047.1000000238419,empty,fok,1.0
 wabe8957,bear,../static/stimuli/images/grocery/sun_attfybmngdqnppeu.jpg,False,0,1352.9000000059605,bear,1194.0,2546.9000000059605,correct,confidence,5.0
@@ -364,7 +364,7 @@ wa34842a,lawn,../static/stimuli/images/tenniscourt/sun_aczifhfuxagmsqub.jpg,True
 wa34842a,snake,../static/stimuli/images/castle/sun_aduovtnrsmdtcpie.jpg,True,0,2018.6999999284744,,0.10000002384185791,2018.7999999523163,empty,fok,2.0
 wa34842a,egg,../static/stimuli/images/musuem/sun_alsgupdkmpsptlos.jpg,False,0,1657.2000000476837,,0.0,1657.2000000476837,empty,fok,1.0
 wa34842a,truck,../static/stimuli/images/vineyard/sun_amazvkispkonazvz.jpg,False,0,1134.3000000715256,,0.19999992847442627,1134.5,empty,fok,5.0
-wa34842a,bone,../static/stimuli/images/tower/sun_afjkdsegpwxewtah.jpg,False,0,974.6999999284744,stone,865.8000000715256,1840.5,correct,confidence,4.0
+wa34842a,bone,../static/stimuli/images/tower/sun_afjkdsegpwxewtah.jpg,False,0,974.6999999284744,stone,865.8000000715256,1840.5,other,confidence,4.0
 wa34842a,window,../static/stimuli/images/railway/sun_azmvasvseueupvyd.jpg,False,0,1075.1000000238419,,0.0,1075.1000000238419,empty,fok,1.0
 wa34842a,puzzle,../static/stimuli/images/gym/sun_awvqsdkrklypaaep.jpg,False,0,924.6000000238419,puzzle,1144.6000000238419,2069.2000000476837,correct,confidence,5.0
 wa34842a,jeans,../static/stimuli/images/ziggurat/sun_aecdvzqgcesggjrp.jpg,False,0,1092.2000000476837,,0.10000002384185791,1092.3000000715256,empty,fok,1.0
@@ -391,7 +391,7 @@ wa34842a,bed,../static/stimuli/images/warehouse/sun_ahkbykndmtongifl.jpg,False,0
 wa34842a,rabbit,../static/stimuli/images/computerroom/sun_aiwdglrsrkkfbgzz.jpg,False,0,1093.8999999761581,,0.10000002384185791,1094.0,empty,fok,1.0
 wa34842a,ear,../static/stimuli/images/theater/sun_awkfdodvwaaleezx.jpg,False,0,721.0999999046326,,0.0,721.0999999046326,empty,fok,1.0
 wa34842a,cat,../static/stimuli/images/subway/sun_axdrpmtfwsncbewy.jpg,False,0,667.3999999761581,,0.0,667.3999999761581,empty,fok,1.0
-wa34842a,potato,../static/stimuli/images/restaurant/sun_ajsstbpxnharlnnf.jpg,False,0,1209.8999999761581,potatoe,1462.6000000238419,2672.5,correct,confidence,5.0
+wa34842a,potato,../static/stimuli/images/restaurant/sun_ajsstbpxnharlnnf.jpg,False,0,1209.8999999761581,potatoe,1462.6000000238419,2672.5,other,confidence,5.0
 wa34842a,cake,../static/stimuli/images/volcano/sun_agobzgvhyhaxalcv.jpg,False,0,976.8999999761581,,0.0,976.8999999761581,empty,fok,1.0
 wa34842a,fence,../static/stimuli/images/auditorium/sun_aiheutdgogkujwri.jpg,False,0,661.2000000476837,,0.0,661.2000000476837,empty,fok,1.0
 wa34842a,bee,../static/stimuli/images/campsite/sun_asbhlaoploqpjahx.jpg,False,0,955.5,bee,555.0,1510.5,correct,confidence,5.0
@@ -399,7 +399,7 @@ wa34842a,dog,../static/stimuli/images/bookstore/sun_aibnpvhkdpdnzcnz.jpg,False,0
 wa34842a,lion,../static/stimuli/images/skiresort/sun_agpfoakkwrzedbll.jpg,False,0,990.7000000476837,lion,970.7999999523163,1961.5,correct,confidence,4.0
 wa34842a,computer,../static/stimuli/images/garage/sun_delfxfnqyuiaselp.jpg,False,0,1257.2999999523163,l,1460.2999999523163,2717.5999999046326,empty,confidence,1.0
 wa34842a,bird,../static/stimuli/images/forest/sun_arwykvgzpgybhibg.jpg,False,0,1390.8999999761581,,0.0,1390.8999999761581,empty,fok,1.0
-w4284da3,puzzle,../static/stimuli/images/campsite/sun_arwteuvpegqctvcg.jpg,True,0,2815.0,tree,1039.5999999996275,3854.5999999996275,intrusion,confidence,1.0
+w4284da3,puzzle,../static/stimuli/images/campsite/sun_arwteuvpegqctvcg.jpg,True,0,2815.0,tree,1039.5999999996275,3854.5999999996275,other,confidence,1.0
 w4284da3,candle,../static/stimuli/images/warehouse/sun_aibppakephiqqqrb.jpg,True,0,1686.5,candle,1520.0,3206.5,correct,confidence,5.0
 w4284da3,lawn,../static/stimuli/images/pool/sun_aztsporcpcmiibon.jpg,True,0,1870.2000000011176,,0.09999999962747097,1870.300000000745,empty,fok,1.0
 w4284da3,hat,../static/stimuli/images/windmill/sun_adstnygbbvkhooog.jpg,False,0,1334.0999999996275,hat,688.0,2022.0999999996275,correct,confidence,5.0
@@ -427,7 +427,7 @@ w4284da3,duck,../static/stimuli/images/castle/sun_apbjjqvsvrybtdua.jpg,False,0,1
 w4284da3,fence,../static/stimuli/images/greenhouse/sun_bmzsunjewvlfjojq.jpg,False,0,1310.7000000011176,,0.0,1310.7000000011176,empty,fok,1.0
 w4284da3,toilet,../static/stimuli/images/skiresort/sun_aijypnsissxbdxyj.jpg,False,0,1446.9000000003725,toilet,1271.9000000003725,2718.800000000745,correct,confidence,5.0
 w4284da3,bear,../static/stimuli/images/gym/sun_awvqsdkrklypaaep.jpg,False,0,1357.4000000003725,bear,839.9000000003725,2197.300000000745,correct,confidence,4.0
-w4284da3,eye,../static/stimuli/images/grocery/sun_ajfkrdilcurxubxd.jpg,False,0,1566.9000000003725,honey,1224.0,2790.9000000003725,intrusion,confidence,2.0
+w4284da3,eye,../static/stimuli/images/grocery/sun_ajfkrdilcurxubxd.jpg,False,0,1566.9000000003725,honey,1224.0,2790.9000000003725,other,confidence,2.0
 w4284da3,apple,../static/stimuli/images/footballfield/sun_afihcbvbdxmnexyh.jpg,False,0,1326.300000000745,apple,1087.9000000003725,2414.2000000011176,correct,confidence,5.0
 w4284da3,door,../static/stimuli/images/subway/sun_apgdazdsggmnohcz.jpg,False,0,2205.4000000003725,,0.0,2205.4000000003725,empty,fok,2.0
 w4284da3,hay,../static/stimuli/images/house/sun_azzyyehcunxuhihg.jpg,False,0,1220.5999999996275,,0.09999999962747097,1220.699999999255,empty,fok,1.0
@@ -439,7 +439,7 @@ w4284da3,truck,../static/stimuli/images/kitchen/sun_aovnyfewezfmgwke.jpg,False,0
 w4284da3,rabbit,../static/stimuli/images/volcano/sun_axyqizdexdgrtfie.jpg,False,0,1533.5,,0.0,1533.5,empty,fok,1.0
 w4284da3,flower,../static/stimuli/images/sky/sun_aeglnxtxlevipkzh.jpg,False,0,1526.800000000745,,0.0,1526.800000000745,empty,fok,2.0
 w4284da3,pig,../static/stimuli/images/railway/sun_asgcpxncztcqwiyz.jpg,False,0,1181.300000000745,,0.0,1181.300000000745,empty,fok,1.0
-w8e71a19,bee,../static/stimuli/images/house/sun_admwlghhtfixlbsf.jpg,True,0,1223.3000001907349,farm,495.30000019073486,1718.6000003814697,intrusion,confidence,1.0
+w8e71a19,bee,../static/stimuli/images/house/sun_admwlghhtfixlbsf.jpg,True,0,1223.3000001907349,farm,495.30000019073486,1718.6000003814697,other,confidence,1.0
 w8e71a19,drink,../static/stimuli/images/skiresort/sun_aijypnsissxbdxyj.jpg,True,0,982.3999996185303,heatt,431.9000005722046,1414.3000001907349,intrusion,confidence,1.0
 w8e71a19,fence,../static/stimuli/images/beach/sun_abylvpgvhrpaxgnk.jpg,True,0,1190.8999996185303,fence,1112.5,2303.3999996185303,correct,confidence,5.0
 w8e71a19,bread,../static/stimuli/images/theater/sun_acehmgvyiimdorgz.jpg,False,0,933.6999998092651,cat,432.30000019073486,1366.0,intrusion,confidence,1.0
@@ -450,7 +450,7 @@ w8e71a19,pig,../static/stimuli/images/bookstore/sun_avsybhiblxqxcayh.jpg,False,0
 w8e71a19,flower,../static/stimuli/images/river/sun_aahjsajmsehqtuox.jpg,False,0,1247.0,volcano,728.4000005722046,1975.4000005722046,intrusion,confidence,3.0
 w8e71a19,truck,../static/stimuli/images/auditorium/sun_ahxfbcfdtvgnrivf.jpg,False,0,1118.8000001907349,volcano,719.8999996185303,1838.6999998092651,intrusion,confidence,1.0
 w8e71a19,heart,../static/stimuli/images/downtown/sun_acbmuljpyqdcboxt.jpg,False,0,902.3999996185303,hearrt,576.1000003814697,1478.5,correct,confidence,5.0
-w8e71a19,bed,../static/stimuli/images/gym/sun_auzbqfsaebhgtrig.jpg,False,0,1589.6999998092651,farm,519.8999996185303,2109.5999994277954,intrusion,confidence,1.0
+w8e71a19,bed,../static/stimuli/images/gym/sun_auzbqfsaebhgtrig.jpg,False,0,1589.6999998092651,farm,519.8999996185303,2109.5999994277954,other,confidence,1.0
 w8e71a19,toilet,../static/stimuli/images/forest/sun_avyyymflzsdrwgbe.jpg,False,0,998.3999996185303,toilet,648.9000005722046,1647.3000001907349,correct,confidence,5.0
 w8e71a19,rabbit,../static/stimuli/images/windmill/sun_alrghzshdjgnywto.jpg,False,0,982.3999996185303,rabbit,1616.0,2598.3999996185303,correct,confidence,5.0
 w8e71a19,door,../static/stimuli/images/tower/sun_afjkdsegpwxewtah.jpg,False,0,1597.8000001907349,heart,560.0999994277954,2157.8999996185303,intrusion,confidence,1.0
@@ -458,10 +458,10 @@ w8e71a19,bag,../static/stimuli/images/footballfield/sun_aadxnjugrvhqyufw.jpg,Fal
 w8e71a19,candle,../static/stimuli/images/kitchen/sun_aizcycyyvgfcdnzp.jpg,False,0,774.6999998092651,heart,679.8000001907349,1454.5,intrusion,confidence,1.0
 w8e71a19,sand,../static/stimuli/images/vineyard/sun_adcctdabyxmhioeg.jpg,False,0,798.3999996185303,sand,440.0,1238.3999996185303,correct,confidence,5.0
 w8e71a19,bone,../static/stimuli/images/sky/sun_awdlpzaohypbcfjk.jpg,False,0,798.1999998092651,bone,383.9000005722046,1182.1000003814697,correct,confidence,5.0
-w8e71a19,window,../static/stimuli/images/volcano/sun_axyqizdexdgrtfie.jpg,False,0,2463.9000005722046,edge,590.8000001907349,3054.7000007629395,intrusion,confidence,3.0
-w8e71a19,puzzle,../static/stimuli/images/restaurant/sun_aiyfhlpenzexmqoi.jpg,False,0,959.1999998092651,farm,463.19999980926514,1422.3999996185303,intrusion,confidence,1.0
-w8e71a19,computer,../static/stimuli/images/street/sun_aadhshmrjrbucdky.jpg,False,0,1013.1999998092651,farm,439.9000005722046,1453.1000003814697,intrusion,confidence,1.0
-w8e71a19,horse,../static/stimuli/images/pool/sun_antxeexzhaspkvlj.jpg,False,0,1422.8000001907349,pool,624.0,2046.8000001907349,intrusion,confidence,1.0
+w8e71a19,window,../static/stimuli/images/volcano/sun_axyqizdexdgrtfie.jpg,False,0,2463.9000005722046,edge,590.8000001907349,3054.7000007629395,other,confidence,3.0
+w8e71a19,puzzle,../static/stimuli/images/restaurant/sun_aiyfhlpenzexmqoi.jpg,False,0,959.1999998092651,farm,463.19999980926514,1422.3999996185303,other,confidence,1.0
+w8e71a19,computer,../static/stimuli/images/street/sun_aadhshmrjrbucdky.jpg,False,0,1013.1999998092651,farm,439.9000005722046,1453.1000003814697,other,confidence,1.0
+w8e71a19,horse,../static/stimuli/images/pool/sun_antxeexzhaspkvlj.jpg,False,0,1422.8000001907349,pool,624.0,2046.8000001907349,other,confidence,1.0
 w8e71a19,duck,../static/stimuli/images/musuem/sun_ayrwspiydnlwhouo.jpg,False,0,589.8000001907349,,0.10000038146972656,589.9000005722046,empty,fok,1.0
 w8e71a19,potato,../static/stimuli/images/shoppingmall/sun_asbknkxckcdqmjml.jpg,False,0,422.6000003814697,,1119.7999992370605,1542.3999996185303,empty,fok,1.0
 w8e71a19,egg,../static/stimuli/images/temple/sun_apdrdxoeskjgfrbj.jpg,False,0,942.6999998092651,egg,415.19999980926514,1357.8999996185303,correct,confidence,5.0
@@ -469,7 +469,7 @@ w8e71a19,bird,../static/stimuli/images/greenhouse/sun_aahkpmrwfcwqyfcf.jpg,False
 w8e71a19,hat,../static/stimuli/images/tenniscourt/sun_arhfignuhjkxcmvk.jpg,False,0,1398.5,hat,263.8999996185303,1662.3999996185303,correct,confidence,5.0
 w8e71a19,cat,../static/stimuli/images/subway/sun_agpnhsuccwnvcjwe.jpg,False,0,1414.1999998092651,,0.10000038146972656,1414.3000001907349,empty,fok,1.0
 w8e71a19,cake,../static/stimuli/images/ziggurat/sun_apdphtulomykrqoa.jpg,False,0,1286.8000001907349,,0.09999942779541016,1286.8999996185303,empty,fok,1.0
-w8e71a19,milk,../static/stimuli/images/railway/sun_acfjiedtgqzgvtnp.jpg,False,0,766.1000003814697,mil,471.6000003814697,1237.7000007629395,correct,confidence,5.0
+w8e71a19,milk,../static/stimuli/images/railway/sun_acfjiedtgqzgvtnp.jpg,False,0,766.1000003814697,mil,471.6000003814697,1237.7000007629395,other,confidence,5.0
 w8e71a19,hay,../static/stimuli/images/underwater/sun_aufltyunbkquxrih.jpg,False,0,910.5,milk,687.7999992370605,1598.2999992370605,intrusion,confidence,1.0
 w8e71a19,snake,../static/stimuli/images/roof/sun_asrztwexxagrlhem.jpg,False,0,959.0,snake,1504.0999994277954,2463.0999994277954,correct,confidence,5.0
 w8e71a19,jeans,../static/stimuli/images/grocery/sun_akqpikmgyzrpoilg.jpg,False,0,1534.8000001907349,,536.3000001907349,2071.1000003814697,empty,fok,1.0
@@ -480,7 +480,7 @@ w8e71a19,nut,../static/stimuli/images/laundryroom/sun_dftejcrhqzltgvmr.jpg,False
 w8e71a19,bear,../static/stimuli/images/garage/sun_deomonrjnryvglit.jpg,False,0,901.5,bear,376.0,1277.5,correct,confidence,5.0
 w8e71a19,dog,../static/stimuli/images/castle/sun_apbjjqvsvrybtdua.jpg,False,0,1087.3000001907349,,0.10000038146972656,1087.4000005722046,empty,fok,1.0
 w375eab0,fence,../static/stimuli/images/bookstore/sun_aamunjvxvlcyagxh.jpg,True,0,5839.399999991059,fence,1922.2999999970198,7761.699999988079,correct,confidence,5.0
-w375eab0,rabbit,../static/stimuli/images/subway/sun_agpnhsuccwnvcjwe.jpg,True,0,4482.5,tree,1439.0,5921.5,intrusion,confidence,2.0
+w375eab0,rabbit,../static/stimuli/images/subway/sun_agpnhsuccwnvcjwe.jpg,True,0,4482.5,tree,1439.0,5921.5,other,confidence,2.0
 w375eab0,toilet,../static/stimuli/images/forest/sun_almbxcurjahdxery.jpg,True,0,1952.3999999910593,nut,1075.4000000059605,3027.7999999970198,intrusion,confidence,3.0
 w375eab0,egg,../static/stimuli/images/skiresort/sun_adyplaxglzqyoynb.jpg,False,0,1697.2000000029802,egg,1694.9000000059605,3392.1000000089407,correct,confidence,5.0
 w375eab0,sand,../static/stimuli/images/warehouse/sun_ainoacwsquefrlbr.jpg,False,0,1170.800000011921,sand,2444.699999988079,3615.5,correct,confidence,5.0
@@ -494,7 +494,7 @@ w375eab0,nut,../static/stimuli/images/waterfall/sun_acmlcxobalurtcmq.jpg,False,0
 w375eab0,bone,../static/stimuli/images/tenniscourt/sun_avbthoqreldjpsco.jpg,False,0,1963.7999999970198,luber,1328.5999999940395,3292.3999999910593,other,confidence,1.0
 w375eab0,bed,../static/stimuli/images/temple/sun_ardesvcosqecvbes.jpg,False,0,1162.1000000089407,hat,348.3999999910593,1510.5,intrusion,confidence,1.0
 w375eab0,ear,../static/stimuli/images/castle/sun_alevmcaohaqqwlic.jpg,False,0,1556.5,hat,384.59999999403954,1941.0999999940395,intrusion,confidence,1.0
-w375eab0,eye,../static/stimuli/images/auditorium/sun_aiheutdgogkujwri.jpg,False,0,1731.6000000089407,tree,641.3999999910593,2373.0,intrusion,confidence,1.0
+w375eab0,eye,../static/stimuli/images/auditorium/sun_aiheutdgogkujwri.jpg,False,0,1731.6000000089407,tree,641.3999999910593,2373.0,other,confidence,1.0
 w375eab0,cake,../static/stimuli/images/computerroom/sun_aknbqkyjmltzjpuf.jpg,False,0,6076.199999988079,cake,591.8000000119209,6668.0,correct,confidence,2.0
 w375eab0,hay,../static/stimuli/images/restaurant/sun_afgriceqykrjokmt.jpg,False,0,1170.3999999910593,hay,431.0,1601.3999999910593,correct,confidence,5.0
 w375eab0,truck,../static/stimuli/images/pool/sun_abmafiafisngvteo.jpg,False,0,1183.0,truck,1027.7999999970198,2210.7999999970198,correct,confidence,5.0
@@ -564,7 +564,7 @@ wc540abf,duck,../static/stimuli/images/temple/sun_aaexbfhvrzmbsfus.jpg,True,0,14
 wc540abf,sand,../static/stimuli/images/computerroom/sun_azkmsfiuzzekamsy.jpg,True,0,957.2000000476837,sand,783.7000000476837,1740.9000000953674,correct,confidence,5.0
 wc540abf,cat,../static/stimuli/images/underwater/sun_azotfggtynldgbwm.jpg,False,0,1085.2999999523163,cat,335.5,1420.7999999523163,correct,confidence,5.0
 wc540abf,bear,../static/stimuli/images/waterfall/sun_ahssvsymysusmiqw.jpg,False,0,1143.5,bear,382.2999999523163,1525.7999999523163,correct,confidence,5.0
-wc540abf,snake,../static/stimuli/images/street/sun_aaeluqrkikjbtquv.jpg,False,0,951.6000001430511,snakes,558.5,1510.1000001430511,correct,confidence,5.0
+wc540abf,snake,../static/stimuli/images/street/sun_aaeluqrkikjbtquv.jpg,False,0,951.6000001430511,snakes,558.5,1510.1000001430511,other,confidence,5.0
 wc540abf,drink,../static/stimuli/images/garage/sun_dfvgejtxiljzbywb.jpg,False,0,1431.6000001430511,drink,655.5999999046326,2087.2000000476837,correct,confidence,5.0
 wc540abf,cake,../static/stimuli/images/house/sun_afejjgypgnszvwza.jpg,False,0,926.8999998569489,cake,374.7000000476837,1301.5999999046326,correct,confidence,4.0
 wc540abf,door,../static/stimuli/images/beach/sun_aawqdbpihmlbwyyn.jpg,False,0,928.0,door,389.5,1317.5,correct,confidence,5.0
@@ -572,7 +572,7 @@ wc540abf,apple,../static/stimuli/images/bookstore/sun_aibnpvhkdpdnzcnz.jpg,False
 wc540abf,truck,../static/stimuli/images/ranch/sun_axqdjxmxvxjmytiu.jpg,False,0,1039.0999999046326,truck,582.6000001430511,1621.7000000476837,correct,confidence,5.0
 wc540abf,puzzle,../static/stimuli/images/footballfield/sun_aadxnjugrvhqyufw.jpg,False,0,1028.0,puzzle,728.0999999046326,1756.0999999046326,correct,confidence,5.0
 wc540abf,jeans,../static/stimuli/images/warehouse/sun_abdmrgvlsfpsgxyu.jpg,False,0,975.1000001430511,jeans,494.7999999523163,1469.9000000953674,correct,confidence,5.0
-wc540abf,horse,../static/stimuli/images/downtown/sun_abosdjemftsczdvd.jpg,False,0,1271.3000001907349,horses,991.0,2262.300000190735,correct,confidence,3.0
+wc540abf,horse,../static/stimuli/images/downtown/sun_abosdjemftsczdvd.jpg,False,0,1271.3000001907349,horses,991.0,2262.300000190735,other,confidence,3.0
 wc540abf,dog,../static/stimuli/images/river/sun_ahmmzoezbuevqzjm.jpg,False,0,991.8999998569489,dog,1006.9000000953674,1998.7999999523163,correct,confidence,5.0
 wc540abf,heart,../static/stimuli/images/volcano/sun_atcuupfdqteblxpx.jpg,False,0,935.9000000953674,heart,558.9000000953674,1494.8000001907349,correct,confidence,5.0
 wc540abf,hay,../static/stimuli/images/grocery/sun_akqpikmgyzrpoilg.jpg,False,0,1013.7999999523163,hay,311.0,1324.7999999523163,correct,confidence,5.0
@@ -584,7 +584,7 @@ wc540abf,egg,../static/stimuli/images/roof/sun_atghhbuspyfvqzao.jpg,False,0,789.
 wc540abf,rabbit,../static/stimuli/images/theater/sun_acpdepnxayyyjqgs.jpg,False,0,1160.0999999046326,rabbit,734.6000001430511,1894.7000000476837,correct,confidence,5.0
 wc540abf,volcano,../static/stimuli/images/campsite/sun_akmknzqdbcxpznth.jpg,False,0,1296.7999999523163,volcano,885.5999999046326,2182.399999856949,correct,confidence,5.0
 wc540abf,flower,../static/stimuli/images/kitchen/sun_aqeaevwwwjoqhzvl.jpg,False,0,935.3000001907349,flower,718.5999999046326,1653.9000000953674,correct,confidence,5.0
-wc540abf,lion,../static/stimuli/images/laundryroom/sun_adldglebrfdkcxwu.jpg,False,0,895.0,lon,695.0999999046326,1590.0999999046326,correct,confidence,5.0
+wc540abf,lion,../static/stimuli/images/laundryroom/sun_adldglebrfdkcxwu.jpg,False,0,895.0,lon,695.0999999046326,1590.0999999046326,other,confidence,5.0
 wc540abf,bee,../static/stimuli/images/pool/sun_amnkmeojepioccty.jpg,False,0,1013.9000000953674,bee,352.09999990463257,1366.0,correct,confidence,5.0
 wc540abf,toilet,../static/stimuli/images/vineyard/sun_aokkqrsxsvimuubo.jpg,False,0,1165.0999999046326,toilet,672.4000000953674,1837.5,correct,confidence,5.0
 wc540abf,hat,../static/stimuli/images/skiresort/sun_agehhpppqkifjwhn.jpg,False,0,1277.7000000476837,hat,358.59999990463257,1636.2999999523163,correct,confidence,5.0
@@ -607,7 +607,7 @@ w7ec000e,apple,../static/stimuli/images/airport/sun_ammfdrzrfvjsqahx.jpg,False,0
 w7ec000e,horse,../static/stimuli/images/garage/sun_dfvgejtxiljzbywb.jpg,False,0,1596.699999999255,,0.09999999776482582,1596.7999999970198,empty,fok,1.0
 w7ec000e,bear,../static/stimuli/images/footballfield/sun_ahqkbelqgjflpbjo.jpg,False,0,1322.6000000014901,,0.0,1322.6000000014901,empty,fok,1.0
 w7ec000e,computer,../static/stimuli/images/house/sun_aacohnpwcrythslq.jpg,False,0,545.1000000014901,,0.19999999925494194,545.3000000007451,empty,fok,1.0
-w7ec000e,hay,../static/stimuli/images/sky/sun_agaqzpqhbcmmvisy.jpg,False,0,1621.8999999985099,dust,4781.20000000298,6403.10000000149,intrusion,confidence,2.0
+w7ec000e,hay,../static/stimuli/images/sky/sun_agaqzpqhbcmmvisy.jpg,False,0,1621.8999999985099,dust,4781.20000000298,6403.10000000149,other,confidence,2.0
 w7ec000e,nut,../static/stimuli/images/shoppingmall/sun_aeqagrktttxaasae.jpg,False,0,1417.0,,0.0,1417.0,empty,fok,1.0
 w7ec000e,bread,../static/stimuli/images/pool/sun_aexdaltifheurhfa.jpg,False,0,977.0,,0.09999999776482582,977.0999999977648,empty,fok,1.0
 w7ec000e,bed,../static/stimuli/images/subway/sun_agpnhsuccwnvcjwe.jpg,False,0,858.4000000022352,,0.09999999776482582,858.5,empty,fok,1.0
@@ -801,7 +801,7 @@ wf3e0b96,pig,../static/stimuli/images/musuem/sun_alsgupdkmpsptlos.jpg,False,0,12
 wf3e0b96,cake,../static/stimuli/images/vineyard/sun_azygdhuijrbfollv.jpg,False,0,3359.0,cake,1104.0999999642372,4463.099999964237,correct,confidence,3.0
 wae1d2da,ear,../static/stimuli/images/ranch/sun_acianlkkblpqgica.jpg,True,0,4727.600000023842,pig,1342.7000000476837,6070.300000071526,intrusion,confidence,2.0
 wae1d2da,lion,../static/stimuli/images/gym/sun_auzbqfsaebhgtrig.jpg,True,0,1060.6000000238419,lion,718.0,1778.6000000238419,correct,confidence,5.0
-wae1d2da,eye,../static/stimuli/images/warehouse/sun_aaawomlbokrxmfyj.jpg,True,0,938.0,eyes,1754.8999999761581,2692.899999976158,correct,confidence,4.0
+wae1d2da,eye,../static/stimuli/images/warehouse/sun_aaawomlbokrxmfyj.jpg,True,0,938.0,eyes,1754.8999999761581,2692.899999976158,other,confidence,4.0
 wae1d2da,truck,../static/stimuli/images/sky/sun_aemltyubcdmxluwx.jpg,False,0,1241.2000000476837,,0.10000002384185791,1241.3000000715256,empty,fok,1.0
 wae1d2da,sand,../static/stimuli/images/ziggurat/sun_apdphtulomykrqoa.jpg,False,0,711.3000000715256,sand,472.7999999523163,1184.1000000238419,correct,confidence,5.0
 wae1d2da,bird,../static/stimuli/images/kitchen/sun_akzumputqvdvtqbq.jpg,False,0,1667.1999999284744,,0.0,1667.1999999284744,empty,fok,1.0
@@ -820,7 +820,7 @@ wae1d2da,pig,../static/stimuli/images/campsite/sun_amejpvolcgftwwch.jpg,False,0,
 wae1d2da,volcano,../static/stimuli/images/railway/sun_axeddylwawkspiuo.jpg,False,0,1060.3999999761581,volcano,801.2999999523163,1861.6999999284744,correct,confidence,5.0
 wae1d2da,rabbit,../static/stimuli/images/greenhouse/sun_apjhtwdcpezmnlze.jpg,False,0,1165.2000000476837,rabbit,985.3999999761581,2150.600000023842,correct,confidence,3.0
 wae1d2da,puzzle,../static/stimuli/images/computerroom/sun_azkmsfiuzzekamsy.jpg,False,0,951.6000000238419,puzzle,623.7999999523163,1575.3999999761581,correct,confidence,5.0
-wae1d2da,heart,../static/stimuli/images/shoppingmall/sun_abmhoudmvlbwstuf.jpg,False,0,789.0,love,417.89999997615814,1206.8999999761581,intrusion,confidence,5.0
+wae1d2da,heart,../static/stimuli/images/shoppingmall/sun_abmhoudmvlbwstuf.jpg,False,0,789.0,love,417.89999997615814,1206.8999999761581,other,confidence,5.0
 wae1d2da,bear,../static/stimuli/images/garage/sun_daivjtyepudsqerl.jpg,False,0,1171.4000000953674,bear,450.39999997615814,1621.8000000715256,correct,confidence,5.0
 wae1d2da,jeans,../static/stimuli/images/pool/sun_argikopryamoycho.jpg,False,0,1261.5,,0.0,1261.5,empty,fok,1.0
 wae1d2da,hat,../static/stimuli/images/laundryroom/sun_aamwlajirwqjrbun.jpg,False,0,937.2999999523163,hat,308.7999999523163,1246.0999999046326,correct,confidence,5.0
@@ -929,14 +929,14 @@ w508cd41,door,../static/stimuli/images/airport/sun_axyoqqhxaeocbixs.jpg,False,0,
 w508cd41,heart,../static/stimuli/images/sky/sun_aeglnxtxlevipkzh.jpg,False,0,2071.0,,0.0,2071.0,empty,fok,1.0
 w508cd41,flower,../static/stimuli/images/house/sun_aswyksckmfyarwfk.jpg,False,0,1199.9999999998836,,0.0,1199.9999999998836,empty,fok,1.0
 w508cd41,nut,../static/stimuli/images/windmill/sun_aagvxopinmvnjsdt.jpg,False,0,2069.0,nut,256.0,2325.0,correct,confidence,5.0
-w508cd41,drink,../static/stimuli/images/tenniscourt/sun_ayyvmiocpgbwlgot.jpg,False,0,5834.0,rain,300.0,6134.0,intrusion,confidence,1.0
+w508cd41,drink,../static/stimuli/images/tenniscourt/sun_ayyvmiocpgbwlgot.jpg,False,0,5834.0,rain,300.0,6134.0,other,confidence,1.0
 w508cd41,rabbit,../static/stimuli/images/greenhouse/sun_bncgstrupskxwget.jpg,False,0,2337.9999999998836,rabbit,481.0,2818.9999999998836,correct,confidence,5.0
 w508cd41,cake,../static/stimuli/images/shoppingmall/sun_aqmgjlthiepxfbtd.jpg,False,0,1111.0,,0.0,1111.0,empty,fok,1.0
 w508cd41,apple,../static/stimuli/images/warehouse/sun_aadtsgkouwrqwvwl.jpg,False,0,1139.0,apple,570.0,1709.0,correct,confidence,5.0
 w508cd41,bird,../static/stimuli/images/beach/sun_abrqamdurwzygcjy.jpg,False,0,1545.9999999998836,,0.0,1545.9999999998836,empty,fok,1.0
 w508cd41,candle,../static/stimuli/images/grocery/sun_akqpikmgyzrpoilg.jpg,False,0,1036.0,,0.0,1036.0,empty,fok,1.0
 w508cd41,fence,../static/stimuli/images/railway/sun_axeddylwawkspiuo.jpg,False,0,4836.0,,0.0,4836.0,empty,fok,1.0
-w508cd41,potato,../static/stimuli/images/subway/sun_axdrpmtfwsncbewy.jpg,False,0,2879.0000000001164,pot,1020.9999999998836,3900.0,intrusion,confidence,4.0
+w508cd41,potato,../static/stimuli/images/subway/sun_axdrpmtfwsncbewy.jpg,False,0,2879.0000000001164,pot,1020.9999999998836,3900.0,other,confidence,4.0
 w508cd41,hat,../static/stimuli/images/ziggurat/sun_aenpmgoxmkmwaoiq.jpg,False,0,2447.0,,0.0,2447.0,empty,fok,1.0
 w508cd41,lion,../static/stimuli/images/vineyard/sun_agfdrmftdzokxtnc.jpg,False,0,2564.0,lion,660.0,3224.0,correct,confidence,5.0
 w508cd41,snake,../static/stimuli/images/street/sun_amjwoyuxrszlicsb.jpg,False,0,1126.0,,0.0,1126.0,empty,fok,1.0
@@ -952,9 +952,9 @@ w508cd41,bee,../static/stimuli/images/underwater/sun_asqdtehokuizoxnq.jpg,False,
 w508cd41,computer,../static/stimuli/images/castle/sun_aduovtnrsmdtcpie.jpg,False,0,1603.9999999998836,computer,615.0,2218.9999999998836,correct,confidence,5.0
 w508cd41,toilet,../static/stimuli/images/computerroom/sun_aiwdglrsrkkfbgzz.jpg,False,0,1814.0,toilet,524.0,2338.0,correct,confidence,5.0
 w508cd41,milk,../static/stimuli/images/waterfall/sun_ahssvsymysusmiqw.jpg,False,0,1034.0,,1.0,1035.0,empty,fok,1.0
-w508cd41,hay,../static/stimuli/images/river/sun_atesawsfypjpyefy.jpg,False,0,2024.0,day,180.0,2204.0,correct,confidence,5.0
+w508cd41,hay,../static/stimuli/images/river/sun_atesawsfypjpyefy.jpg,False,0,2024.0,day,180.0,2204.0,other,confidence,5.0
 w508cd41,truck,../static/stimuli/images/theater/sun_augboomebjfniikq.jpg,False,0,3433.9999999998836,truck,511.0,3944.9999999998836,correct,confidence,5.0
-w508cd41,dog,../static/stimuli/images/ranch/sun_atkydlwjcpmattts.jpg,False,0,2009.0,day,210.0,2219.0,intrusion,confidence,5.0
+w508cd41,dog,../static/stimuli/images/ranch/sun_atkydlwjcpmattts.jpg,False,0,2009.0,day,210.0,2219.0,other,confidence,5.0
 w508cd41,pig,../static/stimuli/images/bookstore/sun_aalyndhausktwxbc.jpg,False,0,3254.0,pig,241.0,3495.0,correct,confidence,5.0
 w508cd41,eye,../static/stimuli/images/downtown/sun_bubeehcgngkyqymr.jpg,False,0,1468.9999999998836,eye,255.0,1723.9999999998836,correct,confidence,5.0
 w508cd41,bear,../static/stimuli/images/musuem/sun_alsgupdkmpsptlos.jpg,False,0,885.0,,0.0,885.0,empty,fok,1.0
@@ -1050,7 +1050,7 @@ wb488c8b,cat,../static/stimuli/images/pool/sun_aexdaltifheurhfa.jpg,False,0,1466
 wb488c8b,toilet,../static/stimuli/images/tenniscourt/sun_aczifhfuxagmsqub.jpg,False,0,1253.2999999821186,,0.0,1253.2999999821186,empty,fok,1.0
 wb488c8b,hat,../static/stimuli/images/vineyard/sun_apdbcyzwitltnzyz.jpg,False,0,1420.699999988079,hat,1127.0,2547.699999988079,correct,confidence,4.0
 wb488c8b,snake,../static/stimuli/images/downtown/sun_ahwvhnliokuzkazb.jpg,False,0,1395.300000011921,window,1262.2999999821186,2657.5999999940395,intrusion,confidence,2.0
-wb488c8b,bear,../static/stimuli/images/windmill/sun_acijpcruwskdzwbx.jpg,False,0,1223.800000011921,cow,680.9000000059605,1904.7000000178814,intrusion,confidence,2.0
+wb488c8b,bear,../static/stimuli/images/windmill/sun_acijpcruwskdzwbx.jpg,False,0,1223.800000011921,cow,680.9000000059605,1904.7000000178814,other,confidence,2.0
 wb488c8b,potato,../static/stimuli/images/gym/sun_agptlflfgabhuxym.jpg,False,0,1220.300000011921,potato,4091.7999999821186,5312.0999999940395,correct,confidence,5.0
 wb488c8b,bone,../static/stimuli/images/forest/sun_arwykvgzpgybhibg.jpg,False,0,1697.7999999821186,,0.10000002384185791,1697.9000000059605,empty,fok,1.0
 wb488c8b,sand,../static/stimuli/images/theater/sun_atelpfsrkdqaoyph.jpg,False,0,1548.699999988079,sand,2197.800000011921,3746.5,correct,confidence,5.0
@@ -1126,7 +1126,7 @@ w48e45bb,eye,../static/stimuli/images/greenhouse/sun_bmzsunjewvlfjojq.jpg,False,
 w48e45bb,nut,../static/stimuli/images/volcano/sun_axyqizdexdgrtfie.jpg,False,0,1465.0,nut,1753.0,3218.0,correct,confidence,5.0
 w48e45bb,lion,../static/stimuli/images/skiresort/sun_aqtrvlzivijhozcl.jpg,False,0,3277.0,,0.0,3277.0,empty,fok,1.0
 w48e45bb,cat,../static/stimuli/images/vineyard/sun_aokkqrsxsvimuubo.jpg,False,0,1352.0,cat,1857.0,3209.0,correct,confidence,5.0
-w48e45bb,lawn,../static/stimuli/images/street/sun_aaeluqrkikjbtquv.jpg,False,0,1658.0,lane,2456.0,4114.0,correct,confidence,2.0
+w48e45bb,lawn,../static/stimuli/images/street/sun_aaeluqrkikjbtquv.jpg,False,0,1658.0,lane,2456.0,4114.0,other,confidence,2.0
 w48e45bb,rabbit,../static/stimuli/images/castle/sun_aieefrkagxyksfuj.jpg,False,0,2319.0,,0.0,2319.0,empty,fok,1.0
 w48e45bb,bed,../static/stimuli/images/laundryroom/sun_acnrhsgylwftewpq.jpg,False,0,1521.0,,0.0,1521.0,empty,fok,1.0
 w48e45bb,fence,../static/stimuli/images/roof/sun_aqhqmhidvlrpfhie.jpg,False,0,1534.0,,0.0,1534.0,empty,fok,1.0
@@ -1155,7 +1155,7 @@ w48e45bb,bread,../static/stimuli/images/shoppingmall/sun_asbknkxckcdqmjml.jpg,Fa
 w48e45bb,bag,../static/stimuli/images/musuem/sun_aspbwvercyqvrrkn.jpg,False,0,1148.0,,0.0,1148.0,empty,fok,1.0
 w48e45bb,snake,../static/stimuli/images/river/sun_aztombwyhubhaynq.jpg,False,0,1400.0,snake,3470.0,4870.0,correct,confidence,5.0
 w48e45bb,hat,../static/stimuli/images/grocery/sun_afjotbibjndyibuy.jpg,False,0,3863.0,,0.0,3863.0,empty,fok,1.0
-w48e45bb,hay,../static/stimuli/images/auditorium/sun_amnlhuknqqtssrhl.jpg,False,0,1929.0,hye,1585.0,3514.0,intrusion,confidence,1.0
+w48e45bb,hay,../static/stimuli/images/auditorium/sun_amnlhuknqqtssrhl.jpg,False,0,1929.0,hye,1585.0,3514.0,other,confidence,1.0
 w48e45bb,heart,../static/stimuli/images/sky/sun_agpvigtqjmmxbzwp.jpg,False,0,1502.0,,0.0,1502.0,empty,fok,1.0
 w48e45bb,egg,../static/stimuli/images/tower/sun_aqbekeygojzsbcsp.jpg,False,0,1308.0,,0.0,1308.0,empty,fok,1.0
 w48e45bb,bear,../static/stimuli/images/ranch/sun_airsfxbouimobamd.jpg,False,0,1260.0,bear,2113.0,3373.0,correct,confidence,5.0
@@ -1165,7 +1165,7 @@ w0185152,sand,../static/stimuli/images/tenniscourt/sun_akifkmvcnuzulsxa.jpg,True
 w0185152,door,../static/stimuli/images/castle/sun_aoguwxhjirnhxsgn.jpg,False,0,5502.899999856949,door,751.9000000953674,6254.799999952316,correct,confidence,4.0
 w0185152,toilet,../static/stimuli/images/restaurant/sun_ajsstbpxnharlnnf.jpg,False,0,6294.299999952316,toilet,1359.7999999523163,7654.099999904633,correct,confidence,5.0
 w0185152,lion,../static/stimuli/images/volcano/sun_aacjsxcwmkbgvpmb.jpg,False,0,1246.7999999523163,lion,1376.0999999046326,2622.899999856949,correct,confidence,5.0
-w0185152,duck,../static/stimuli/images/gym/sun_abcjjambqjxedqdv.jpg,False,0,8117.0,hate,1167.8999998569489,9284.899999856949,intrusion,confidence,1.0
+w0185152,duck,../static/stimuli/images/gym/sun_abcjjambqjxedqdv.jpg,False,0,8117.0,hate,1167.8999998569489,9284.899999856949,other,confidence,1.0
 w0185152,truck,../static/stimuli/images/downtown/sun_aljrvcabwnwkorml.jpg,False,0,6078.899999856949,,2215.9000000953674,8294.799999952316,empty,fok,1.0
 w0185152,bee,../static/stimuli/images/bookstore/sun_aamunjvxvlcyagxh.jpg,False,0,,,,,timeout,,
 w0185152,snake,../static/stimuli/images/sky/sun_ampvdpptptmciwok.jpg,False,0,2069.4000000953674,snake,1504.1999998092651,3573.5999999046326,correct,confidence,5.0
@@ -1204,7 +1204,7 @@ w1322d2e,hay,../static/stimuli/images/campsite/sun_asbhlaoploqpjahx.jpg,True,0,5
 w1322d2e,bear,../static/stimuli/images/footballfield/sun_bxvamckmwplxbzxz.jpg,True,0,1516.8999999761581,bear,482.10000002384186,1999.0,correct,confidence,5.0
 w1322d2e,door,../static/stimuli/images/ranch/sun_ayvjppkciavpdbhs.jpg,False,0,1313.5,door,569.1000000238419,1882.6000000238419,correct,confidence,5.0
 w1322d2e,nut,../static/stimuli/images/forest/sun_abvrazjxgpqhvszy.jpg,False,0,1787.3999999761581,nut,527.1000000238419,2314.5,correct,confidence,3.0
-w1322d2e,sand,../static/stimuli/images/computerroom/sun_atznfxhjiiugbvxi.jpg,False,0,803.1000000238419,stand,722.0,1525.1000000238419,correct,confidence,5.0
+w1322d2e,sand,../static/stimuli/images/computerroom/sun_atznfxhjiiugbvxi.jpg,False,0,803.1000000238419,stand,722.0,1525.1000000238419,other,confidence,5.0
 w1322d2e,computer,../static/stimuli/images/auditorium/sun_almcaxysfdwizxac.jpg,False,0,959.2000000476837,computer,1319.5,2278.7000000476837,correct,confidence,2.0
 w1322d2e,bee,../static/stimuli/images/temple/sun_asirkyjruyeentuc.jpg,False,0,945.0,bee,884.7999999523163,1829.7999999523163,correct,confidence,2.0
 w1322d2e,flower,../static/stimuli/images/shoppingmall/sun_attlobbjfpnyzslo.jpg,False,0,1107.1000000238419,flower,866.6000000238419,1973.7000000476837,correct,confidence,5.0
@@ -1324,7 +1324,7 @@ we3c4461,bear,../static/stimuli/images/tower/sun_augaqwzgrksvvsgf.jpg,True,0,273
 we3c4461,rabbit,../static/stimuli/images/warehouse/sun_abqmsdjgfgnjjgzm.jpg,True,0,2741.600000023842,,0.10000002384185791,2741.7000000476837,empty,fok,1.0
 we3c4461,fence,../static/stimuli/images/theater/sun_acehmgvyiimdorgz.jpg,False,0,1190.800000011921,,1270.7999999523163,2461.599999964237,empty,fok,1.0
 we3c4461,snake,../static/stimuli/images/pool/sun_antxeexzhaspkvlj.jpg,False,0,1197.199999988079,,0.0,1197.199999988079,empty,fok,2.0
-we3c4461,window,../static/stimuli/images/downtown/sun_ahtmvwmmrlbrfchd.jpg,False,0,1087.6000000238419,windows,911.0,1998.6000000238419,correct,confidence,5.0
+we3c4461,window,../static/stimuli/images/downtown/sun_ahtmvwmmrlbrfchd.jpg,False,0,1087.6000000238419,windows,911.0,1998.6000000238419,other,confidence,5.0
 we3c4461,egg,../static/stimuli/images/bookstore/sun_aauabdbreuzsnnrv.jpg,False,0,1126.7999999523163,1,327.0,1453.7999999523163,empty,confidence,1.0
 we3c4461,ear,../static/stimuli/images/skiresort/sun_aqtrvlzivijhozcl.jpg,False,0,725.8999999761581,,0.0,725.8999999761581,empty,fok,2.0
 we3c4461,volcano,../static/stimuli/images/beach/sun_abylvpgvhrpaxgnk.jpg,False,0,1445.199999988079,,0.0,1445.199999988079,empty,fok,1.0
@@ -1332,7 +1332,7 @@ we3c4461,candle,../static/stimuli/images/temple/sun_aapfmtbuxevwbxck.jpg,False,0
 we3c4461,horse,../static/stimuli/images/computerroom/sun_azkmsfiuzzekamsy.jpg,False,0,845.5,,0.09999996423721313,845.5999999642372,empty,fok,1.0
 we3c4461,pig,../static/stimuli/images/underwater/sun_asqdtehokuizoxnq.jpg,False,0,1007.0,pig,486.89999997615814,1493.8999999761581,correct,confidence,5.0
 we3c4461,drink,../static/stimuli/images/campsite/sun_akmknzqdbcxpznth.jpg,False,0,1277.0,,0.10000002384185791,1277.1000000238419,empty,fok,2.0
-we3c4461,heart,../static/stimuli/images/airport/sun_aajqjnzswlmdcmyl.jpg,False,0,1126.199999988079,love,559.8000000119209,1686.0,intrusion,confidence,5.0
+we3c4461,heart,../static/stimuli/images/airport/sun_aajqjnzswlmdcmyl.jpg,False,0,1126.199999988079,love,559.8000000119209,1686.0,other,confidence,5.0
 we3c4461,hat,../static/stimuli/images/garage/sun_dqhbnkldvcwhjinp.jpg,False,0,1061.800000011921,hat,390.80000001192093,1452.6000000238419,correct,confidence,5.0
 we3c4461,hay,../static/stimuli/images/house/sun_awyiuqdptibtzfuh.jpg,False,0,1037.699999988079,,0.0,1037.699999988079,empty,fok,2.0
 we3c4461,bread,../static/stimuli/images/grocery/sun_acmmgshfrxgopxlk.jpg,False,0,1221.3999999761581,,0.0,1221.3999999761581,empty,fok,1.0
@@ -1358,7 +1358,7 @@ we3c4461,sand,../static/stimuli/images/ranch/sun_atkydlwjcpmattts.jpg,False,0,60
 we3c4461,apple,../static/stimuli/images/greenhouse/sun_bmnxsjsqwqcaluzf.jpg,False,0,855.6000000238419,apple,783.1999999880791,1638.800000011921,correct,confidence,3.0
 we3c4461,lion,../static/stimuli/images/footballfield/sun_aszinldqqvnpmwfh.jpg,False,0,2068.599999964237,,0.0,2068.599999964237,empty,fok,1.0
 we3c4461,jeans,../static/stimuli/images/musuem/sun_alsgupdkmpsptlos.jpg,False,0,1063.0,jeans,614.6999999880791,1677.699999988079,correct,confidence,5.0
-we3c4461,bag,../static/stimuli/images/castle/sun_aoguwxhjirnhxsgn.jpg,False,0,1038.7000000476837,big,391.0,1429.7000000476837,correct,confidence,1.0
+we3c4461,bag,../static/stimuli/images/castle/sun_aoguwxhjirnhxsgn.jpg,False,0,1038.7000000476837,big,391.0,1429.7000000476837,other,confidence,1.0
 w97a1598,horse,../static/stimuli/images/volcano/sun_aojnxwnexkwltvvx.jpg,True,0,1736.0,horse,549.0,2285.0,correct,confidence,5.0
 w97a1598,potato,../static/stimuli/images/gym/sun_akhyzejtqpynaepu.jpg,True,0,1745.0,potato,742.0,2487.0,correct,confidence,5.0
 w97a1598,door,../static/stimuli/images/windmill/sun_acijpcruwskdzwbx.jpg,True,0,743.0,door,495.0,1238.0,correct,confidence,5.0
@@ -1405,24 +1405,24 @@ w037ce03,eye,../static/stimuli/images/vineyard/sun_aokkqrsxsvimuubo.jpg,True,0,1
 w037ce03,ear,../static/stimuli/images/river/sun_aahjsajmsehqtuox.jpg,False,0,1617.8999999761581,winter,1893.0,3510.899999976158,other,confidence,1.0
 w037ce03,truck,../static/stimuli/images/tower/sun_augaqwzgrksvvsgf.jpg,False,0,2042.5,clock,1567.5999999642372,3610.099999964237,other,confidence,4.0
 w037ce03,puzzle,../static/stimuli/images/grocery/sun_attfybmngdqnppeu.jpg,False,0,2157.2999999523163,grocery aisle,7030.400000035763,9187.699999988079,other,confidence,4.0
-w037ce03,duck,../static/stimuli/images/gym/sun_auzbqfsaebhgtrig.jpg,False,0,1315.5,gym,937.3000000119209,2252.800000011921,intrusion,confidence,5.0
+w037ce03,duck,../static/stimuli/images/gym/sun_auzbqfsaebhgtrig.jpg,False,0,1315.5,gym,937.3000000119209,2252.800000011921,other,confidence,5.0
 w037ce03,door,../static/stimuli/images/street/sun_agtpyiscmdidhpgk.jpg,False,0,1650.5,big city,4093.199999988079,5743.699999988079,other,confidence,4.0
 w037ce03,bread,../static/stimuli/images/downtown/sun_acbmuljpyqdcboxt.jpg,False,0,1855.4000000357628,downtown,6418.599999964237,8274.0,other,confidence,5.0
 w037ce03,bee,../static/stimuli/images/subway/sun_amwmhabnpkxinmtz.jpg,False,0,1445.1000000238419,subway,1976.199999988079,3421.300000011921,other,confidence,5.0
-w037ce03,volcano,../static/stimuli/images/shoppingmall/sun_avicxzccipgymejx.jpg,False,0,1420.1000000238419,mall,1225.8999999761581,2646.0,intrusion,confidence,4.0
+w037ce03,volcano,../static/stimuli/images/shoppingmall/sun_avicxzccipgymejx.jpg,False,0,1420.1000000238419,mall,1225.8999999761581,2646.0,other,confidence,4.0
 w037ce03,horse,../static/stimuli/images/sky/sun_aemltyubcdmxluwx.jpg,False,0,1467.5,clouds,1747.8999999761581,3215.399999976158,other,confidence,5.0
 w037ce03,snake,../static/stimuli/images/bookstore/sun_avqoszezjldwidcy.jpg,False,0,1154.699999988079,library,2692.199999988079,3846.899999976158,other,confidence,5.0
 w037ce03,jeans,../static/stimuli/images/campsite/sun_arbodmznqjwtkkya.jpg,False,0,1035.0,camping,2807.399999976158,3842.399999976158,other,confidence,5.0
 w037ce03,heart,../static/stimuli/images/greenhouse/sun_apjhtwdcpezmnlze.jpg,False,0,1982.0,museum,6642.100000023842,8624.100000023842,other,confidence,4.0
 w037ce03,pig,../static/stimuli/images/computerroom/sun_ajcvdokgzllibdsg.jpg,False,0,1764.7999999523163,computer lab,3826.100000023842,5590.899999976158,other,confidence,5.0
-w037ce03,cake,../static/stimuli/images/house/sun_aswyksckmfyarwfk.jpg,False,0,1425.800000011921,house,1588.199999988079,3014.0,intrusion,confidence,5.0
+w037ce03,cake,../static/stimuli/images/house/sun_aswyksckmfyarwfk.jpg,False,0,1425.800000011921,house,1588.199999988079,3014.0,other,confidence,5.0
 w037ce03,window,../static/stimuli/images/tenniscourt/sun_avbthoqreldjpsco.jpg,False,0,1120.1000000238419,tennis score,2923.399999976158,4043.5,other,confidence,5.0
 w037ce03,dog,../static/stimuli/images/temple/sun_asirkyjruyeentuc.jpg,False,0,1311.4000000357628,chinese temple,7664.399999976158,8975.800000011921,other,confidence,5.0
-w037ce03,milk,../static/stimuli/images/beach/sun_aatjakozddkxujut.jpg,False,0,1310.5,beach,1643.1000000238419,2953.600000023842,intrusion,confidence,5.0
+w037ce03,milk,../static/stimuli/images/beach/sun_aatjakozddkxujut.jpg,False,0,1310.5,beach,1643.1000000238419,2953.600000023842,other,confidence,5.0
 w037ce03,nut,../static/stimuli/images/laundryroom/sun_aenyfwnevttqnhhe.jpg,False,0,1175.699999988079,laundry,2281.099999964237,3456.7999999523163,other,confidence,5.0
-w037ce03,apple,../static/stimuli/images/roof/sun_atghhbuspyfvqzao.jpg,False,0,1144.7999999523163,roof,1344.4000000357628,2489.199999988079,intrusion,confidence,5.0
+w037ce03,apple,../static/stimuli/images/roof/sun_atghhbuspyfvqzao.jpg,False,0,1144.7999999523163,roof,1344.4000000357628,2489.199999988079,other,confidence,5.0
 w037ce03,bear,../static/stimuli/images/airport/sun_axuntpkgfijknxde.jpg,False,0,1082.199999988079,airport,2537.600000023842,3619.800000011921,other,confidence,5.0
-w037ce03,bed,../static/stimuli/images/ranch/sun_atkydlwjcpmattts.jpg,False,0,1191.1000000238419,farm,1134.7999999523163,2325.899999976158,intrusion,confidence,5.0
+w037ce03,bed,../static/stimuli/images/ranch/sun_atkydlwjcpmattts.jpg,False,0,1191.1000000238419,farm,1134.7999999523163,2325.899999976158,other,confidence,5.0
 w037ce03,toilet,../static/stimuli/images/waterfall/sun_amyxrbqiudksvqun.jpg,False,0,1558.699999988079,waterfalls,5044.0,6602.699999988079,other,confidence,5.0
 w037ce03,drink,../static/stimuli/images/footballfield/sun_aszinldqqvnpmwfh.jpg,False,0,1860.0,football stadium,5889.700000047684,7749.700000047684,other,confidence,5.0
 w037ce03,egg,../static/stimuli/images/forest/sun_avyyymflzsdrwgbe.jpg,False,0,2637.699999988079,falls tree,9472.300000011921,12110.0,other,confidence,4.0
@@ -1433,7 +1433,7 @@ w037ce03,potato,../static/stimuli/images/windmill/sun_avyfornqjbraqqsf.jpg,False
 w037ce03,rabbit,../static/stimuli/images/railway/sun_aqlgoveofhhmvrdh.jpg,False,0,1148.800000011921,train,1167.0999999642372,2315.899999976158,other,confidence,5.0
 w037ce03,cat,../static/stimuli/images/musuem/sun_argfiirfjlkefabp.jpg,False,0,1388.5,art gallery,3355.5,4744.0,other,confidence,5.0
 w037ce03,flower,../static/stimuli/images/auditorium/sun_aiheutdgogkujwri.jpg,False,0,1523.6000000238419,theater,2662.399999976158,4186.0,other,confidence,5.0
-w037ce03,hat,../static/stimuli/images/pool/sun_abmafiafisngvteo.jpg,False,0,1196.800000011921,pool,1380.800000011921,2577.600000023842,intrusion,confidence,5.0
+w037ce03,hat,../static/stimuli/images/pool/sun_abmafiafisngvteo.jpg,False,0,1196.800000011921,pool,1380.800000011921,2577.600000023842,other,confidence,5.0
 w037ce03,bag,../static/stimuli/images/kitchen/sun_akzumputqvdvtqbq.jpg,False,0,1539.300000011921,kitchen,1953.699999988079,3493.0,other,confidence,5.0
 w037ce03,bone,../static/stimuli/images/underwater/sun_azotfggtynldgbwm.jpg,False,0,1515.2000000476837,fish in the ocean,3778.5,5293.700000047684,other,confidence,5.0
 w037ce03,bird,../static/stimuli/images/theater/sun_ahtaknlqeslujgbq.jpg,False,0,1372.5999999642372,theater,2893.100000023842,4265.699999988079,other,confidence,5.0
@@ -1453,7 +1453,7 @@ wc0ee046,bone,../static/stimuli/images/house/sun_awvfftwqwfbjqmmu.jpg,False,0,10
 wc0ee046,potato,../static/stimuli/images/pool/sun_argikopryamoycho.jpg,False,0,1045.2999999523163,potato,1109.800000011921,2155.099999964237,correct,confidence,5.0
 wc0ee046,egg,../static/stimuli/images/sky/sun_ampvdpptptmciwok.jpg,False,0,838.8000000119209,egg,891.3000000119209,1730.1000000238419,correct,confidence,5.0
 wc0ee046,puzzle,../static/stimuli/images/grocery/sun_acmmgshfrxgopxlk.jpg,False,0,1372.8999999761581,,0.0,1372.8999999761581,empty,fok,1.0
-wc0ee046,lawn,../static/stimuli/images/ziggurat/sun_aenpmgoxmkmwaoiq.jpg,False,0,1074.1000000238419,lava,916.1999999880791,1990.300000011921,correct,confidence,3.0
+wc0ee046,lawn,../static/stimuli/images/ziggurat/sun_aenpmgoxmkmwaoiq.jpg,False,0,1074.1000000238419,lava,916.1999999880791,1990.300000011921,other,confidence,3.0
 wc0ee046,milk,../static/stimuli/images/street/sun_aqzrscvtljhimvtf.jpg,False,0,1094.0,,0.0,1094.0,empty,fok,1.0
 wc0ee046,heart,../static/stimuli/images/garage/sun_deomonrjnryvglit.jpg,False,0,1018.0999999642372,heart,1009.7000000476837,2027.800000011921,correct,confidence,5.0
 wc0ee046,dog,../static/stimuli/images/downtown/sun_bzwgvgvsqqpbjfwc.jpg,False,0,973.2000000476837,,0.0,973.2000000476837,empty,fok,1.0
@@ -1521,7 +1521,7 @@ wfada924,volcano,../static/stimuli/images/campsite/sun_agjhcohmxuuaimig.jpg,Fals
 wfada924,bee,../static/stimuli/images/gym/sun_aljefikdfqefidfc.jpg,False,0,756.0,bee,502.40000000037253,1258.4000000003725,correct,confidence,5.0
 w0c7e0ff,bone,../static/stimuli/images/castle/sun_alevmcaohaqqwlic.jpg,True,0,2396.0,,0.0,2396.0,empty,fok,1.0
 w0c7e0ff,horse,../static/stimuli/images/footballfield/sun_aegayohtofbvbdoa.jpg,True,0,1478.0,,0.0,1478.0,empty,fok,1.0
-w0c7e0ff,egg,../static/stimuli/images/ranch/sun_amqejeymhjlanyvr.jpg,True,0,4220.0,eggs,1606.0,5826.0,correct,confidence,5.0
+w0c7e0ff,egg,../static/stimuli/images/ranch/sun_amqejeymhjlanyvr.jpg,True,0,4220.0,eggs,1606.0,5826.0,other,confidence,5.0
 w0c7e0ff,bee,../static/stimuli/images/forest/sun_arwykvgzpgybhibg.jpg,False,0,1255.0,,0.0,1255.0,empty,fok,1.0
 w0c7e0ff,dog,../static/stimuli/images/bookstore/sun_aauabdbreuzsnnrv.jpg,False,0,1583.0,dog,1778.0,3361.0,correct,confidence,5.0
 w0c7e0ff,toilet,../static/stimuli/images/river/sun_awyqyxlrmqvjlwnd.jpg,False,0,2579.0000000001164,toilet,2281.9999999998836,4861.0,correct,confidence,5.0
@@ -1579,7 +1579,7 @@ w066f11e,truck,../static/stimuli/images/gym/sun_abcjjambqjxedqdv.jpg,False,0,976
 w066f11e,bed,../static/stimuli/images/beach/sun_abrqamdurwzygcjy.jpg,False,0,3486.0,,0.0,3486.0,empty,fok,3.0
 w066f11e,lion,../static/stimuli/images/tower/sun_avnkmtvvzgltezto.jpg,False,0,1172.0,,0.0,1172.0,empty,fok,1.0
 w066f11e,hay,../static/stimuli/images/windmill/sun_arostrfeclmqdszk.jpg,False,0,1215.0,hay,882.0,2097.0,correct,confidence,2.0
-w066f11e,door,../static/stimuli/images/grocery/sun_ahmoznrxomkgrris.jpg,False,0,2935.0,meat,835.0,3770.0,intrusion,confidence,2.0
+w066f11e,door,../static/stimuli/images/grocery/sun_ahmoznrxomkgrris.jpg,False,0,2935.0,meat,835.0,3770.0,other,confidence,2.0
 w066f11e,drink,../static/stimuli/images/auditorium/sun_ahwuhefoqkvitxnk.jpg,False,0,1044.0,milk,876.0,1920.0,intrusion,confidence,2.0
 w066f11e,bone,../static/stimuli/images/skiresort/sun_aqtrvlzivijhozcl.jpg,False,0,1756.0,,0.0,1756.0,empty,fok,3.0
 w066f11e,dog,../static/stimuli/images/roof/sun_asrztwexxagrlhem.jpg,False,0,1216.0,,0.0,1216.0,empty,fok,1.0
@@ -1723,7 +1723,7 @@ w3195d66,bag,../static/stimuli/images/greenhouse/sun_aahkpmrwfcwqyfcf.jpg,True,0
 w3195d66,snake,../static/stimuli/images/waterfall/sun_awrontvhyysjfacv.jpg,True,0,1147.0,snake,499.0,1646.0,correct,confidence,5.0
 w3195d66,drink,../static/stimuli/images/garage/sun_davtjcuielbxnyza.jpg,True,0,1031.0,drink,639.0,1670.0,correct,confidence,5.0
 w3195d66,door,../static/stimuli/images/ranch/sun_airsfxbouimobamd.jpg,False,0,801.0,door,372.0,1173.0,correct,confidence,5.0
-w3195d66,jeans,../static/stimuli/images/forest/sun_atlxncsxfmqwisuw.jpg,False,0,1266.0,jean,1347.0,2613.0,correct,confidence,4.0
+w3195d66,jeans,../static/stimuli/images/forest/sun_atlxncsxfmqwisuw.jpg,False,0,1266.0,jean,1347.0,2613.0,other,confidence,4.0
 w3195d66,bone,../static/stimuli/images/river/sun_abktmmreusnujejq.jpg,False,0,1165.9999999998836,bone,398.0,1563.9999999998836,correct,confidence,5.0
 w3195d66,nut,../static/stimuli/images/footballfield/sun_aadxnjugrvhqyufw.jpg,False,0,1065.0,nut,579.0,1644.0,correct,confidence,5.0
 w3195d66,bed,../static/stimuli/images/house/sun_awyiuqdptibtzfuh.jpg,False,0,1060.9999999998836,bed,448.0,1508.9999999998836,correct,confidence,5.0
@@ -1848,7 +1848,7 @@ w2d8638a,snake,../static/stimuli/images/airport/sun_ammfdrzrfvjsqahx.jpg,False,0
 w2d8638a,volcano,../static/stimuli/images/volcano/sun_ausfbukcukjcqubc.jpg,False,0,1440.6000000014901,',331.59999999403954,1772.1999999955297,empty,confidence,1.0
 w2d8638a,puzzle,../static/stimuli/images/restaurant/sun_aejvqzvtonxptams.jpg,False,0,1691.5,,0.20000000298023224,1691.7000000029802,empty,fok,1.0
 w2d8638a,lion,../static/stimuli/images/skiresort/sun_aqtrvlzivijhozcl.jpg,False,0,1043.2000000029802,,0.0,1043.2000000029802,empty,fok,1.0
-w2d8638a,candle,../static/stimuli/images/musuem/sun_asxfpkysdohbethd.jpg,False,0,988.7000000029802,brea,451.1000000014901,1439.8000000044703,intrusion,confidence,2.0
+w2d8638a,candle,../static/stimuli/images/musuem/sun_asxfpkysdohbethd.jpg,False,0,988.7000000029802,brea,451.1000000014901,1439.8000000044703,other,confidence,2.0
 w2d8638a,heart,../static/stimuli/images/gym/sun_appsvbfzhwrmtrje.jpg,False,0,854.2999999970198,heart,501.20000000298023,1355.5,correct,confidence,5.0
 w2d8638a,rabbit,../static/stimuli/images/railway/sun_avugyywnswogxvlh.jpg,False,0,1047.2999999970198,rabbit,607.0,1654.2999999970198,correct,confidence,5.0
 w2d8638a,jeans,../static/stimuli/images/computerroom/sun_aagspgyvjmoiytfb.jpg,False,0,1093.3999999985099,jeans,481.30000000447035,1574.7000000029802,correct,confidence,5.0
@@ -1872,7 +1872,7 @@ w2d8638a,apple,../static/stimuli/images/waterfall/sun_awrontvhyysjfacv.jpg,False
 w2d8638a,bread,../static/stimuli/images/footballfield/sun_bytuhfnudnbsojli.jpg,False,0,1523.7999999970198,bread,482.1000000014901,2005.8999999985099,correct,confidence,2.0
 w2d8638a,bone,../static/stimuli/images/beach/sun_abylvpgvhrpaxgnk.jpg,False,0,992.2000000029802,,0.10000000149011612,992.3000000044703,empty,fok,1.0
 w2d8638a,potato,../static/stimuli/images/subway/sun_axjlvqkyqahstpwg.jpg,False,0,1593.1000000014901,potato,970.8999999985099,2564.0,correct,confidence,5.0
-w2d8638a,duck,../static/stimuli/images/roof/sun_awyytziajjpreuke.jpg,False,0,1004.4000000059605,duc,432.8999999985099,1437.3000000044703,correct,confidence,3.0
+w2d8638a,duck,../static/stimuli/images/roof/sun_awyytziajjpreuke.jpg,False,0,1004.4000000059605,duc,432.8999999985099,1437.3000000044703,other,confidence,3.0
 w2d8638a,drink,../static/stimuli/images/street/sun_amjwoyuxrszlicsb.jpg,False,0,1332.9000000059605,,0.0,1332.9000000059605,empty,fok,1.0
 w2d8638a,window,../static/stimuli/images/vineyard/sun_aioxamlvtxhpnzzt.jpg,False,0,1436.5,window,1009.1000000014901,2445.60000000149,correct,confidence,2.0
 w2d8638a,bed,../static/stimuli/images/ranch/sun_axqdjxmxvxjmytiu.jpg,False,0,879.5,,0.20000000298023224,879.7000000029802,empty,fok,1.0
@@ -1890,7 +1890,7 @@ w5263b40,lawn,../static/stimuli/images/forest/sun_abvrazjxgpqhvszy.jpg,False,0,1
 w5263b40,heart,../static/stimuli/images/computerroom/sun_aagspgyvjmoiytfb.jpg,False,0,1156.219999975292,heart,790.8450000104494,1947.0649999857415,correct,confidence,5.0
 w5263b40,flower,../static/stimuli/images/tower/sun_abxucdjovctfgknh.jpg,False,0,1295.9050000063144,flower,1398.2250000117347,2694.130000018049,correct,confidence,5.0
 w5263b40,computer,../static/stimuli/images/laundryroom/sun_amdxqjichaqshdel.jpg,False,0,1311.344999994617,computer,1240.7600000151433,2552.1050000097603,correct,confidence,5.0
-w5263b40,horse,../static/stimuli/images/kitchen/sun_avlgzqfdedxwbiei.jpg,False,0,2799.235000013141,beach,1482.4549999902956,4281.690000003437,intrusion,confidence,2.0
+w5263b40,horse,../static/stimuli/images/kitchen/sun_avlgzqfdedxwbiei.jpg,False,0,2799.235000013141,beach,1482.4549999902956,4281.690000003437,other,confidence,2.0
 w5263b40,bed,../static/stimuli/images/musuem/sun_aqrchpiffnzkysmc.jpg,False,0,965.1500000036322,bed,488.99499999242835,1454.1449999960605,correct,confidence,5.0
 w5263b40,hay,../static/stimuli/images/auditorium/sun_akzbbqivzbpbnjbz.jpg,False,0,932.8300000051968,,0.07999999797903001,932.9100000031758,empty,fok,1.0
 w5263b40,puzzle,../static/stimuli/images/ziggurat/sun_amuijzzaceciuwpo.jpg,False,0,738.0899999989197,,0.07999999797903001,738.1699999968987,empty,fok,1.0
@@ -1943,7 +1943,7 @@ w53f5df5,volcano,../static/stimuli/images/greenhouse/sun_bmnxsjsqwqcaluzf.jpg,Fa
 w53f5df5,milk,../static/stimuli/images/volcano/sun_agobzgvhyhaxalcv.jpg,False,0,7720.300000011921,milk,546.0,8266.300000011921,correct,confidence,1.0
 w53f5df5,bear,../static/stimuli/images/tower/sun_augaqwzgrksvvsgf.jpg,False,0,1484.0,bear,504.80000001192093,1988.800000011921,correct,confidence,3.0
 w53f5df5,snake,../static/stimuli/images/temple/sun_aaexbfhvrzmbsfus.jpg,False,0,960.1999999880791,snake,606.5,1566.699999988079,correct,confidence,4.0
-w53f5df5,eye,../static/stimuli/images/house/sun_aahrslvfecptaudk.jpg,False,0,907.9000000357628,eyes,408.39999997615814,1316.300000011921,correct,confidence,3.0
+w53f5df5,eye,../static/stimuli/images/house/sun_aahrslvfecptaudk.jpg,False,0,907.9000000357628,eyes,408.39999997615814,1316.300000011921,other,confidence,3.0
 w53f5df5,candle,../static/stimuli/images/footballfield/sun_bxvamckmwplxbzxz.jpg,False,0,1018.1000000238419,candle,689.6999999880791,1707.800000011921,correct,confidence,4.0
 w53f5df5,cat,../static/stimuli/images/kitchen/sun_ajmwiafzffjerzeb.jpg,False,0,815.5,cat,437.69999998807907,1253.199999988079,correct,confidence,5.0
 w53f5df5,ear,../static/stimuli/images/restaurant/sun_agizngsilvvsycgq.jpg,False,0,2332.300000011921,,0.0,2332.300000011921,empty,fok,1.0
@@ -2146,7 +2146,7 @@ w8a5b790,duck,../static/stimuli/images/railway/sun_atutomffrubpoiva.jpg,False,0,
 w8a5b790,bone,../static/stimuli/images/street/sun_aqzrscvtljhimvtf.jpg,False,0,1561.0,,0.0,1561.0,empty,fok,1.0
 w8a5b790,window,../static/stimuli/images/downtown/sun_aljrvcabwnwkorml.jpg,False,0,1064.0,window,1680.0,2744.0,correct,confidence,4.0
 w8a5b790,nut,../static/stimuli/images/river/sun_auvfucpnqlcaddzs.jpg,False,0,1729.0,,0.0,1729.0,empty,fok,1.0
-w8a5b790,bee,../static/stimuli/images/vineyard/sun_apdbcyzwitltnzyz.jpg,False,0,1352.0,bees,1293.0,2645.0,correct,confidence,4.0
+w8a5b790,bee,../static/stimuli/images/vineyard/sun_apdbcyzwitltnzyz.jpg,False,0,1352.0,bees,1293.0,2645.0,other,confidence,4.0
 w8a5b790,rabbit,../static/stimuli/images/ranch/sun_ayvjppkciavpdbhs.jpg,False,0,2425.0,dog,1528.0,3953.0,intrusion,confidence,2.0
 w8a5b790,egg,../static/stimuli/images/musuem/sun_alsgupdkmpsptlos.jpg,False,0,1528.0,egg,1721.0,3249.0,correct,confidence,5.0
 w8a5b790,lawn,../static/stimuli/images/volcano/sun_ausfbukcukjcqubc.jpg,False,0,1633.0,,0.0,1633.0,empty,fok,1.0
@@ -2159,15 +2159,15 @@ w8a5b790,pig,../static/stimuli/images/roof/sun_awyytziajjpreuke.jpg,False,0,1384
 w8a5b790,bed,../static/stimuli/images/sky/sun_aczjsyhtqawbyyer.jpg,False,0,1400.0,bed,1464.0,2864.0,correct,confidence,5.0
 w8a5b790,door,../static/stimuli/images/skiresort/sun_ahlksvwmghqfwqtw.jpg,False,0,1984.0,door,1448.0,3432.0,correct,confidence,3.0
 w8a5b790,volcano,../static/stimuli/images/subway/sun_agpnhsuccwnvcjwe.jpg,False,0,4224.0,volcano,2058.0,6282.0,correct,confidence,3.0
-wb9911cf,truck,../static/stimuli/images/musuem/sun_atiiscmhrcnttlop.jpg,True,0,2893.600000023842,tree,2223.7999999523163,5117.399999976158,intrusion,confidence,1.0
+wb9911cf,truck,../static/stimuli/images/musuem/sun_atiiscmhrcnttlop.jpg,True,0,2893.600000023842,tree,2223.7999999523163,5117.399999976158,other,confidence,1.0
 wb9911cf,drink,../static/stimuli/images/river/sun_ahmmzoezbuevqzjm.jpg,True,0,4478.799999952316,drink,2176.0,6654.799999952316,correct,confidence,2.0
 wb9911cf,toilet,../static/stimuli/images/shoppingmall/sun_ayhhurcrocmglxyx.jpg,True,0,1975.0,toilet,2031.1999999284744,4006.1999999284744,correct,confidence,5.0
 wb9911cf,snake,../static/stimuli/images/underwater/sun_asqdtehokuizoxnq.jpg,False,0,1471.1000000238419,snake,1847.2999999523163,3318.399999976158,correct,confidence,5.0
 wb9911cf,dog,../static/stimuli/images/sky/sun_aeglnxtxlevipkzh.jpg,False,0,2502.0,,0.0,2502.0,empty,fok,1.0
 wb9911cf,lawn,../static/stimuli/images/airport/sun_akhqgzrrubgnwzpa.jpg,False,0,1430.1999999284744,,0.10000002384185791,1430.2999999523163,empty,fok,1.0
 wb9911cf,apple,../static/stimuli/images/castle/sun_apbjjqvsvrybtdua.jpg,False,0,1646.1000000238419,apple,720.0,2366.100000023842,correct,confidence,5.0
-wb9911cf,rabbit,../static/stimuli/images/house/sun_awvfftwqwfbjqmmu.jpg,False,0,1406.7999999523163,flowers,4232.100000023842,5638.899999976158,intrusion,confidence,4.0
-wb9911cf,lion,../static/stimuli/images/auditorium/sun_ahxfbcfdtvgnrivf.jpg,False,0,4565.5,ti,543.8999999761581,5109.399999976158,empty,confidence,1.0
+wb9911cf,rabbit,../static/stimuli/images/house/sun_awvfftwqwfbjqmmu.jpg,False,0,1406.7999999523163,flowers,4232.100000023842,5638.899999976158,other,confidence,4.0
+wb9911cf,lion,../static/stimuli/images/auditorium/sun_ahxfbcfdtvgnrivf.jpg,False,0,4565.5,ti,543.8999999761581,5109.399999976158,other,confidence,1.0
 wb9911cf,eye,../static/stimuli/images/waterfall/sun_acmlcxobalurtcmq.jpg,False,0,4574.299999952316,eye,488.0,5062.299999952316,correct,confidence,5.0
 wb9911cf,heart,../static/stimuli/images/forest/sun_avyyymflzsdrwgbe.jpg,False,0,1895.3000000715256,,0.0,1895.3000000715256,empty,fok,1.0
 wb9911cf,milk,../static/stimuli/images/grocery/sun_aczzweebuokhxnbb.jpg,False,0,1238.7000000476837,milk,784.0,2022.7000000476837,correct,confidence,5.0
@@ -2186,8 +2186,8 @@ wb9911cf,computer,../static/stimuli/images/subway/sun_apgdazdsggmnohcz.jpg,False
 wb9911cf,pig,../static/stimuli/images/pool/sun_abmafiafisngvteo.jpg,False,0,1199.2000000476837,pig,527.1999999284744,1726.3999999761581,correct,confidence,5.0
 wb9911cf,ear,../static/stimuli/images/footballfield/sun_afuzusgbewygvixv.jpg,False,0,1054.8000000715256,,0.0,1054.8000000715256,empty,fok,1.0
 wb9911cf,bread,../static/stimuli/images/restaurant/sun_aiyfhlpenzexmqoi.jpg,False,0,1239.3000000715256,bread,895.2999999523163,2134.600000023842,correct,confidence,5.0
-wb9911cf,window,../static/stimuli/images/street/sun_amjwoyuxrszlicsb.jpg,False,0,1534.5,windows,1160.0,2694.5,correct,confidence,5.0
-wb9911cf,flower,../static/stimuli/images/temple/sun_asirkyjruyeentuc.jpg,False,0,1565.7999999523163,flowers,968.1000000238419,2533.899999976158,correct,confidence,5.0
+wb9911cf,window,../static/stimuli/images/street/sun_amjwoyuxrszlicsb.jpg,False,0,1534.5,windows,1160.0,2694.5,other,confidence,5.0
+wb9911cf,flower,../static/stimuli/images/temple/sun_asirkyjruyeentuc.jpg,False,0,1565.7999999523163,flowers,968.1000000238419,2533.899999976158,other,confidence,5.0
 wb9911cf,puzzle,../static/stimuli/images/warehouse/sun_ahkbykndmtongifl.jpg,False,0,1118.7000000476837,puzzel,1464.0,2582.7000000476837,correct,confidence,5.0
 wb9911cf,cat,../static/stimuli/images/ziggurat/sun_aiqkruqnfbmiiafv.jpg,False,0,934.7000000476837,cat,463.7999999523163,1398.5,correct,confidence,5.0
 wb9911cf,potato,../static/stimuli/images/theater/sun_awkfdodvwaaleezx.jpg,False,0,2727.5,lion,1503.3999999761581,4230.899999976158,intrusion,confidence,3.0
@@ -2207,15 +2207,15 @@ w6e1cf63,truck,../static/stimuli/images/kitchen/sun_aibgyrlkgcnwvhxl.jpg,False,0
 w6e1cf63,bird,../static/stimuli/images/sky/sun_aemltyubcdmxluwx.jpg,False,0,1318.5,bird,1447.3000001907349,2765.800000190735,correct,confidence,5.0
 w6e1cf63,bee,../static/stimuli/images/waterfall/sun_awrontvhyysjfacv.jpg,False,0,1261.5,,0.0,1261.5,empty,fok,1.0
 w6e1cf63,milk,../static/stimuli/images/laundryroom/sun_amdxqjichaqshdel.jpg,False,0,1557.2000000476837,,0.0,1557.2000000476837,empty,fok,1.0
-w6e1cf63,duck,../static/stimuli/images/subway/sun_axjlvqkyqahstpwg.jpg,False,0,1494.6999998092651,ducks,2487.2000000476837,3981.899999856949,correct,confidence,5.0
+w6e1cf63,duck,../static/stimuli/images/subway/sun_axjlvqkyqahstpwg.jpg,False,0,1494.6999998092651,ducks,2487.2000000476837,3981.899999856949,other,confidence,5.0
 w6e1cf63,bone,../static/stimuli/images/ranch/sun_ajrpvgxcgeblwooh.jpg,False,0,1150.0999999046326,horse,1847.2999999523163,2997.399999856949,intrusion,confidence,2.0
-w6e1cf63,rabbit,../static/stimuli/images/volcano/sun_amntiizmakyntrnx.jpg,False,0,2446.600000143051,fire,3983.0,6429.600000143051,intrusion,confidence,1.0
+w6e1cf63,rabbit,../static/stimuli/images/volcano/sun_amntiizmakyntrnx.jpg,False,0,2446.600000143051,fire,3983.0,6429.600000143051,other,confidence,1.0
 w6e1cf63,hay,../static/stimuli/images/underwater/sun_axbjbqawtejfugwt.jpg,False,0,1310.7000000476837,hay,1175.0,2485.7000000476837,correct,confidence,5.0
 w6e1cf63,lion,../static/stimuli/images/forest/sun_anfpmkqemzwfixbm.jpg,False,0,1174.2999999523163,lion,895.0999999046326,2069.399999856949,correct,confidence,5.0
 w6e1cf63,puzzle,../static/stimuli/images/tenniscourt/sun_avbthoqreldjpsco.jpg,False,0,1414.0999999046326,,0.0,1414.0999999046326,empty,fok,1.0
 w6e1cf63,hat,../static/stimuli/images/warehouse/sun_aadtsgkouwrqwvwl.jpg,False,0,1878.9000000953674,hat,2038.7999999523163,3917.7000000476837,correct,confidence,5.0
 w6e1cf63,bread,../static/stimuli/images/skiresort/sun_aqtrvlzivijhozcl.jpg,False,0,1285.9000000953674,,0.0,1285.9000000953674,empty,fok,1.0
-w6e1cf63,eye,../static/stimuli/images/auditorium/sun_amnlhuknqqtssrhl.jpg,False,0,1774.5999999046326,eyes,2631.4000000953674,4406.0,correct,confidence,4.0
+w6e1cf63,eye,../static/stimuli/images/auditorium/sun_amnlhuknqqtssrhl.jpg,False,0,1774.5999999046326,eyes,2631.4000000953674,4406.0,other,confidence,4.0
 w6e1cf63,jeans,../static/stimuli/images/airport/sun_ammfdrzrfvjsqahx.jpg,False,0,1174.2000000476837,pants,1711.2000000476837,2885.4000000953674,other,confidence,5.0
 w6e1cf63,door,../static/stimuli/images/river/sun_abktmmreusnujejq.jpg,False,0,1933.6000001430511,,0.0,1933.6000001430511,empty,fok,1.0
 w6e1cf63,sand,../static/stimuli/images/roof/sun_awyytziajjpreuke.jpg,False,0,1310.7000000476837,sand,2071.0999999046326,3381.7999999523163,correct,confidence,5.0
@@ -2228,7 +2228,7 @@ w6e1cf63,bear,../static/stimuli/images/pool/sun_aelfhlyhvuglfcha.jpg,False,0,141
 w6e1cf63,heart,../static/stimuli/images/vineyard/sun_adcctdabyxmhioeg.jpg,False,0,1118.8999998569489,heart,1223.0,2341.899999856949,correct,confidence,5.0
 w6e1cf63,fence,../static/stimuli/images/grocery/sun_ajfkrdilcurxubxd.jpg,False,0,1046.0,,0.0,1046.0,empty,fok,1.0
 w6e1cf63,computer,../static/stimuli/images/theater/sun_arhrqrqrgyhlozgq.jpg,False,0,4877.799999952316,,0.0,4877.799999952316,empty,fok,1.0
-w6e1cf63,egg,../static/stimuli/images/house/sun_admwlghhtfixlbsf.jpg,False,0,2006.2999999523163,eggs,1767.1000001430511,3773.4000000953674,correct,confidence,3.0
+w6e1cf63,egg,../static/stimuli/images/house/sun_admwlghhtfixlbsf.jpg,False,0,2006.2999999523163,eggs,1767.1000001430511,3773.4000000953674,other,confidence,3.0
 w6e1cf63,bed,../static/stimuli/images/castle/sun_aoguwxhjirnhxsgn.jpg,False,0,2479.2000000476837,bed,710.7999999523163,3190.0,correct,confidence,4.0
 w6e1cf63,drink,../static/stimuli/images/musuem/sun_aspbwvercyqvrrkn.jpg,False,0,1446.2999999523163,drink,3871.0999999046326,5317.399999856949,correct,confidence,4.0
 w6e1cf63,cat,../static/stimuli/images/gym/sun_agptlflfgabhuxym.jpg,False,0,1382.0999999046326,cat,1135.1000001430511,2517.2000000476837,correct,confidence,4.0
@@ -2244,7 +2244,7 @@ w029d2fa,flower,../static/stimuli/images/restaurant/sun_agxfoksoiibofpna.jpg,Tru
 w029d2fa,milk,../static/stimuli/images/grocery/sun_agipdkpovnqrcsgh.jpg,True,0,2437.0,milk,1217.0,3654.0,correct,confidence,5.0
 w029d2fa,bear,../static/stimuli/images/bookstore/sun_aalyndhausktwxbc.jpg,False,0,2738.0,,0.0,2738.0,empty,fok,1.0
 w029d2fa,horse,../static/stimuli/images/underwater/sun_alunasorzxjzhjbv.jpg,False,0,1193.0,,0.0,1193.0,empty,fok,1.0
-w029d2fa,heart,../static/stimuli/images/subway/sun_amwmhabnpkxinmtz.jpg,False,0,1939.0,heat,1089.0,3028.0,correct,confidence,4.0
+w029d2fa,heart,../static/stimuli/images/subway/sun_amwmhabnpkxinmtz.jpg,False,0,1939.0,heat,1089.0,3028.0,other,confidence,4.0
 w029d2fa,volcano,../static/stimuli/images/temple/sun_ahuwbjbhgegvnlsq.jpg,False,0,2341.0,,0.0,2341.0,empty,fok,1.0
 w029d2fa,toilet,../static/stimuli/images/airport/sun_aqytxlpqgdgggfum.jpg,False,0,1162.0,,0.0,1162.0,empty,fok,1.0
 w029d2fa,lion,../static/stimuli/images/roof/sun_acfajljanztkmhkr.jpg,False,0,744.0,,0.0,744.0,empty,fok,1.0
@@ -2318,12 +2318,12 @@ w2153c89,computer,../static/stimuli/images/shoppingmall/sun_abmhoudmvlbwstuf.jpg
 w2153c89,flower,../static/stimuli/images/roof/sun_awskptrfuzjyjwes.jpg,False,0,1831.304999999702,,1608.2400000011548,3439.545000000857,empty,fok,2.0
 w2153c89,sand,../static/stimuli/images/beach/sun_abylvpgvhrpaxgnk.jpg,False,0,2222.08999999566,sand,960.2850000085309,3182.375000004191,correct,confidence,5.0
 w2153c89,candle,../static/stimuli/images/temple/sun_ardesvcosqecvbes.jpg,False,0,1278.1550000072457,,0.04499999340623617,1278.200000000652,empty,fok,2.0
-w2153c89,heart,../static/stimuli/images/ziggurat/sun_agbaptlibgqhrwwn.jpg,False,0,2365.355000001844,smart,816.3999999957159,3181.75499999756,correct,confidence,4.0
+w2153c89,heart,../static/stimuli/images/ziggurat/sun_agbaptlibgqhrwwn.jpg,False,0,2365.355000001844,smart,816.3999999957159,3181.75499999756,other,confidence,4.0
 w4448d1d,bag,../static/stimuli/images/grocery/sun_acmmgshfrxgopxlk.jpg,True,0,940.2999999970198,bag,461.90000000596046,1402.2000000029802,correct,confidence,5.0
 w4448d1d,hat,../static/stimuli/images/theater/sun_awkfdodvwaaleezx.jpg,True,0,1122.7999999970198,hat,438.90000000596046,1561.7000000029802,correct,confidence,5.0
 w4448d1d,pig,../static/stimuli/images/forest/sun_arwykvgzpgybhibg.jpg,True,0,990.9000000059605,pig,432.20000000298023,1423.1000000089407,correct,confidence,5.0
 w4448d1d,bee,../static/stimuli/images/pool/sun_aexdaltifheurhfa.jpg,False,0,1136.9000000059605,bee,352.0,1488.9000000059605,correct,confidence,5.0
-w4448d1d,ear,../static/stimuli/images/restaurant/sun_agxfoksoiibofpna.jpg,False,0,4542.79999999702,book,515.0,5057.79999999702,intrusion,confidence,2.0
+w4448d1d,ear,../static/stimuli/images/restaurant/sun_agxfoksoiibofpna.jpg,False,0,4542.79999999702,book,515.0,5057.79999999702,other,confidence,2.0
 w4448d1d,apple,../static/stimuli/images/warehouse/sun_aadtsgkouwrqwvwl.jpg,False,0,927.0999999940395,apple,685.6000000089407,1612.7000000029802,correct,confidence,4.0
 w4448d1d,candle,../static/stimuli/images/tenniscourt/sun_abhryuvnxasmofva.jpg,False,0,1255.6000000089407,,0.0,1255.6000000089407,empty,fok,1.0
 w4448d1d,eye,../static/stimuli/images/tower/sun_altkfiythtxnptob.jpg,False,0,773.8999999910593,eye,907.5,1681.3999999910593,correct,confidence,5.0
@@ -2440,17 +2440,17 @@ w3a7dde9,bread,../static/stimuli/images/restaurant/sun_agizngsilvvsycgq.jpg,Fals
 w3a7dde9,toilet,../static/stimuli/images/pool/sun_aelfhlyhvuglfcha.jpg,False,0,1294.4000000059605,,0.09999999403953552,1294.5,empty,fok,1.0
 w3a7dde9,bee,../static/stimuli/images/laundryroom/sun_abdhkuiitfxcgncb.jpg,False,0,1542.5999999940395,bee,542.1999999880791,2084.7999999821186,correct,confidence,5.0
 wbcb3788,rabbit,../static/stimuli/images/kitchen/sun_akzumputqvdvtqbq.jpg,True,0,1623.5999999046326,rabbit,886.6999998092651,2510.2999997138977,correct,confidence,3.0
-wbcb3788,eye,../static/stimuli/images/castle/sun_aoguwxhjirnhxsgn.jpg,True,0,1404.8999996185303,rat,360.2000002861023,1765.0999999046326,intrusion,confidence,1.0
-wbcb3788,window,../static/stimuli/images/ranch/sun_amqejeymhjlanyvr.jpg,True,0,3413.5999999046326,cow,264.1000003814697,3677.7000002861023,intrusion,confidence,1.0
+wbcb3788,eye,../static/stimuli/images/castle/sun_aoguwxhjirnhxsgn.jpg,True,0,1404.8999996185303,rat,360.2000002861023,1765.0999999046326,other,confidence,1.0
+wbcb3788,window,../static/stimuli/images/ranch/sun_amqejeymhjlanyvr.jpg,True,0,3413.5999999046326,cow,264.1000003814697,3677.7000002861023,other,confidence,1.0
 wbcb3788,snake,../static/stimuli/images/laundryroom/sun_dgpgttfvjctszkzz.jpg,False,0,1005.2000002861023,rabbit,776.0,1781.2000002861023,intrusion,confidence,5.0
 wbcb3788,milk,../static/stimuli/images/grocery/sun_afjotbibjndyibuy.jpg,False,0,1094.0,bear,360.0,1454.0,intrusion,confidence,1.0
 wbcb3788,bird,../static/stimuli/images/roof/sun_aqxzijexicadnjja.jpg,False,0,805.5,bird,720.0,1525.5,correct,confidence,5.0
 wbcb3788,apple,../static/stimuli/images/tower/sun_altkfiythtxnptob.jpg,False,0,886.9000000953674,apple,455.2999997138977,1342.1999998092651,correct,confidence,4.0
 wbcb3788,bear,../static/stimuli/images/footballfield/sun_aadxnjugrvhqyufw.jpg,False,0,1183.9000000953674,bear,269.7999997138977,1453.6999998092651,correct,confidence,1.0
-wbcb3788,hat,../static/stimuli/images/subway/sun_akifaegxlwcrziyq.jpg,False,0,928.0,rat,246.0,1174.0,correct,confidence,1.0
+wbcb3788,hat,../static/stimuli/images/subway/sun_akifaegxlwcrziyq.jpg,False,0,928.0,rat,246.0,1174.0,other,confidence,1.0
 wbcb3788,horse,../static/stimuli/images/railway/sun_acfjiedtgqzgvtnp.jpg,False,0,983.4000000953674,horse,1622.0999999046326,2605.5,correct,confidence,5.0
-wbcb3788,candle,../static/stimuli/images/house/sun_azzyyehcunxuhihg.jpg,False,0,1445.3000001907349,rat,256.09999990463257,1701.4000000953674,intrusion,confidence,1.0
-wbcb3788,bone,../static/stimuli/images/bookstore/sun_aalyndhausktwxbc.jpg,False,0,1246.0999999046326,rat,271.69999980926514,1517.7999997138977,intrusion,confidence,1.0
+wbcb3788,candle,../static/stimuli/images/house/sun_azzyyehcunxuhihg.jpg,False,0,1445.3000001907349,rat,256.09999990463257,1701.4000000953674,other,confidence,1.0
+wbcb3788,bone,../static/stimuli/images/bookstore/sun_aalyndhausktwxbc.jpg,False,0,1246.0999999046326,rat,271.69999980926514,1517.7999997138977,other,confidence,1.0
 wbcb3788,sand,../static/stimuli/images/volcano/sun_axyqizdexdgrtfie.jpg,False,0,1006.1000003814697,sand,376.3999996185303,1382.5,correct,confidence,5.0
 wbcb3788,bee,../static/stimuli/images/garage/sun_davtjcuielbxnyza.jpg,False,0,1317.8999996185303,bee,336.0,1653.8999996185303,correct,confidence,1.0
 wbcb3788,cake,../static/stimuli/images/greenhouse/sun_bncgstrupskxwget.jpg,False,0,1198.5,cake,351.2999997138977,1549.7999997138977,correct,confidence,5.0
@@ -2663,7 +2663,7 @@ w573ffa2,puzzle,../static/stimuli/images/sky/sun_aboqqlnpqcqfghfo.jpg,False,0,79
 w573ffa2,eye,../static/stimuli/images/waterfall/sun_aecefabfvaewllpg.jpg,False,0,599.5,,0.10000000894069672,599.6000000089407,empty,fok,1.0
 w573ffa2,bone,../static/stimuli/images/temple/sun_apdrdxoeskjgfrbj.jpg,False,0,972.0,,0.09999999403953552,972.0999999940395,empty,fok,1.0
 w573ffa2,cat,../static/stimuli/images/river/sun_aahjsajmsehqtuox.jpg,False,0,647.8999999910593,,0.10000000894069672,648.0,empty,fok,1.0
-w573ffa2,truck,../static/stimuli/images/subway/sun_apsbdxitmzdgpeyn.jpg,False,0,1226.7000000029802,trucks,1938.0,3164.7000000029802,correct,confidence,2.0
+w573ffa2,truck,../static/stimuli/images/subway/sun_apsbdxitmzdgpeyn.jpg,False,0,1226.7000000029802,trucks,1938.0,3164.7000000029802,other,confidence,2.0
 w573ffa2,flower,../static/stimuli/images/underwater/sun_aufltyunbkquxrih.jpg,False,0,800.9000000059605,flower,1135.7000000029802,1936.6000000089407,correct,confidence,2.0
 w573ffa2,rabbit,../static/stimuli/images/bookstore/sun_avsybhiblxqxcayh.jpg,False,0,874.0999999940395,,0.0,874.0999999940395,empty,fok,1.0
 w573ffa2,fence,../static/stimuli/images/tenniscourt/sun_abhryuvnxasmofva.jpg,False,0,870.1000000089407,fence,1138.7000000029802,2008.800000011921,correct,confidence,4.0
@@ -2763,7 +2763,7 @@ wcf9ea93,drink,../static/stimuli/images/underwater/sun_ajzucqttdjcknlvx.jpg,True
 wcf9ea93,heart,../static/stimuli/images/temple/sun_aiqyivjtsjhjgqur.jpg,True,0,1188.9000000003725,heart,1108.5,2297.4000000003725,correct,confidence,5.0
 wcf9ea93,dog,../static/stimuli/images/warehouse/sun_aaawomlbokrxmfyj.jpg,True,0,3088.5999999996275,dog,1598.2000000001863,4686.799999999814,correct,confidence,2.0
 wcf9ea93,cat,../static/stimuli/images/computerroom/sun_aknbqkyjmltzjpuf.jpg,False,0,1229.0,cat,758.2000000001863,1987.2000000001863,correct,confidence,5.0
-wcf9ea93,rabbit,../static/stimuli/images/ranch/sun_airsfxbouimobamd.jpg,False,0,1188.8999999994412,wheat,1318.6000000005588,2507.5,intrusion,confidence,1.0
+wcf9ea93,rabbit,../static/stimuli/images/ranch/sun_airsfxbouimobamd.jpg,False,0,1188.8999999994412,wheat,1318.6000000005588,2507.5,other,confidence,1.0
 wcf9ea93,volcano,../static/stimuli/images/tower/sun_augaqwzgrksvvsgf.jpg,False,0,1426.5999999996275,,2621.100000000559,4047.7000000001863,empty,fok,1.0
 wcf9ea93,hat,../static/stimuli/images/footballfield/sun_byyhmoxeyuabpnes.jpg,False,0,1517.1000000005588,,0.09999999962747097,1517.2000000001863,empty,fok,1.0
 wcf9ea93,lawn,../static/stimuli/images/windmill/sun_arostrfeclmqdszk.jpg,False,0,1498.2000000001863,lawn,998.5,2496.7000000001863,correct,confidence,4.0
@@ -2773,7 +2773,7 @@ wcf9ea93,bone,../static/stimuli/images/railway/sun_axeddylwawkspiuo.jpg,False,0,
 wcf9ea93,bag,../static/stimuli/images/sky/sun_abbtimwgskvvaeps.jpg,False,0,1737.5,,0.0,1737.5,empty,fok,1.0
 wcf9ea93,bird,../static/stimuli/images/garage/sun_davtjcuielbxnyza.jpg,False,0,1837.0,,0.09999999962747097,1837.0999999996275,empty,fok,1.0
 wcf9ea93,potato,../static/stimuli/images/beach/sun_aacgcodmtsyjjmbx.jpg,False,0,2549.2000000001863,milk,1568.0999999996275,4117.299999999814,intrusion,confidence,1.0
-wcf9ea93,puzzle,../static/stimuli/images/river/sun_aztombwyhubhaynq.jpg,False,0,1438.3999999994412,wheat,1107.5,2545.899999999441,intrusion,confidence,1.0
+wcf9ea93,puzzle,../static/stimuli/images/river/sun_aztombwyhubhaynq.jpg,False,0,1438.3999999994412,wheat,1107.5,2545.899999999441,other,confidence,1.0
 wcf9ea93,candle,../static/stimuli/images/pool/sun_ammyodxmkwfauuzp.jpg,False,0,1007.4000000003725,candle,1218.5,2225.9000000003725,correct,confidence,5.0
 wcf9ea93,apple,../static/stimuli/images/house/sun_aangbuylfvckqqoo.jpg,False,0,1487.7999999998137,,0.0,1487.7999999998137,empty,fok,1.0
 wcf9ea93,truck,../static/stimuli/images/shoppingmall/sun_attlobbjfpnyzslo.jpg,False,0,1757.8999999994412,,0.0,1757.8999999994412,empty,fok,1.0
@@ -2785,7 +2785,7 @@ wcf9ea93,sand,../static/stimuli/images/campsite/sun_amejpvolcgftwwch.jpg,False,0
 wcf9ea93,ear,../static/stimuli/images/street/sun_aaeryjozzmanouqj.jpg,False,0,1229.0,ear,978.2999999998137,2207.2999999998137,correct,confidence,5.0
 wcf9ea93,duck,../static/stimuli/images/restaurant/sun_aejvqzvtonxptams.jpg,False,0,1287.2999999998137,,0.0,1287.2999999998137,empty,fok,1.0
 wcf9ea93,bee,../static/stimuli/images/volcano/sun_aacjsxcwmkbgvpmb.jpg,False,0,1198.2000000001863,cat,669.2000000001863,1867.4000000003725,intrusion,confidence,4.0
-wcf9ea93,snake,../static/stimuli/images/vineyard/sun_agfdrmftdzokxtnc.jpg,False,0,1118.7999999998137,wheat,1028.5,2147.2999999998137,intrusion,confidence,2.0
+wcf9ea93,snake,../static/stimuli/images/vineyard/sun_agfdrmftdzokxtnc.jpg,False,0,1118.7999999998137,wheat,1028.5,2147.2999999998137,other,confidence,2.0
 wcf9ea93,bread,../static/stimuli/images/musuem/sun_agblrnoilxeknben.jpg,False,0,1316.3999999994412,,0.0,1316.3999999994412,empty,fok,1.0
 wcf9ea93,fence,../static/stimuli/images/grocery/sun_afjotbibjndyibuy.jpg,False,0,1247.5999999996275,,0.0,1247.5999999996275,empty,fok,1.0
 wcf9ea93,cake,../static/stimuli/images/laundryroom/sun_adldglebrfdkcxwu.jpg,False,0,867.2999999998137,,0.0,867.2999999998137,empty,fok,1.0
@@ -2864,7 +2864,7 @@ w3b56fcd,potato,../static/stimuli/images/house/sun_abcaoiwkiofeweig.jpg,False,0,
 w3b56fcd,egg,../static/stimuli/images/restaurant/sun_advrksojohxolufo.jpg,False,0,2063.5,,0.09999999403953552,2063.5999999940395,empty,fok,2.0
 w3b56fcd,door,../static/stimuli/images/railway/sun_aprfapnfngmvbixm.jpg,False,0,1222.9000000059605,door,1144.0999999940395,2367.0,correct,confidence,5.0
 w3b56fcd,hay,../static/stimuli/images/street/sun_amjwoyuxrszlicsb.jpg,False,0,1375.1999999955297,,0.10000000149011612,1375.2999999970198,empty,fok,1.0
-w3b56fcd,pig,../static/stimuli/images/roof/sun_asrztwexxagrlhem.jpg,False,0,1743.1000000014901,cow,920.0,2663.10000000149,intrusion,confidence,4.0
+w3b56fcd,pig,../static/stimuli/images/roof/sun_asrztwexxagrlhem.jpg,False,0,1743.1000000014901,cow,920.0,2663.10000000149,other,confidence,4.0
 w3b56fcd,drink,../static/stimuli/images/subway/sun_aoelchwqhnnizmrp.jpg,False,0,1495.1000000014901,drink,1408.1000000014901,2903.2000000029802,correct,confidence,5.0
 w3b56fcd,truck,../static/stimuli/images/skiresort/sun_agpfoakkwrzedbll.jpg,False,0,1343.6000000014901,truck,1319.3999999985099,2663.0,correct,confidence,5.0
 w3b56fcd,cat,../static/stimuli/images/underwater/sun_aojrtoikxmtgzchi.jpg,False,0,1335.1000000014901,cat,663.7999999970198,1998.8999999985099,correct,confidence,5.0
@@ -2915,7 +2915,7 @@ w4f0266e,door,../static/stimuli/images/gym/sun_auzbqfsaebhgtrig.jpg,False,0,1062
 w4f0266e,horse,../static/stimuli/images/computerroom/sun_azkmsfiuzzekamsy.jpg,False,0,2305.5,hores,613.7999999523163,2919.2999999523163,correct,confidence,1.0
 w4f0266e,heart,../static/stimuli/images/railway/sun_aqlgoveofhhmvrdh.jpg,False,0,819.2999999523163,,0.10000014305114746,819.4000000953674,empty,fok,1.0
 w4f0266e,hat,../static/stimuli/images/volcano/sun_aetnikjhplqgsznx.jpg,False,0,1411.5999999046326,,0.09999990463256836,1411.6999998092651,empty,fok,1.0
-w4f0266e,cake,../static/stimuli/images/campsite/sun_agjhcohmxuuaimig.jpg,False,0,1364.2999999523163,cale,2179.5,3543.7999999523163,correct,confidence,1.0
+w4f0266e,cake,../static/stimuli/images/campsite/sun_agjhcohmxuuaimig.jpg,False,0,1364.2999999523163,cale,2179.5,3543.7999999523163,other,confidence,1.0
 w4f0266e,bear,../static/stimuli/images/subway/sun_amwmhabnpkxinmtz.jpg,False,0,987.0999999046326,,0.0,987.0999999046326,empty,fok,1.0
 w4f0266e,cat,../static/stimuli/images/shoppingmall/sun_aqmgjlthiepxfbtd.jpg,False,0,824.9000000953674,,0.09999990463256836,825.0,empty,fok,1.0
 w4f0266e,pig,../static/stimuli/images/musuem/sun_alsgupdkmpsptlos.jpg,False,0,921.1999998092651,pig,2129.7000000476837,3050.899999856949,correct,confidence,5.0
@@ -3018,7 +3018,7 @@ w4201c44,horse,../static/stimuli/images/bookstore/sun_aibnpvhkdpdnzcnz.jpg,False
 w4201c44,rabbit,../static/stimuli/images/subway/sun_agpnhsuccwnvcjwe.jpg,False,0,1340.7999999970198,rabbit,880.8999999910593,2221.699999988079,correct,confidence,4.0
 w4201c44,cake,../static/stimuli/images/windmill/sun_ahkhvvnvkjevxvvu.jpg,False,0,1239.1000000089407,cake,517.3999999910593,1756.5,correct,confidence,4.0
 w4201c44,hay,../static/stimuli/images/waterfall/sun_bbvrdmjbnzoaqrmp.jpg,False,0,965.1000000089407,,0.19999998807907104,965.2999999970198,empty,fok,1.0
-w4201c44,bee,../static/stimuli/images/greenhouse/sun_aahkpmrwfcwqyfcf.jpg,False,0,1494.0999999940395,bees,755.1000000089407,2249.2000000029802,correct,confidence,4.0
+w4201c44,bee,../static/stimuli/images/greenhouse/sun_aahkpmrwfcwqyfcf.jpg,False,0,1494.0999999940395,bees,755.1000000089407,2249.2000000029802,other,confidence,4.0
 w4201c44,apple,../static/stimuli/images/railway/sun_acfjiedtgqzgvtnp.jpg,False,0,1163.6000000089407,apple,1030.5999999940395,2194.2000000029802,correct,confidence,4.0
 w4201c44,nut,../static/stimuli/images/theater/sun_atelpfsrkdqaoyph.jpg,False,0,1067.5,nut,411.09999999403954,1478.5999999940395,correct,confidence,5.0
 w4201c44,egg,../static/stimuli/images/ranch/sun_amqejeymhjlanyvr.jpg,False,0,1128.5999999940395,,0.20000000298023224,1128.7999999970198,empty,fok,1.0
@@ -3286,7 +3286,7 @@ wf574169,bed,../static/stimuli/images/campsite/sun_aommnycdukjoaebq.jpg,False,0,
 wf574169,bee,../static/stimuli/images/restaurant/sun_agxfoksoiibofpna.jpg,False,0,959.7000000476837,bee,351.5,1311.2000000476837,correct,confidence,5.0
 wf574169,bear,../static/stimuli/images/pool/sun_abmafiafisngvteo.jpg,False,0,928.5,bear,305.90000009536743,1234.4000000953674,correct,confidence,5.0
 wf574169,bread,../static/stimuli/images/footballfield/sun_aszinldqqvnpmwfh.jpg,False,0,763.5,bread,468.59999990463257,1232.0999999046326,correct,confidence,5.0
-wf574169,hay,../static/stimuli/images/waterfall/sun_bbvrdmjbnzoaqrmp.jpg,False,0,2001.5,appl,481.59999990463257,2483.0999999046326,intrusion,confidence,4.0
+wf574169,hay,../static/stimuli/images/waterfall/sun_bbvrdmjbnzoaqrmp.jpg,False,0,2001.5,appl,481.59999990463257,2483.0999999046326,other,confidence,4.0
 wf574169,cake,../static/stimuli/images/tenniscourt/sun_akifkmvcnuzulsxa.jpg,False,0,1038.1999998092651,cake,608.0,1646.1999998092651,correct,confidence,5.0
 wf574169,dog,../static/stimuli/images/railway/sun_aqddawzjzkqycxjc.jpg,False,0,1118.3000001907349,dog,591.8999998569489,1710.2000000476837,correct,confidence,5.0
 wf574169,fence,../static/stimuli/images/subway/sun_amwmhabnpkxinmtz.jpg,False,0,1008.2999999523163,fence,926.3000001907349,1934.6000001430511,correct,confidence,5.0
@@ -3406,7 +3406,7 @@ we506259,nut,../static/stimuli/images/computerroom/sun_ashjjvtrfwzoxxij.jpg,Fals
 we506259,candle,../static/stimuli/images/campsite/sun_amejpvolcgftwwch.jpg,False,0,1404.2000000029802,,0.10000000149011612,1404.3000000044703,empty,fok,1.0
 we506259,eye,../static/stimuli/images/skiresort/sun_aewjqygtlkyracri.jpg,False,0,1580.1000000014901,,0.0,1580.1000000014901,empty,fok,1.0
 we506259,potato,../static/stimuli/images/railway/sun_atutomffrubpoiva.jpg,False,0,1099.0,potato,1813.1000000014901,2912.10000000149,correct,confidence,4.0
-we506259,flower,../static/stimuli/images/roof/sun_airvzklrdchyytiu.jpg,False,0,1779.0,car,911.4000000059605,2690.4000000059605,intrusion,confidence,2.0
+we506259,flower,../static/stimuli/images/roof/sun_airvzklrdchyytiu.jpg,False,0,1779.0,car,911.4000000059605,2690.4000000059605,other,confidence,2.0
 we506259,truck,../static/stimuli/images/tower/sun_afjkdsegpwxewtah.jpg,False,0,1236.0,window,1373.8000000044703,2609.8000000044703,intrusion,confidence,5.0
 we506259,drink,../static/stimuli/images/warehouse/sun_aaawomlbokrxmfyj.jpg,False,0,1443.2000000029802,,0.0,1443.2000000029802,empty,fok,1.0
 we506259,bee,../static/stimuli/images/windmill/sun_ahkhvvnvkjevxvvu.jpg,False,0,1252.1000000014901,,0.10000000149011612,1252.2000000029802,empty,fok,1.0
@@ -3431,7 +3431,7 @@ we506259,hay,../static/stimuli/images/forest/sun_abvrazjxgpqhvszy.jpg,False,0,10
 we506259,bear,../static/stimuli/images/sky/sun_ampvdpptptmciwok.jpg,False,0,940.5,bear,838.5,1779.0,correct,confidence,5.0
 we506259,sand,../static/stimuli/images/airport/sun_aelkzcvlquyyzxlu.jpg,False,0,2010.5,,0.0,2010.5,empty,fok,1.0
 we506259,snake,../static/stimuli/images/waterfall/sun_awrontvhyysjfacv.jpg,False,0,1051.3999999985099,snake,1165.7999999970198,2217.1999999955297,correct,confidence,5.0
-we506259,window,../static/stimuli/images/castle/sun_apbjjqvsvrybtdua.jpg,False,0,901.9000000059605,windows,1229.2999999970198,2131.2000000029802,correct,confidence,4.0
+we506259,window,../static/stimuli/images/castle/sun_apbjjqvsvrybtdua.jpg,False,0,901.9000000059605,windows,1229.2999999970198,2131.2000000029802,other,confidence,4.0
 we506259,rabbit,../static/stimuli/images/musuem/sun_agblrnoilxeknben.jpg,False,0,1650.3999999985099,rabbit,1550.3999999985099,3200.7999999970198,correct,confidence,5.0
 we506259,milk,../static/stimuli/images/vineyard/sun_azygdhuijrbfollv.jpg,False,0,1260.1000000014901,milk,1078.1000000014901,2338.2000000029802,correct,confidence,4.0
 we506259,lion,../static/stimuli/images/theater/sun_alttxbnfjyibouth.jpg,False,0,1211.1000000014901,lion,1932.8999999985099,3144.0,correct,confidence,4.0
@@ -3685,7 +3685,7 @@ wa6b3bff,nut,../static/stimuli/images/garage/sun_deomonrjnryvglit.jpg,True,0,145
 wa6b3bff,bread,../static/stimuli/images/shoppingmall/sun_aradyzjpmslqqakf.jpg,False,0,1650.9000000953674,bread,1109.5,2760.4000000953674,correct,confidence,5.0
 wa6b3bff,drink,../static/stimuli/images/sky/sun_abbtimwgskvvaeps.jpg,False,0,4272.799999952316,soal,704.5999999046326,4977.399999856949,other,confidence,1.0
 wa6b3bff,jeans,../static/stimuli/images/windmill/sun_awjnichhcaunlnrz.jpg,False,0,2250.2000000476837,skip,706.5999999046326,2956.7999999523163,other,confidence,1.0
-wa6b3bff,bone,../static/stimuli/images/downtown/sun_acbmuljpyqdcboxt.jpg,False,0,1750.2000000476837,dense,1058.6000001430511,2808.800000190735,intrusion,confidence,4.0
+wa6b3bff,bone,../static/stimuli/images/downtown/sun_acbmuljpyqdcboxt.jpg,False,0,1750.2000000476837,dense,1058.6000001430511,2808.800000190735,other,confidence,4.0
 wa6b3bff,door,../static/stimuli/images/waterfall/sun_albucmtmstcfpynn.jpg,False,0,1367.8000001907349,door,829.5,2197.300000190735,correct,confidence,5.0
 wa6b3bff,cake,../static/stimuli/images/tenniscourt/sun_abhryuvnxasmofva.jpg,False,0,1147.5,cake,585.2999999523163,1732.7999999523163,correct,confidence,5.0
 wa6b3bff,snake,../static/stimuli/images/skiresort/sun_aijypnsissxbdxyj.jpg,False,0,3506.300000190735,skip,689.6999998092651,4196.0,other,confidence,1.0
@@ -3693,13 +3693,13 @@ wa6b3bff,horse,../static/stimuli/images/pool/sun_antxeexzhaspkvlj.jpg,False,0,14
 wa6b3bff,milk,../static/stimuli/images/grocery/sun_attfybmngdqnppeu.jpg,False,0,2398.2000000476837,milk,876.6999998092651,3274.899999856949,correct,confidence,5.0
 wa6b3bff,bird,../static/stimuli/images/airport/sun_aojbxgadgjyajeaw.jpg,False,0,1511.2999999523163,bird,991.0,2502.2999999523163,correct,confidence,5.0
 wa6b3bff,heart,../static/stimuli/images/forest/sun_atohvclowaousrfh.jpg,False,0,2092.5,heart,889.6999998092651,2982.199999809265,correct,confidence,5.0
-wa6b3bff,candle,../static/stimuli/images/musuem/sun_atiiscmhrcnttlop.jpg,False,0,1706.2000000476837,bus,929.2999999523163,2635.5,intrusion,confidence,1.0
+wa6b3bff,candle,../static/stimuli/images/musuem/sun_atiiscmhrcnttlop.jpg,False,0,1706.2000000476837,bus,929.2999999523163,2635.5,other,confidence,1.0
 wa6b3bff,hay,../static/stimuli/images/theater/sun_acehmgvyiimdorgz.jpg,False,0,1627.1999998092651,hay,1275.5,2902.699999809265,correct,confidence,5.0
 wa6b3bff,bed,../static/stimuli/images/gym/sun_aljefikdfqefidfc.jpg,False,0,1096.2000000476837,bed,739.9000000953674,1836.1000001430511,correct,confidence,5.0
 wa6b3bff,sand,../static/stimuli/images/laundryroom/sun_amdxqjichaqshdel.jpg,False,0,1399.7000000476837,sand,721.5999999046326,2121.2999999523163,correct,confidence,5.0
 wa6b3bff,potato,../static/stimuli/images/bookstore/sun_auwghripdoxzluuk.jpg,False,0,1697.9000000953674,children,1492.7999999523163,3190.7000000476837,other,confidence,3.0
 wa6b3bff,eye,../static/stimuli/images/roof/sun_ajxjjpvulhilcwcy.jpg,False,0,2064.4000000953674,eye,637.5999999046326,2702.0,correct,confidence,4.0
-wa6b3bff,lion,../static/stimuli/images/underwater/sun_aktxgxoebrjkepur.jpg,False,0,1931.5,tart,800.5,2732.0,intrusion,confidence,1.0
+wa6b3bff,lion,../static/stimuli/images/underwater/sun_aktxgxoebrjkepur.jpg,False,0,1931.5,tart,800.5,2732.0,other,confidence,1.0
 wa6b3bff,bag,../static/stimuli/images/tower/sun_akmnewliaqefdugs.jpg,False,0,2044.5999999046326,bag,463.60000014305115,2508.2000000476837,correct,confidence,5.0
 wa6b3bff,duck,../static/stimuli/images/subway/sun_axjlvqkyqahstpwg.jpg,False,0,1938.5999999046326,nopre,1418.0999999046326,3356.699999809265,other,confidence,1.0
 wa6b3bff,rabbit,../static/stimuli/images/street/sun_amjwoyuxrszlicsb.jpg,False,0,2237.5,skip,661.0,2898.5,other,confidence,2.0
@@ -3713,11 +3713,11 @@ wa6b3bff,fence,../static/stimuli/images/beach/sun_aaapvfgggrgorgox.jpg,False,0,1
 wa6b3bff,egg,../static/stimuli/images/ranch/sun_adlocewvkpbsaigj.jpg,False,0,1936.5,pig,807.1000001430511,2743.600000143051,intrusion,confidence,3.0
 wa6b3bff,bear,../static/stimuli/images/campsite/sun_arbodmznqjwtkkya.jpg,False,0,967.5,bear,752.1000001430511,1719.6000001430511,correct,confidence,5.0
 wa6b3bff,puzzle,../static/stimuli/images/warehouse/sun_ainoacwsquefrlbr.jpg,False,0,1658.0,puzzle,1413.2999999523163,3071.2999999523163,correct,confidence,5.0
-wa6b3bff,truck,../static/stimuli/images/volcano/sun_amntiizmakyntrnx.jpg,False,0,1627.0,car,1575.5999999046326,3202.5999999046326,intrusion,confidence,5.0
+wa6b3bff,truck,../static/stimuli/images/volcano/sun_amntiizmakyntrnx.jpg,False,0,1627.0,car,1575.5999999046326,3202.5999999046326,other,confidence,5.0
 wa6b3bff,pig,../static/stimuli/images/house/sun_abcaoiwkiofeweig.jpg,False,0,1599.9000000953674,pig,1060.0999999046326,2660.0,correct,confidence,5.0
 wa6b3bff,window,../static/stimuli/images/auditorium/sun_akzbbqivzbpbnjbz.jpg,False,0,1569.2000000476837,window,972.5999999046326,2541.7999999523163,correct,confidence,5.0
 wa6b3bff,computer,../static/stimuli/images/railway/sun_avugyywnswogxvlh.jpg,False,0,1100.0,computer,1489.5999999046326,2589.5999999046326,correct,confidence,5.0
-wa6b3bff,toilet,../static/stimuli/images/vineyard/sun_adcctdabyxmhioeg.jpg,False,0,2047.0,poop,723.6999998092651,2770.699999809265,intrusion,confidence,3.0
+wa6b3bff,toilet,../static/stimuli/images/vineyard/sun_adcctdabyxmhioeg.jpg,False,0,2047.0,poop,723.6999998092651,2770.699999809265,other,confidence,3.0
 wa6b3bff,hat,../static/stimuli/images/ziggurat/sun_aiqkruqnfbmiiafv.jpg,False,0,1067.7000000476837,hat,440.89999985694885,1508.5999999046326,correct,confidence,5.0
 w2465e31,volcano,../static/stimuli/images/volcano/sun_aetnikjhplqgsznx.jpg,True,0,2630.0,volcano,5703.0,8333.0,correct,confidence,4.0
 w2465e31,snake,../static/stimuli/images/kitchen/sun_ajmwiafzffjerzeb.jpg,True,0,6256.0,dog,5215.0,11471.0,intrusion,confidence,2.0
@@ -4072,7 +4072,7 @@ w178df1d,cat,../static/stimuli/images/pool/sun_alkvkavnnunmdavq.jpg,False,0,1098
 w178df1d,bee,../static/stimuli/images/vineyard/sun_aotjqpvjaukupppc.jpg,False,0,1180.7999999523163,bee,479.3000000715256,1660.1000000238419,correct,confidence,5.0
 w178df1d,bed,../static/stimuli/images/sky/sun_aemltyubcdmxluwx.jpg,False,0,994.3999999761581,bed,882.2999999523163,1876.6999999284744,correct,confidence,5.0
 w178df1d,flower,../static/stimuli/images/kitchen/sun_aqeaevwwwjoqhzvl.jpg,False,0,1071.4000000953674,,0.09999990463256836,1071.5,empty,fok,2.0
-w178df1d,pig,../static/stimuli/images/windmill/sun_alrghzshdjgnywto.jpg,False,0,960.0,cow,482.0,1442.0,intrusion,confidence,5.0
+w178df1d,pig,../static/stimuli/images/windmill/sun_alrghzshdjgnywto.jpg,False,0,960.0,cow,482.0,1442.0,other,confidence,5.0
 w178df1d,door,../static/stimuli/images/airport/sun_aojbxgadgjyajeaw.jpg,False,0,1788.5,,0.10000002384185791,1788.6000000238419,empty,fok,2.0
 w178df1d,drink,../static/stimuli/images/roof/sun_awskptrfuzjyjwes.jpg,False,0,783.2000000476837,,0.10000002384185791,783.3000000715256,empty,fok,1.0
 w178df1d,duck,../static/stimuli/images/garage/sun_dqhbnkldvcwhjinp.jpg,False,0,1193.0,,0.10000002384185791,1193.1000000238419,empty,fok,1.0
@@ -4082,7 +4082,7 @@ w178df1d,bear,../static/stimuli/images/downtown/sun_axbzajoxhnjergfp.jpg,False,0
 w6f83aef,bread,../static/stimuli/images/street/sun_avddlmbtwpvlxdol.jpg,True,0,2015.7999999523163,,0.0,2015.7999999523163,empty,fok,1.0
 w6f83aef,heart,../static/stimuli/images/ziggurat/sun_aecdvzqgcesggjrp.jpg,True,0,575.4000000953674,,0.0,575.4000000953674,empty,fok,1.0
 w6f83aef,bird,../static/stimuli/images/house/sun_aahrslvfecptaudk.jpg,True,0,712.6000001430511,1,371.2999999523163,1083.9000000953674,empty,confidence,1.0
-w6f83aef,apple,../static/stimuli/images/downtown/sun_bubeehcgngkyqymr.jpg,False,0,1373.6000001430511,nyc,1243.2000000476837,2616.800000190735,intrusion,confidence,3.0
+w6f83aef,apple,../static/stimuli/images/downtown/sun_bubeehcgngkyqymr.jpg,False,0,1373.6000001430511,nyc,1243.2000000476837,2616.800000190735,other,confidence,3.0
 w6f83aef,candle,../static/stimuli/images/skiresort/sun_adyplaxglzqyoynb.jpg,False,0,1172.7000000476837,,0.0,1172.7000000476837,empty,fok,1.0
 w6f83aef,eye,../static/stimuli/images/tenniscourt/sun_auqykplyynyhxcas.jpg,False,0,711.9000000953674,,894.0999999046326,1606.0,empty,fok,1.0
 w6f83aef,bear,../static/stimuli/images/footballfield/sun_aadxnjugrvhqyufw.jpg,False,0,942.2000000476837,,0.0,942.2000000476837,empty,fok,1.0
@@ -4125,7 +4125,7 @@ w762abbc,bird,../static/stimuli/images/pool/sun_antxeexzhaspkvlj.jpg,True,0,2914
 w762abbc,flower,../static/stimuli/images/subway/sun_agpnhsuccwnvcjwe.jpg,False,0,2055.0,,0.0,2055.0,empty,fok,2.0
 w762abbc,bone,../static/stimuli/images/musuem/sun_axbkhklgdaevqxyj.jpg,False,0,1281.0,bone,534.0,1815.0,correct,confidence,5.0
 w762abbc,window,../static/stimuli/images/railway/sun_aqddawzjzkqycxjc.jpg,False,0,1193.0,window,987.0,2180.0,correct,confidence,5.0
-w762abbc,bag,../static/stimuli/images/tower/sun_amsimjdbtzyefqbh.jpg,False,0,1767.0,purse,812.0,2579.0,intrusion,confidence,3.0
+w762abbc,bag,../static/stimuli/images/tower/sun_amsimjdbtzyefqbh.jpg,False,0,1767.0,purse,812.0,2579.0,other,confidence,3.0
 w762abbc,fence,../static/stimuli/images/downtown/sun_aljrvcabwnwkorml.jpg,False,0,1563.0,fence,702.0,2265.0,correct,confidence,5.0
 w762abbc,bee,../static/stimuli/images/ziggurat/fig1.png,False,0,1493.0,,0.0,1493.0,empty,fok,1.0
 w762abbc,hay,../static/stimuli/images/vineyard/sun_aicvecccjhfzcjnt.jpg,False,0,1079.0,grass,943.0,2022.0,other,confidence,4.0
@@ -4227,7 +4227,7 @@ wc294200,dog,../static/stimuli/images/garage/sun_dqhbnkldvcwhjinp.jpg,False,0,83
 wc294200,apple,../static/stimuli/images/computerroom/sun_aiwdglrsrkkfbgzz.jpg,False,0,1004.2999999523163,apple,585.0,1589.2999999523163,correct,confidence,5.0
 wc294200,egg,../static/stimuli/images/gym/sun_appsvbfzhwrmtrje.jpg,False,0,853.8999999761581,egg,450.5,1304.3999999761581,correct,confidence,5.0
 wc294200,pig,../static/stimuli/images/tenniscourt/sun_arhfignuhjkxcmvk.jpg,False,0,1527.9000000357628,,0.0,1527.9000000357628,empty,fok,3.0
-wc294200,bird,../static/stimuli/images/volcano/sun_agobzgvhyhaxalcv.jpg,False,0,1153.7000000476837,birds,540.0999999642372,1693.800000011921,correct,confidence,5.0
+wc294200,bird,../static/stimuli/images/volcano/sun_agobzgvhyhaxalcv.jpg,False,0,1153.7000000476837,birds,540.0999999642372,1693.800000011921,other,confidence,5.0
 wc294200,bear,../static/stimuli/images/warehouse/sun_agdmklchstfjclxg.jpg,False,0,1020.6999999880791,bear,363.5,1384.199999988079,correct,confidence,5.0
 wc294200,hat,../static/stimuli/images/skiresort/sun_aijypnsissxbdxyj.jpg,False,0,1048.199999988079,hat,269.80000001192093,1318.0,correct,confidence,5.0
 wc294200,rabbit,../static/stimuli/images/auditorium/sun_alpteetxpjmjcejm.jpg,False,0,1409.199999988079,rabbit,584.1999999880791,1993.3999999761581,correct,confidence,4.0
@@ -4257,7 +4257,7 @@ w10dba5f,rabbit,../static/stimuli/images/underwater/sun_aufltyunbkquxrih.jpg,Fal
 w10dba5f,lawn,../static/stimuli/images/street/sun_amwdevcpkorkaqcv.jpg,False,0,1293.1000000238419,,0.0,1293.1000000238419,empty,fok,1.0
 w10dba5f,lion,../static/stimuli/images/shoppingmall/sun_addqytasyktafwmq.jpg,False,0,1732.3000000715256,,0.0,1732.3000000715256,empty,fok,1.0
 w10dba5f,bag,../static/stimuli/images/castle/sun_aduovtnrsmdtcpie.jpg,False,0,1025.2999999523163,,0.10000002384185791,1025.3999999761581,empty,fok,1.0
-w10dba5f,cat,../static/stimuli/images/ranch/sun_atkydlwjcpmattts.jpg,False,0,1344.1999999284744,cats,1874.1000000238419,3218.2999999523163,correct,confidence,5.0
+w10dba5f,cat,../static/stimuli/images/ranch/sun_atkydlwjcpmattts.jpg,False,0,1344.1999999284744,cats,1874.1000000238419,3218.2999999523163,other,confidence,5.0
 w10dba5f,fence,../static/stimuli/images/windmill/sun_ahkhvvnvkjevxvvu.jpg,False,0,1170.0,,0.0,1170.0,empty,fok,1.0
 w10dba5f,jeans,../static/stimuli/images/roof/sun_aqhqmhidvlrpfhie.jpg,False,0,844.3999999761581,,0.0,844.3999999761581,empty,fok,1.0
 w10dba5f,ear,../static/stimuli/images/skiresort/sun_agpfoakkwrzedbll.jpg,False,0,1164.5,,0.20000004768371582,1164.7000000476837,empty,fok,1.0
@@ -4306,7 +4306,7 @@ w42b00b9,truck,../static/stimuli/images/restaurant/sun_aejvqzvtonxptams.jpg,Fals
 w42b00b9,fence,../static/stimuli/images/windmill/sun_avyfornqjbraqqsf.jpg,False,0,920.5,fence,691.4000000059605,1611.9000000059605,correct,confidence,5.0
 w42b00b9,drink,../static/stimuli/images/greenhouse/sun_bxiwqwbzndahlxxp.jpg,False,0,1463.9000000059605,,0.09999999403953552,1464.0,empty,fok,1.0
 w42b00b9,bee,../static/stimuli/images/subway/sun_apsbdxitmzdgpeyn.jpg,False,0,1048.300000011921,bee,565.4000000059605,1613.7000000178814,correct,confidence,3.0
-w42b00b9,egg,../static/stimuli/images/street/sun_amjwoyuxrszlicsb.jpg,False,0,1255.0999999940395,eggs,645.1999999880791,1900.2999999821186,correct,confidence,5.0
+w42b00b9,egg,../static/stimuli/images/street/sun_amjwoyuxrszlicsb.jpg,False,0,1255.0999999940395,eggs,645.1999999880791,1900.2999999821186,other,confidence,5.0
 w42b00b9,ear,../static/stimuli/images/underwater/sun_axbjbqawtejfugwt.jpg,False,0,785.0999999940395,ear,355.19999998807907,1140.2999999821186,correct,confidence,5.0
 w42b00b9,rabbit,../static/stimuli/images/ziggurat/sun_amuijzzaceciuwpo.jpg,False,0,1015.5,rabbit,802.7000000178814,1818.2000000178814,correct,confidence,5.0
 w42b00b9,horse,../static/stimuli/images/skiresort/sun_aewjqygtlkyracri.jpg,False,0,1122.0,horse,720.5999999940395,1842.5999999940395,correct,confidence,5.0
@@ -4482,7 +4482,7 @@ wb5f80bb,bed,../static/stimuli/images/windmill/sun_avyfornqjbraqqsf.jpg,False,0,
 w880a528,cat,../static/stimuli/images/warehouse/sun_aboqyhgpfgwxwmut.jpg,True,0,1312.699999999255,cat,419.80000000074506,1732.5,correct,confidence,5.0
 w880a528,bed,../static/stimuli/images/downtown/sun_acbmuljpyqdcboxt.jpg,True,0,863.5,,0.10000000149011612,863.6000000014901,empty,fok,1.0
 w880a528,ear,../static/stimuli/images/volcano/sun_amntiizmakyntrnx.jpg,True,0,610.7999999970198,,873.8000000007451,1484.5999999977648,empty,fok,1.0
-w880a528,bone,../static/stimuli/images/gym/sun_agptlflfgabhuxym.jpg,False,0,1011.9000000022352,saw,523.8000000007451,1535.7000000029802,intrusion,confidence,5.0
+w880a528,bone,../static/stimuli/images/gym/sun_agptlflfgabhuxym.jpg,False,0,1011.9000000022352,saw,523.8000000007451,1535.7000000029802,other,confidence,5.0
 w880a528,lawn,../static/stimuli/images/skiresort/sun_agehhpppqkifjwhn.jpg,False,0,775.0999999977648,,0.0,775.0999999977648,empty,fok,1.0
 w880a528,heart,../static/stimuli/images/roof/sun_atghhbuspyfvqzao.jpg,False,0,535.6999999992549,,840.1999999992549,1375.8999999985099,empty,fok,1.0
 w880a528,eye,../static/stimuli/images/footballfield/sun_afihcbvbdxmnexyh.jpg,False,0,784.9000000022352,,0.0,784.9000000022352,empty,fok,1.0
@@ -4506,7 +4506,7 @@ w880a528,candle,../static/stimuli/images/waterfall/sun_amyxrbqiudksvqun.jpg,Fals
 w880a528,window,../static/stimuli/images/sky/sun_aemltyubcdmxluwx.jpg,False,0,519.6999999992549,,0.10000000149011612,519.8000000007451,empty,fok,1.0
 w880a528,fence,../static/stimuli/images/airport/sun_aqogketumcqznmzs.jpg,False,0,512.5999999977648,,0.0,512.5999999977648,empty,fok,1.0
 w880a528,bear,../static/stimuli/images/restaurant/sun_ajsstbpxnharlnnf.jpg,False,0,1118.1000000014901,bear,1055.5999999977648,2173.699999999255,correct,confidence,5.0
-w880a528,hay,../static/stimuli/images/tower/sun_altkfiythtxnptob.jpg,False,0,1538.1000000014901,saw,614.3999999985099,2152.5,correct,confidence,3.0
+w880a528,hay,../static/stimuli/images/tower/sun_altkfiythtxnptob.jpg,False,0,1538.1000000014901,saw,614.3999999985099,2152.5,other,confidence,3.0
 w880a528,puzzle,../static/stimuli/images/musuem/sun_akxippvbzxkxmejj.jpg,False,0,1011.6999999992549,puzzle,1282.300000000745,2294.0,correct,confidence,5.0
 w880a528,horse,../static/stimuli/images/shoppingmall/sun_asbknkxckcdqmjml.jpg,False,0,582.6000000014901,,0.0,582.6000000014901,empty,fok,1.0
 w880a528,flower,../static/stimuli/images/castle/sun_aieefrkagxyksfuj.jpg,False,0,842.1000000014901,,0.0,842.1000000014901,empty,fok,1.0
@@ -4566,7 +4566,7 @@ w49701fc,window,../static/stimuli/images/downtown/sun_acbmuljpyqdcboxt.jpg,False
 w49701fc,sand,../static/stimuli/images/theater/sun_abnbylturqcwwiuz.jpg,False,0,2516.5,tall,785.2999999970198,3301.7999999970198,other,confidence,1.0
 w49701fc,bee,../static/stimuli/images/house/sun_afejjgypgnszvwza.jpg,False,0,3137.9000000059605,garden,905.8999999910593,4043.7999999970198,other,confidence,1.0
 w49701fc,fence,../static/stimuli/images/airport/sun_aajqjnzswlmdcmyl.jpg,False,0,1548.0999999940395,fence,939.0999999940395,2487.199999988079,correct,confidence,4.0
-w49701fc,door,../static/stimuli/images/tenniscourt/sun_aizsvornuhzvyvhc.jpg,False,0,3083.5,play,673.7000000029802,3757.2000000029802,intrusion,confidence,1.0
+w49701fc,door,../static/stimuli/images/tenniscourt/sun_aizsvornuhzvyvhc.jpg,False,0,3083.5,play,673.7000000029802,3757.2000000029802,other,confidence,1.0
 w49701fc,puzzle,../static/stimuli/images/skiresort/sun_ancomucdrbxydgbi.jpg,False,0,1656.7000000029802,,0.09999999403953552,1656.7999999970198,empty,fok,1.0
 w49701fc,computer,../static/stimuli/images/sky/sun_agaqzpqhbcmmvisy.jpg,False,0,1040.2000000029802,,0.0,1040.2000000029802,empty,fok,1.0
 w49701fc,bird,../static/stimuli/images/laundryroom/sun_adldglebrfdkcxwu.jpg,False,0,1028.800000011921,,0.09999999403953552,1028.9000000059605,empty,fok,1.0
@@ -4574,7 +4574,7 @@ w49701fc,bed,../static/stimuli/images/pool/sun_argikopryamoycho.jpg,False,0,1300
 w49701fc,eye,../static/stimuli/images/tower/sun_augaqwzgrksvvsgf.jpg,False,0,2448.800000011921,,0.0,2448.800000011921,empty,fok,1.0
 w49701fc,dog,../static/stimuli/images/auditorium/sun_amnlhuknqqtssrhl.jpg,False,0,675.5999999940395,,1236.9000000059605,1912.5,empty,fok,1.0
 w49701fc,candle,../static/stimuli/images/roof/sun_atghhbuspyfvqzao.jpg,False,0,1097.7999999970198,,0.0,1097.7999999970198,empty,fok,1.0
-w49701fc,heart,../static/stimuli/images/gym/sun_auzbqfsaebhgtrig.jpg,False,0,1939.0,happy,714.7000000029802,2653.7000000029802,intrusion,confidence,2.0
+w49701fc,heart,../static/stimuli/images/gym/sun_auzbqfsaebhgtrig.jpg,False,0,1939.0,happy,714.7000000029802,2653.7000000029802,other,confidence,2.0
 w49701fc,lawn,../static/stimuli/images/campsite/sun_aommnycdukjoaebq.jpg,False,0,1224.699999988079,,0.0,1224.699999988079,empty,fok,1.0
 w49701fc,duck,../static/stimuli/images/ziggurat/sun_aenpmgoxmkmwaoiq.jpg,False,0,1347.7000000029802,,0.0,1347.7000000029802,empty,fok,1.0
 w49701fc,jeans,../static/stimuli/images/volcano/sun_amntiizmakyntrnx.jpg,False,0,701.2999999970198,,0.0,701.2999999970198,empty,fok,1.0
@@ -4623,7 +4623,7 @@ wdde2e7b,bed,../static/stimuli/images/computerroom/sun_azkmsfiuzzekamsy.jpg,Fals
 wdde2e7b,egg,../static/stimuli/images/vineyard/sun_amazvkispkonazvz.jpg,False,0,1334.5,,0.09999999403953552,1334.5999999940395,empty,fok,1.0
 wdde2e7b,candle,../static/stimuli/images/beach/sun_aabhqzsffoeycgje.jpg,False,0,1958.5,,0.0,1958.5,empty,fok,1.0
 wdde2e7b,drink,../static/stimuli/images/auditorium/sun_ahcmaddzrcfxzuuz.jpg,False,0,895.0999999940395,,0.0,895.0999999940395,empty,fok,1.0
-wdde2e7b,window,../static/stimuli/images/theater/sun_arhrqrqrgyhlozgq.jpg,False,0,1636.699999988079,windows,3319.0,4955.699999988079,correct,confidence,4.0
+wdde2e7b,window,../static/stimuli/images/theater/sun_arhrqrqrgyhlozgq.jpg,False,0,1636.699999988079,windows,3319.0,4955.699999988079,other,confidence,4.0
 wdde2e7b,lawn,../static/stimuli/images/restaurant/sun_afgriceqykrjokmt.jpg,False,0,1188.9000000059605,,0.09999999403953552,1189.0,empty,fok,1.0
 wdde2e7b,jeans,../static/stimuli/images/grocery/sun_acmmgshfrxgopxlk.jpg,False,0,1166.800000011921,,0.09999999403953552,1166.9000000059605,empty,fok,1.0
 wdde2e7b,fence,../static/stimuli/images/shoppingmall/sun_aradyzjpmslqqakf.jpg,False,0,1799.2999999821186,fence,1886.7000000178814,3686.0,correct,confidence,5.0
@@ -4658,7 +4658,7 @@ wb3bf80f,volcano,../static/stimuli/images/airport/sun_aelkzcvlquyyzxlu.jpg,False
 wb3bf80f,truck,../static/stimuli/images/footballfield/sun_afuzusgbewygvixv.jpg,False,0,974.5,truck,1519.5999999940395,2494.0999999940395,correct,confidence,5.0
 wb3bf80f,hay,../static/stimuli/images/volcano/sun_aetnikjhplqgsznx.jpg,False,0,2814.800000011921,,0.09999999403953552,2814.9000000059605,empty,fok,1.0
 wb3bf80f,puzzle,../static/stimuli/images/roof/sun_acebhjdzsytwpmoj.jpg,False,0,1189.199999988079,puzzle,1295.4000000059605,2484.5999999940395,correct,confidence,5.0
-wb3bf80f,lawn,../static/stimuli/images/ziggurat/sun_apdphtulomykrqoa.jpg,False,0,1206.7000000178814,yar,416.09999999403954,1622.800000011921,intrusion,confidence,5.0
+wb3bf80f,lawn,../static/stimuli/images/ziggurat/sun_apdphtulomykrqoa.jpg,False,0,1206.7000000178814,yar,416.09999999403954,1622.800000011921,other,confidence,5.0
 wb3bf80f,bone,../static/stimuli/images/skiresort/sun_adyplaxglzqyoynb.jpg,False,0,1574.4000000059605,bone,704.0,2278.4000000059605,correct,confidence,5.0
 wb3bf80f,flower,../static/stimuli/images/underwater/sun_aufltyunbkquxrih.jpg,False,0,1037.199999988079,flower,1800.0999999940395,2837.2999999821186,correct,confidence,5.0
 wb3bf80f,bread,../static/stimuli/images/subway/sun_alfhdavatfhkuxyo.jpg,False,0,966.0999999940395,bread,783.7000000178814,1749.800000011921,correct,confidence,5.0
@@ -4684,7 +4684,7 @@ w37dd8e4,bear,../static/stimuli/images/auditorium/sun_amogjvmhqoxmxbyg.jpg,True,
 w37dd8e4,bag,../static/stimuli/images/laundryroom/sun_amdxqjichaqshdel.jpg,True,0,1335.0,bag,466.0,1801.0,correct,confidence,5.0
 w37dd8e4,bed,../static/stimuli/images/volcano/sun_amntiizmakyntrnx.jpg,False,0,2138.0,,0.0,2138.0,empty,fok,2.0
 w37dd8e4,cake,../static/stimuli/images/skiresort/sun_agpfoakkwrzedbll.jpg,False,0,986.0,,0.0,986.0,empty,fok,2.0
-w37dd8e4,fence,../static/stimuli/images/railway/sun_avugyywnswogxvlh.jpg,False,0,1158.0,fences,1002.0,2160.0,correct,confidence,5.0
+w37dd8e4,fence,../static/stimuli/images/railway/sun_avugyywnswogxvlh.jpg,False,0,1158.0,fences,1002.0,2160.0,other,confidence,5.0
 w37dd8e4,bird,../static/stimuli/images/bookstore/sun_aamunjvxvlcyagxh.jpg,False,0,1106.0,,0.0,1106.0,empty,fok,2.0
 w37dd8e4,ear,../static/stimuli/images/campsite/sun_amejpvolcgftwwch.jpg,False,0,1106.0,,0.0,1106.0,empty,fok,3.0
 w37dd8e4,cat,../static/stimuli/images/tenniscourt/sun_akifkmvcnuzulsxa.jpg,False,0,826.0,,0.0,826.0,empty,fok,1.0
@@ -4754,10 +4754,10 @@ we599fe7,bed,../static/stimuli/images/roof/sun_aqxzijexicadnjja.jpg,False,0,1458
 we599fe7,hay,../static/stimuli/images/underwater/sun_aufltyunbkquxrih.jpg,False,0,1455.0000000001164,,0.0,1455.0000000001164,empty,fok,1.0
 we599fe7,pig,../static/stimuli/images/laundryroom/sun_adldglebrfdkcxwu.jpg,False,0,1380.0,,0.0,1380.0,empty,fok,2.0
 we599fe7,lion,../static/stimuli/images/auditorium/sun_almcaxysfdwizxac.jpg,False,0,1276.0,,0.0,1276.0,empty,fok,1.0
-we599fe7,bear,../static/stimuli/images/vineyard/sun_adcctdabyxmhioeg.jpg,False,0,3236.9999999998836,salt,2552.0000000001164,5789.0,intrusion,confidence,2.0
+we599fe7,bear,../static/stimuli/images/vineyard/sun_adcctdabyxmhioeg.jpg,False,0,3236.9999999998836,salt,2552.0000000001164,5789.0,other,confidence,2.0
 we599fe7,jeans,../static/stimuli/images/waterfall/sun_acmlcxobalurtcmq.jpg,False,0,1506.9999999998836,jeans,2563.0000000001164,4070.0,correct,confidence,5.0
 we599fe7,cat,../static/stimuli/images/greenhouse/sun_bhxqibazllyrcpje.jpg,False,0,1245.0000000001164,cat,1698.9999999997672,2943.9999999998836,correct,confidence,5.0
-we599fe7,rabbit,../static/stimuli/images/river/sun_atesawsfypjpyefy.jpg,False,0,3501.0,salt,2974.0,6475.0,intrusion,confidence,2.0
+we599fe7,rabbit,../static/stimuli/images/river/sun_atesawsfypjpyefy.jpg,False,0,3501.0,salt,2974.0,6475.0,other,confidence,2.0
 we599fe7,heart,../static/stimuli/images/campsite/sun_azvxwxzbkknkggng.jpg,False,0,1327.0,heart,2089.0,3416.0,correct,confidence,5.0
 w2b66bb3,horse,../static/stimuli/images/computerroom/sun_azkmsfiuzzekamsy.jpg,True,0,5971.100000143051,,0.09999990463256836,5971.200000047684,empty,fok,1.0
 w2b66bb3,cake,../static/stimuli/images/castle/sun_apvtpjdfgucfbnsd.jpg,True,0,2553.0,,0.0,2553.0,empty,fok,1.0
@@ -4790,7 +4790,7 @@ w2b66bb3,lawn,../static/stimuli/images/theater/sun_acpdepnxayyyjqgs.jpg,False,0,
 w2b66bb3,puzzle,../static/stimuli/images/footballfield/sun_afihcbvbdxmnexyh.jpg,False,0,527.2000000476837,,0.0,527.2000000476837,empty,fok,1.0
 w2b66bb3,jeans,../static/stimuli/images/tenniscourt/sun_arhfignuhjkxcmvk.jpg,False,0,561.1999998092651,,0.0,561.1999998092651,empty,fok,1.0
 w2b66bb3,window,../static/stimuli/images/tower/sun_abxucdjovctfgknh.jpg,False,0,1147.1999998092651,window,2809.7000000476837,3956.899999856949,correct,confidence,4.0
-w2b66bb3,truck,../static/stimuli/images/roof/sun_acebhjdzsytwpmoj.jpg,False,0,1059.7999999523163,tree,830.2999999523163,1890.0999999046326,intrusion,confidence,4.0
+w2b66bb3,truck,../static/stimuli/images/roof/sun_acebhjdzsytwpmoj.jpg,False,0,1059.7999999523163,tree,830.2999999523163,1890.0999999046326,other,confidence,4.0
 w2b66bb3,candle,../static/stimuli/images/ziggurat/sun_aenpmgoxmkmwaoiq.jpg,False,0,1067.7000000476837,,0.0,1067.7000000476837,empty,fok,1.0
 w2b66bb3,duck,../static/stimuli/images/ranch/sun_ajxvkybqisznlxgg.jpg,False,0,540.0,,0.09999990463256836,540.0999999046326,empty,fok,1.0
 w2b66bb3,heart,../static/stimuli/images/auditorium/sun_amogjvmhqoxmxbyg.jpg,False,0,761.7999999523163,,0.0,761.7999999523163,empty,fok,1.0
@@ -4809,7 +4809,7 @@ w0f2031b,hat,../static/stimuli/images/downtown/sun_aljrvcabwnwkorml.jpg,False,0,
 w0f2031b,duck,../static/stimuli/images/roof/sun_aqhqmhidvlrpfhie.jpg,False,0,1049.5999999046326,dog,1488.0,2537.5999999046326,intrusion,confidence,2.0
 w0f2031b,snake,../static/stimuli/images/footballfield/sun_bytuhfnudnbsojli.jpg,False,0,1423.4000000953674,,0.09999990463256836,1423.5,empty,fok,1.0
 w0f2031b,rabbit,../static/stimuli/images/temple/sun_aiqyivjtsjhjgqur.jpg,False,0,1049.7000000476837,rabbit,1109.7999999523163,2159.5,correct,confidence,5.0
-w0f2031b,bread,../static/stimuli/images/volcano/sun_atcuupfdqteblxpx.jpg,False,0,1937.5,lava,1046.0,2983.5,intrusion,confidence,3.0
+w0f2031b,bread,../static/stimuli/images/volcano/sun_atcuupfdqteblxpx.jpg,False,0,1937.5,lava,1046.0,2983.5,other,confidence,3.0
 w0f2031b,bone,../static/stimuli/images/shoppingmall/sun_avicxzccipgymejx.jpg,False,0,1493.7999999523163,,0.09999990463256836,1493.8999998569489,empty,fok,1.0
 w0f2031b,cake,../static/stimuli/images/street/sun_aadhshmrjrbucdky.jpg,False,0,1544.8999998569489,,0.0,1544.8999998569489,empty,fok,1.0
 w0f2031b,window,../static/stimuli/images/skiresort/sun_agpfoakkwrzedbll.jpg,False,0,1267.5999999046326,,0.0,1267.5999999046326,empty,fok,1.0
@@ -4825,7 +4825,7 @@ w0f2031b,volcano,../static/stimuli/images/river/sun_auvfucpnqlcaddzs.jpg,False,0
 w0f2031b,heart,../static/stimuli/images/bookstore/sun_avqoszezjldwidcy.jpg,False,0,2578.7999999523163,,0.0,2578.7999999523163,empty,fok,2.0
 w0f2031b,hay,../static/stimuli/images/theater/sun_acehmgvyiimdorgz.jpg,False,0,1050.7000000476837,,0.0,1050.7000000476837,empty,fok,1.0
 w0f2031b,bag,../static/stimuli/images/pool/sun_aztsporcpcmiibon.jpg,False,0,1074.9000000953674,bag,599.0,1673.9000000953674,correct,confidence,5.0
-w0f2031b,ear,../static/stimuli/images/tower/sun_amsimjdbtzyefqbh.jpg,False,0,1128.6000001430511,hear,581.5999999046326,1710.2000000476837,correct,confidence,5.0
+w0f2031b,ear,../static/stimuli/images/tower/sun_amsimjdbtzyefqbh.jpg,False,0,1128.6000001430511,hear,581.5999999046326,1710.2000000476837,other,confidence,5.0
 w0f2031b,truck,../static/stimuli/images/vineyard/sun_aotjqpvjaukupppc.jpg,False,0,1526.7000000476837,train,835.7999999523163,2362.5,other,confidence,4.0
 w0f2031b,bed,../static/stimuli/images/tenniscourt/sun_ayyvmiocpgbwlgot.jpg,False,0,1284.6999998092651,,0.0,1284.6999998092651,empty,fok,1.0
 w0f2031b,lawn,../static/stimuli/images/railway/sun_aqlgoveofhhmvrdh.jpg,False,0,1210.7000000476837,,0.0,1210.7000000476837,empty,fok,1.0
@@ -4891,7 +4891,7 @@ w1d6de38,eye,../static/stimuli/images/greenhouse/sun_apjhtwdcpezmnlze.jpg,False,
 w1d6de38,hay,../static/stimuli/images/subway/sun_abufzioeatuizeoh.jpg,False,0,1717.0,,12.899999976158142,1729.8999999761581,empty,fok,1.0
 w1d6de38,truck,../static/stimuli/images/theater/sun_acpdepnxayyyjqgs.jpg,False,0,1703.6000000238419,,3276.100000023842,4979.700000047684,empty,fok,1.0
 w1d6de38,bee,../static/stimuli/images/forest/sun_arwykvgzpgybhibg.jpg,False,0,2988.2999999523163,,0.8000000715255737,2989.100000023842,empty,fok,2.0
-w1d6de38,bag,../static/stimuli/images/railway/sun_asgcpxncztcqwiyz.jpg,False,0,1447.2999999523163,bags,1632.0,3079.2999999523163,correct,confidence,4.0
+w1d6de38,bag,../static/stimuli/images/railway/sun_asgcpxncztcqwiyz.jpg,False,0,1447.2999999523163,bags,1632.0,3079.2999999523163,other,confidence,4.0
 w1d6de38,horse,../static/stimuli/images/downtown/sun_bzwgvgvsqqpbjfwc.jpg,False,0,2194.899999976158,horse,1257.5,3452.399999976158,correct,confidence,4.0
 w1d6de38,candle,../static/stimuli/images/campsite/sun_aommnycdukjoaebq.jpg,False,0,1477.1000000238419,,0.10000002384185791,1477.2000000476837,empty,fok,1.0
 w1d6de38,fence,../static/stimuli/images/tenniscourt/sun_ajmzjgescxgcfhdp.jpg,False,0,1527.6999999284744,,0.40000009536743164,1528.1000000238419,empty,fok,1.0

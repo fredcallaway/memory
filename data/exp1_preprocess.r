@@ -1,7 +1,7 @@
 source("common.r")
 
-# VERSIONS = c('v6.5E')
-# EXP_NAME = "exp1"
+VERSIONS = c('v6.5E')
+EXP_NAME = "exp1"
 
 # %% ==================== Load  ====================
 
@@ -14,11 +14,11 @@ all_trials = load_data('simple-recall-penalized') %>%
     preprocess_recall %>% 
     select(-judgement_type)
 
-all_pretest %>%
-    filter((word != response), correct) %>%
-    sample_n(30) %>%
-    select(word, response) %>%
-    print(n=30)
+# all_pretest %>%
+#     filter((word != response), correct) %>%
+#     sample_n(30) %>%
+#     select(word, response) %>%
+#     print(n=30)
 
 # %% ==================== Exclusions ====================
 
@@ -39,16 +39,16 @@ trials %>%
     left_join(summarise_pretest(pretest)) %>%
     write_out('all_trials.csv')
 
-trials = trials %>% 
+trials = trials %>%
     mutate(drop = response_type %nin% c("correct","empty")) %T>% 
-    with(write_tex(n_pct(drop), "N/error")) %>% 
+    with(write_tex(n_pct(drop), "N/error")) %T>%
     with(write_tex(n_pct(response_type == "intrusion"), "N/intrusion")) %T>%
     with(write_tex(n_pct(response_type == "other"), "N/other")) %T>%
-    with(write_tex(n_pct(response_type == "timeout"), "N/timeout")) %T>%
+    with(write_tex(n_pct(response_type == "timeout"), "N/timeout")) %>%
     filter(!drop) %>% 
-    mutate(drop = is.na(rt)) %T>% 
-    with(write_tex(sum(drop), "N/short")) %>% 
-    filter(!drop)
+    mutate(drop2 = is.na(rt)) %T>%
+    with(write_tex(sum(drop2), "N/short")) %>%
+    filter(!drop2)
 
 # %% ==================== Select and augment ====================
 
