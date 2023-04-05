@@ -3,6 +3,7 @@ EXP_NAME = ARGS[2]
 
 N_SOBOL = 50_000
 RESULTS = "results/$RUN/$EXP_NAME"
+@everywhere RESULTS = $RESULTS
 mkpath(RESULTS)
 
 @everywhere include("common.jl")
@@ -27,7 +28,6 @@ end
 
 # %% ==================== fitting pipeline ====================
 
-get_simdir(name) = "$RESULTS/simulations/$(name)_trials"
 
 function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_init, 10), n_sim_top=1_000_000)
     print_header(name)
@@ -43,14 +43,11 @@ function fit_exp1_model(name, make_policies, box; n_init=N_SOBOL, n_top=cld(n_in
     top_tbl.judgement_noise = 0.5 .* top_tbl.drift_σ
     display(top_tbl[1:13, :])
 
-    simdir = get_simdir(name)
-    mkpath(simdir)
     @showprogress "simulating" pmap(enumerate(eachrow(top_tbl)[1:3])) do (i, row)
         ndt = Gamma(row.α_ndt, row.θ_ndt)
         prm = NamedTuple(row)
         sim = simulate_exp1(make_policies, prm, n_sim_top)
         sim.rt = sim.rt .+ rand(ndt, nrow(sim))
-        CSV.write("$simdir/$i.csv", sim)
         write_sim(sim, name, i)
     end
 

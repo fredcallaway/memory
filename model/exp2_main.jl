@@ -2,6 +2,7 @@ RUN = ARGS[1]
 EXP_NAME = ARGS[2]
 EXP1_NAME = startswith(EXP_NAME, "old") ? "old_exp1" : "exp1"
 RESULTS = "results/$RUN/$EXP_NAME"
+@everywhere RESULTS = $RESULTS
 EXP1_RESULTS = "results/$RUN/$EXP1_NAME"
 
 @everywhere begin
@@ -51,6 +52,7 @@ end
 @everywhere human_hist = make_hist(human_fixations)
 
 @everywhere function write_sims(name, make_policies; ndt=:optimize, n_top=1)
+    fixed_name = "fixed_" * name
     exp1_top = eachrow(load_fits(name, EXP1_RESULTS))[1:n_top]
     prms = map(exp1_top) do prm
         (;prm..., switch_cost=prm.sample_cost)
@@ -69,14 +71,14 @@ end
         else
             ndt_dist = ndt  # note: untested (possibe variable scope issue)
         end
-        write_fits(DataFrame((;prm..., α_ndt=ndt_dist.α, θ_ndt=ndt_dist.θ)), "top", name)
+        write_fits(DataFrame((;prm..., α_ndt=ndt_dist.α, θ_ndt=ndt_dist.θ)), "top", fixed_name)
 
         sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
         add_duration_noise!(sim, ndt_dist)
 
         trials = make_trials(sim); fixations = make_fixations(sim)
-        write_sim(trials, name, i, "trials")
-        write_sim(fixations, name, i, "fixations")
+        write_sim(trials, fixed_name, i, "trials")
+        write_sim(fixations, fixed_name, i, "fixations")
     end
 end
 
@@ -116,38 +118,20 @@ end
     OptimalPolicy(exp2_mdp(prm)),
 )
 
-@spawn write_sims("optimal", optimal_policies)
+# %% ==================== empirical (old) ====================
 
-# optimal_box = Box(
-#     drift_μ = (-0.1, 0.1),
-#     noise = (0, 0.3),
-#     threshold = 1,
-#     sample_cost = (0, .03),
-#     switch_cost = (0, .1),
-#     between_σ = (0, .4),
-#     within_σ=0,
-#     judgement_noise=0,
-# )
+@everywhere begin
+    # plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
+    plausible_skips(x) = @rsubset(x, :response_type == "empty")
+    const emp_pretest_stop_dist = empirical_distribution(plausible_skips(human_pretest).rt)
+    const emp_crit_stop_dist = empirical_distribution(skipmissing(plausible_skips(human_trials_witherr).rt))
+    const emp_switch_dist = empirical_distribution(human_fixations.duration)
 
-# fit_model("optimal", optimal_policies, optimal_box; n_init=5_000)
-
-# exp1_fit = load_fit("optimal", EXP1_RUN)
-
-# constrained_optimal_box = Box(
-#     drift_μ = (exp1_fit.drift_µ, 0.2),
-#     noise = exp1_fit.noise,
-#     threshold = 1,
-#     sample_cost = exp1_fit.sample_cost,
-#     switch_cost = (0, .05),
-#     between_σ = (0, 2 * exp1_fit.between_σ),
-#     within_σ=0,
-#     judgement_noise=0,
-# )
-
-# fit_model("constrained_optimal", optimal_policies, constrained_optimal_box; n_init=5_000)
-
-# if I want to take out the presentation dimension
-# hists = compute_histograms("optimal", optimal_policies, sample_params(optimal_box, 5000); read_only=true)
+    old_empirical_policies(prm) = (
+        RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
+        RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
+    )
+end
 
 # %% ==================== flexible ====================
 
@@ -170,25 +154,11 @@ flexible_box = Box(
     RandomSwitchingPolicy(exp2_mdp(prm), Gamma(prm.α_switch, prm.θ_switch), Gamma(prm.α_stop, prm.θ_stop)),
 )
 
-fit_model("flexible", flexible_policies, flexible_box)
-
-# %% ==================== empirical (old) ====================
-
-@everywhere begin
-    # plausible_skips(x) = @rsubset(x, :response_type in ["other", "empty"])
-    plausible_skips(x) = @rsubset(x, :response_type == "empty")
-    const emp_pretest_stop_dist = empirical_distribution(plausible_skips(human_pretest).rt)
-    const emp_crit_stop_dist = empirical_distribution(skipmissing(plausible_skips(human_trials_witherr).rt))
-    const emp_switch_dist = empirical_distribution(human_fixations.duration)
-
-    old_empirical_policies(prm) = (
-        RandomStoppingPolicy(pretest_mdp(prm), emp_pretest_stop_dist),
-        RandomSwitchingPolicy(exp2_mdp(prm), emp_switch_dist, emp_crit_stop_dist),
-    )
+@sync begin
+    @spawnat :any write_sims("optimal", optimal_policies)
+    @spawnat :any write_sims("empirical_old", old_empirical_policies)
+    fit_model("flexible", flexible_policies, flexible_box)
 end
-
-@spawn write_sims("empirical_old", old_empirical_policies)
-
 
 # %% ==================== report parameters ====================
 

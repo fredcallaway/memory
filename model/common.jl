@@ -168,7 +168,7 @@ function load_fits(name, results=RESULTS)
 end
 
 function write_fits(fits, fit_name, model_name, results=RESULTS)
-    path = "$results/fits/$model_name/$fit_name"
+    path = "$results/fits/$model_name/$fit_name.csv"
     mkpath(dirname(path))
     CSV.write(path, fits)
 end
