@@ -13,7 +13,7 @@ load_human = function(exp, file) {
 }
 
 load_model = function(run, exp, file, name, n=1) {
-    glue('../model/results/{run}/{exp}/simulations/{name}_{file}/{n}.csv') %>% 
+    glue('../model/results/{run}/{exp}/simulations/{name}/{file}/{n}.csv') %>%
         read_csv(col_types = cols()) %>% 
         mutate(name=name, wid = glue('{name}-{n}'))
 }

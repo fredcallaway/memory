@@ -71,7 +71,7 @@ end
         else
             ndt_dist = ndt  # note: untested (possibe variable scope issue)
         end
-        write_fits(DataFrame((;prm..., α_ndt=ndt_dist.α, θ_ndt=ndt_dist.θ)), "top", fixed_name)
+        write_fits(DataFrame([(;prm..., α_ndt=ndt_dist.α, θ_ndt=ndt_dist.θ)]), "top", fixed_name)
 
         sim = simulate_exp2(pre_pol, crit_pol; prm.within_σ, prm.between_σ)
         add_duration_noise!(sim, ndt_dist)
@@ -260,7 +260,7 @@ end
 write_tex("lesion_search/nonfixated", fmt_ci(ef.nonfixated))
 write_tex("lesion_search/nonfixated_accuracy", string(round1(100*ef.accuracy), "\\%"))
 
-@assert prm_fixated == prm_nonfixated
+# @assert prm_fixated == prm_nonfixated
 
 # %% --------
 

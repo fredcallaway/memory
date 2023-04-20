@@ -38,7 +38,8 @@ function discretize_judgement!(df, noise)
         rtyp => quantile(model, cumsum(target_prop)) 
     end |> Dict
     df.judgement = map(df.response_type, df.judgement) do rtyp, j
-        findfirst(j .≤ breaks[rtyp])
+        i = findfirst(j .≤ breaks[rtyp])
+        something(i, length(breaks))  # judgment greater than all breaks (floating point error)
     end
     df
 end

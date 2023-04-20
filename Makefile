@@ -1,5 +1,5 @@
 PAPER = ~/Papers/meta-memory
-RUN = sep11
+RUN = apr6
 
 sync: # sends results to the paper directory, kind of abusing make here...
 	rsync --delete-after -av analysis/stats/ $(PAPER)/stats/

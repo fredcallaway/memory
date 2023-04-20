@@ -1,7 +1,7 @@
 source("setup.r")
 STEP_SIZE = .1
 
-RUN = opt_get("run", default="sep11")
+RUN = opt_get("run", default="apr6")
 EXP_NAME = opt_get("exp_name", default="exp1")
 OUT = opt_get("out", default=glue("figs/{RUN}/{EXP_NAME}"))
 MODELS = opt_get("models", default="optimal,flexible") %>% 
@@ -20,6 +20,7 @@ df = load_model_human(RUN, EXP_NAME, "trials", MODELS) %>%
 
 our_check = df %>% filter(name == "Human") %>% with(1000*sum(rt)) %>% floor %>% as.integer
 model_check = glue("../model/results/{RUN}/{EXP_NAME}/checksum") %>% read_file %>% as.integer
+print(glue("{our_check} vs {model_check}"))
 stopifnot(our_check == model_check)
 
 # %% ==================== accuracy ====================

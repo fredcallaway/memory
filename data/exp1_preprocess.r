@@ -1,8 +1,5 @@
 source("common.r")
 
-VERSIONS = c('v6.5E')
-EXP_NAME = "exp1"
-
 # %% ==================== Load  ====================
 
 all_pretest = load_data('simple-recall') %>% 

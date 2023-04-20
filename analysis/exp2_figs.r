@@ -1,7 +1,7 @@
 source("setup.r")
 STEP_SIZE = .1
 
-RUN = opt_get("run", default="sep11")
+RUN = opt_get("run", default="apr6")
 EXP_NAME = opt_get("exp_name", default="exp2")
 OUT = opt_get("out", default=glue("figs/{RUN}/{EXP_NAME}"))
 MODELS = opt_get("models", default="fixed_optimal,flexible") %>% 
@@ -52,7 +52,8 @@ df %>%
     filter(between(n_pres, 1,6)) %>%
     ggplot(aes(n_pres, ..prop..)) +
     geom_bar() +
-    facet_wrap(~name)
+    facet_wrap(~name) +
+    labs(x="Number of Fixations", y="Proportion of Trials")
 
 savefig("nfix", WIDTH, 1)
 
@@ -259,14 +260,3 @@ plt_timecourse = alt_timecourse %>%
     labs(x="Time (s)", y="Probability Fixate First Cue", color="Total\nPretest\nAccuracy")
 
 savefig("alt_timecourse", WIDTH, 1)
-
-# %% --------
-df %>%
-    mutate(total_pretest_accuracy = pretest_accuracy_first + pretest_accuracy_second) %>%
-    collapse_participants(median, rt, total_pretest_accuracy) %>%
-    ggplot(aes(total_pretest_accuracy, rt)) +
-    stat_summary(fun=mean, geom="line") +
-    stat_summary(fun.data=mean_cl_boot, geom=geom) +
-    facet_wrap(~name)
-
-savefig("tmp", WIDTH, 1)

@@ -1,4 +1,3 @@
-
 figs/%: figs/%/exp1 figs/%/exp1_alt figs/%/exp2 figs/%/exp2_alt \
 	    figs/%/old_exp1 figs/%/old_exp1_alt figs/%/old_exp2 figs/%/old_exp2_alt
 	echo done

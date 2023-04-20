@@ -2,8 +2,6 @@ suppressPackageStartupMessages(source("stats_base.r"))
 EXP_NAME = opt_get("exp_name", default="exp2")
 write_tex = tex_writer(glue("stats/{EXP_NAME}"))
 
-df = load_model_human("sep11", "exp2", "trials", c("fixed_optimal", "flexible"))
-
 
 # %% ==================== load data ====================
 
@@ -36,29 +34,7 @@ fixations = load_human("exp2", "fixations") %>%
         relative = fixated - nonfixated
     )
 
-# %% --------
-X = df %>%
-    mutate(trial_type = glue("{pretest_accuracy_first} {pretest_accuracy_second}"))
-
-# %% --------
-
-X %>%
-    filter(trial_type %in% c("1 1", "0 0", "0.5 0.5")) %>%
-    group_by(name, trial_type) %>%
-    summarise(mean(choose_first & n_pres == 1))
-    # summarise(mean(rt), mean(n_pres), mean(choose_first, na.rm=T))
-
-X %>%
-    filter(trial_type == "0 0", n_pres < 4) %>%
-    count(name, response_type, trial_type, n_pres) %>%
-    group_by(name) %>%
-    mutate(prop = n/sum(n)) %>%
-    select(-n, -trial_type) %>%
-    pivot_wider(names_from=name, values_from=prop)
-
-
-
-startsWith("foo", "f")
+df = load_model_human("apr6", "exp2", "trials", c("fixed_optimal", "flexible"))
 
 # %% ==================== accuracy ====================
 
@@ -66,38 +42,6 @@ all_trials %>%
     with(mean(response_type == "correct")) %>% 
     fmt_percent %>% 
     write_tex("accuracy")
-
-
-all_trials %>%
-    count(choose_first, )
-
-# %% --------
-
-props = df %>%
-    mutate(correct = (response_type == "correct")) %>%
-    count(name, pretest_accuracy, correct) %>%
-    group_by(name) %>%
-    mutate(prop = n / sum(n))
-
-pretest_rates = props %>%
-    group_by(name, pretest_accuracy) %>%
-    summarise(total=sum(prop))
-
-acc_rates = df %>%
-    mutate(correct = (response_type == "correct")) %>%
-    group_by(name, pretest_accuracy) %>%
-    summarise(acc=mean(correct))
-
-left_join(pretest_rates, acc_rates) %>%
-    ungroup() %>%
-    mutate(value = fmt("{acc:.3} ({total:.3})"), .keep="unused") %>%
-    mutate(pretest_accuracy = fmt_percent(pretest_accuracy)) %>%
-    pivot_wider(names_from=pretest_accuracy, values_from=value) %>%
-    column_to_rownames(var="name") %>%
-    kbl(format="latex", booktabs=T, digits=3, escape=F) %>%
-    gsub('_', ' ', .) %>%
-    gsub('0\\.', '.', .) %>%
-    write_tex("accuracy_table", format=F)
 
 # %% ==================== overall proportion ====================
 
@@ -181,6 +125,3 @@ fixations %>%
     mutate(bad = relative < 0) %>% 
     regress_logistic(bad ~ duration, data=.) %>% 
     write_model("prop_bad", logistic=T)
-
-
-
